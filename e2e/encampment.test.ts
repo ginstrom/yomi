@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { EncampmentProbe, GuildHallProbe } from '../src/testHook.ts'
+import { PARTNERS } from '../src/game/worldMap.ts'
+import { hexNeighbors, hexToOffset } from '../src/grid/hex.ts'
+import { roadTo } from '../src/game/trade.ts'
 import { useGames, type Game } from './driver.ts'
 
 /** A new game with gold and iron (or `stock`) planted in its stock, reloaded and continued at the encampment. */
@@ -118,7 +121,7 @@ describe('the encampment', () => {
     expect(back.world.stock).toMatchObject({ gold: 60, iron: 35 })
   })
 
-  it("builds the Builders' Lodge on its plot, and refuses its third level with the roads line", async () => {
+  it("builds the Builders' Lodge on its plot", async () => {
     const game = await games.open()
     await richAtHome(game, { gold: 100, timber: 50 })
     const camp = await enter(game)
@@ -132,28 +135,22 @@ describe('the encampment', () => {
     expect(built.message).toBe("The Builders' Lodge is built.")
   })
 
-  it('says why the Lodge goes no higher as soon as it is raised to 2, without another click', async () => {
+  it('raises the Lodge to level 2 without a word about roads, and to level 3', async () => {
     const game = await games.open()
-    await richAtHome(game, { gold: 500, stone: 50 }, undefined, { 'world.lodge': 1 })
+    await richAtHome(game, { gold: 500, iron: 50, stone: 50 }, undefined, { 'world.lodge': 1 })
     const camp = await enter(game)
     await game.click(facility(camp, 'builders_lodge'))
     const shown = await game.settled('Encampment', (c) => c.selected === 'builders_lodge')
     await game.click(shown.buttons.improve)
     const raised = await game.settled('Encampment', (c) => facility(c, 'builders_lodge').level === 2)
-    expect(raised.message).toBe("The Builders' Lodge is raised to level 2. Roads come with trade routes.")
-    expect(raised.buttons.improve.enabled).toBe(false)
-  })
-
-  it('shows the Lodge at level 2 with its Raise disabled and the roads line', async () => {
-    const game = await games.open()
-    await richAtHome(game, { gold: 500, iron: 50, stone: 50 }, undefined, { 'world.lodge': 2 })
-    const camp = await enter(game)
-    expect(facility(camp, 'builders_lodge').frame).toBe('camp_lodge/level_2')
-    await game.click(facility(camp, 'builders_lodge'))
-    const shown = await game.settled('Encampment', (c) => c.selected === 'builders_lodge')
-    expect(shown.buttons.improve.enabled).toBe(false)
-    expect(shown.refusal).toBe('Roads come with trade routes.')
-    expect(shown.details[0]).toBe("Builders' Lodge, level 2 of 3")
+    expect(raised.message).toBe("The Builders' Lodge is raised to level 2.")
+    expect(raised.buttons.improve.enabled).toBe(true)
+    await game.click(raised.buttons.improve)
+    const third = await game.settled('Encampment', (c) => facility(c, 'builders_lodge').level === 3)
+    expect(third.message).toBe("The Builders' Lodge is raised to level 3.")
+    expect(third.buttons.improve.enabled).toBe(false)
+    expect(facility(third, 'builders_lodge').frame).toBe('camp_lodge/level_3')
+    expect(third.details[0]).toBe("Builders' Lodge, level 3 of 3")
   })
 
   it('names the trading post by its level, with its market income, and raises it to the Trading House', async () => {
@@ -689,5 +686,135 @@ describe('the encampment', () => {
     const after = await game.settled('World', (w) => w.message.includes('Balanced'))
     expect(after.world.turn).toBe(2)
     expect(after.world.stock).toMatchObject({ gold: 15, iron: 15 })
+  })
+
+  it('opens a route from the trading post’s Routes tab, and shows it raided when a nest is placed beside the road', async () => {
+    const game = await games.open()
+    await game.newGame()
+    const typed = async (line: string) => {
+      await game.page.locator('#yomi-debug input').fill(line)
+      await game.press('Enter')
+    }
+    await game.press('Shift+Backquote')
+    await typed('contact all')
+    await typed('facility trading_post 4')
+    await typed('stock gold 100 timber 20')
+    await game.waitFor('World', (w) => w.world.contacted.length === 2 && w.world.tradingPost === 4 && w.world.stock.gold === 100)
+    await game.press('Escape')
+
+    const goToTradingPost = async () => {
+      const camp = await enter(game)
+      await game.click(facility(camp, 'trading_post'))
+      const shown = await game.settled('Encampment', (c) => c.selected === 'trading_post')
+      await game.click(shown.buttons.open)
+      await game.waitForScenes(['TradingPost'], ['World'])
+      return game.settled('TradingPost')
+    }
+    const post = await goToTradingPost()
+    await game.click(post.buttons.routesTab)
+    const tab = await game.settled('TradingPost', (p) => p.tab === 'routes')
+    expect(tab.routes.map((r) => [r.partner, r.status])).toEqual([['millbrook', 'closed'], ['saltmere', 'closed']])
+    expect(tab.routes[0].line).toMatch(/^Open a route to Millbrook: \d+ hexes, about \d+ gold every 5 days and 1 timber every 10, costs \d+ gold, 10 timber$/)
+    expect(tab.routes[0].open).toMatchObject({ visible: true, enabled: true })
+    // The offer names the partner's good; the notes under the minimap give its condition (and why security is short, if it is).
+    expect(tab.routes[0].line).toContain('and 1 timber every 10')
+    expect(tab.routeNotes.at(-1)).toMatch(/^1 timber every 10 days while security is 50% or more/)
+    // Every control lies inside the window: the frame is scaled to fit.
+    for (const at of [tab.routes[0].open!, tab.buttons.buyTab, tab.buttons.sellTab, tab.buttons.routesTab, tab.buttons.close]) {
+      expect(at.x).toBeGreaterThan(0)
+      expect(at.x).toBeLessThan(1280)
+      expect(at.y).toBeGreaterThan(0)
+      expect(at.y).toBeLessThan(800)
+    }
+    const cost = Number(/costs (\d+) gold/.exec(tab.routes[0].line)![1])
+
+    await game.click(tab.routes[0].open!)
+    const opened = await game.settled('TradingPost', (p) => p.routes[0]?.status === 'open')
+    expect(opened.message).toBe('A road is opened to Millbrook.')
+    expect(opened.gold).toBe(100 - cost)
+    expect(opened.routes[0].open).toBeNull()
+    expect(opened.routes[0].line).toMatch(/^Millbrook road: security \d+%, about \d+ gold every 5 days$/)
+
+    // The Market keeps one route: Saltmere's Open is faint but clickable, and says why, spending nothing.
+    expect(opened.routes[1].open).toMatchObject({ visible: true, enabled: false })
+    await game.click({ x: opened.routes[1].open!.x - 200, y: opened.routes[1].open!.y })
+    const chosen = await game.settled('TradingPost', (p) => p.routes[1]?.selected === true)
+    // Chosen but not yet clicked: the refusal shows under the minimap.
+    expect(chosen.routeRefusal).toBe('The Market keeps 1 route open at most.')
+    await game.click(opened.routes[1].open!)
+    const refused = await game.settled('TradingPost', (p) => p.message === 'The Market keeps 1 route open at most.')
+    // The refusal is told once: in the message, not again under the minimap.
+    expect(refused.routeRefusal).toBeNull()
+    expect(refused.gold).toBe(100 - cost)
+    expect(refused.routes.map((r) => r.status)).toEqual(['open', 'closed'])
+
+    await game.click(refused.buttons.close)
+    await game.waitForScenes(['Encampment'], ['World'])
+    await game.click((await game.settled('Encampment')).buttons.leave)
+    await game.waitForScenes(['World'])
+    const map = await game.settled('World')
+    expect(map.world.routes).toHaveLength(1)
+    // A nest two hexes from the road's far end: the partner's own neighbours' neighbours.
+    const millbrook = PARTNERS.find((p) => p.id === 'millbrook')!.position
+    const beside = hexNeighbors(hexNeighbors(millbrook)[0]).find((h) => !map.world.locations.some((l) => l.position.q === h.q && l.position.r === h.r))!
+    const { col, row } = hexToOffset(beside)
+    await game.press('Shift+Backquote')
+    await typed(`spawn goblin_raid ${col} ${row}`)
+    await game.waitFor('World', (w) => w.world.locations.some((l) => l.id.startsWith('spawn_') && l.position.q === beside.q && l.position.r === beside.r))
+    await game.press('Escape')
+
+    const again = await goToTradingPost()
+    await game.click(again.buttons.routesTab)
+    const raided = await game.settled('TradingPost', (p) => p.routes[0]?.status === 'raided')
+    expect(raided.routes[0].line).toMatch(/pays nothing while raided$/)
+  })
+
+  it('keeps the Routes tab\'s notes and refusal above the message line at 840 × 560, in the worst case (verification round 3)', async () => {
+    const game = await games.open()
+    const start = await game.newGame()
+    const road = roadTo(start.world, 'saltmere')!
+    const cols = start.world.board.cols
+    const index = (i: number) => {
+      const { col, row } = hexToOffset(road[i])
+      return row * cols + col
+    }
+    // Saltmere's road: corrupted (explored) far out, blighted and tainted beyond it, so the offer is raided at once,
+    // its security below 50% (the good's note "(not now)"), and with the stock spent on Millbrook's route, refused.
+    const marks = [
+      { index: index(15), level: 3 },
+      ...[16, 17, 18, 19, 20, 21, 22, 23, 24, 25].map((i) => ({ index: index(i), level: 2 })),
+      ...[8, 9, 10, 11, 12, 13, 14, 26, 27].map((i) => ({ index: index(i), level: 1 })),
+    ]
+    await game.page.evaluate((planted) => {
+      const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
+      const { world } = saved.game
+      world.contacted = ['millbrook', 'saltmere']
+      world.tradingPost = 5
+      world.stock = { gold: 27, timber: 10 }
+      for (const { index, level } of planted) {
+        world.blight[index] = level
+        world.seen[index] = level
+      }
+      localStorage.setItem('yomi.save.1', JSON.stringify(saved))
+    }, marks)
+    await game.resize(840, 560)
+    await game.click((await game.reload()).buttons.continue)
+    await game.waitForScenes(['World'])
+    const camp = await enter(game)
+    await game.click(facility(camp, 'trading_post'))
+    await game.click((await game.settled('Encampment', (c) => c.selected === 'trading_post')).buttons.open)
+    await game.waitForScenes(['TradingPost'], ['World'])
+    await game.click((await game.settled('TradingPost')).buttons.routesTab)
+    const tab = await game.settled('TradingPost', (p) => p.tab === 'routes' && p.routes.length === 2)
+    await game.click(tab.routes[0].open!)
+    const opened = await game.settled('TradingPost', (p) => p.routes[0]?.status === 'open' || p.routes[0]?.status === 'raided')
+    expect(opened.message).toBe('A road is opened to Millbrook.')
+    await game.click({ x: opened.routes[1].open!.x - 150, y: opened.routes[1].open!.y })
+    const worst = await game.settled('TradingPost', (p) => p.routes[1]?.selected === true)
+    expect(worst.routes[1].line).toMatch(/Raided at once\.$/)
+    expect(worst.routeRefusal).toMatch(/more than the stock holds/)
+    expect(worst.routeNotes[0]).toMatch(/^Raided at once: the blight has overrun it \d+ hexes out\.$/)
+    expect(worst.routeStack).not.toBeNull()
+    expect(worst.routeStack!.bottom).toBeLessThan(worst.routeStack!.messageTop)
   })
 })

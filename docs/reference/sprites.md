@@ -14,8 +14,8 @@ All sprites share `palette.toml`, a muted Baldur's Gate-style palette.
 | Gear laid over the hero body (`gear_<icon>`) | `gear/` | 32px `unit` | 3x |
 | Item icons, runes among them | `icons/` | 20px `icon` | 2x |
 | Socket pips (`icon_socket_empty`, `icon_socket_filled`) | `icons/` | 6px `pip` | 2x |
-| World map points of interest (`map_<kind>`, one per `LocationKind`; `map_watchtower`; `map_blight`, shown at 1x inside a corrupted hex) | `map/` | 24px `map` | 2x |
-| Encampment facilities (`camp_<facility>`, a frame `level_<n>` a level; `camp_plot` for one not built) | `encampment/` | 48px `building` | 3x |
+| World map points of interest (`map_<kind>`, one per `LocationKind`, but the trade partners each have their own, `map_partner_village` for Millbrook and `map_partner_port` for Saltmere, by `PARTNER_SPRITES`; `map_watchtower`; `map_blight`, shown at 1x inside a corrupted hex) | `map/` | 24px `map` | 2x |
+| Encampment facilities (`camp_<facility>`, a frame `level_<n>` a level, the Builders' Lodge's `level_3` redrawn in stage 8 with paved road and a milestone; `camp_plot` for one not built) | `encampment/` | 48px `building` | 3x |
 | The encampment's tent and campfire | `encampment/` | 24px `map` | 2x |
 | Battle effects (`fx_<name>`) | `effects/` | 16px `effect` | 2x |
 | Portraits (`portrait_<id>`, one per `PortraitId` in `src/character/portraits.ts`) | `portraits/` | 32px `portrait` | 2x in the party's column, 4x on the character panel |

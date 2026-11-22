@@ -1,5 +1,5 @@
 import { SHRINE_STRENGTH } from './blight.ts'
-import { LODGE_LEVEL_LIMIT, MAX_LODGE_LEVEL, MAX_SHRINE_LEVEL, ROADS_REFUSAL, canAfford, describeCost, lodgeCost, raiseLodge, raiseShrine, shrineCost } from './buildings.ts'
+import { MAX_LODGE_LEVEL, MAX_SHRINE_LEVEL, canAfford, describeCost, lodgeCost, raiseLodge, raiseShrine, shrineCost } from './buildings.ts'
 import type { Expedition } from './expedition.ts'
 import type { GameState } from './gameState.ts'
 import { GUILD_HALL_LEVELS, MAX_GUILD_HALL_LEVEL, homeParty, noPartyHome, upgradeCost, upgradeGuildHall } from './guildHall.ts'
@@ -40,8 +40,6 @@ export interface FacilityView {
   action: string | null
   /** Why the next level cannot be bought now, or null when it can (or there is none). */
   refusal: string | null
-  /** Why the next level cannot be had whatever the stock holds (the Lodge's roads), or null: a refusal the screen shows unasked. */
-  barred: string | null
   /** Whether the facility has a screen of its own to open (the guild hall's roster), which it has once built. */
   opens: boolean
 }
@@ -61,8 +59,6 @@ interface Facility {
   improve: (game: GameState, party: Expedition) => string | null
   /** What the next level adds, when the effect at that level is too long to show under the effect at this one. */
   next?: (game: GameState, level: number) => string
-  /** Why the next level cannot be had whatever the stock holds, checked before the stock; null when nothing bars it. */
-  refusal?: (game: GameState) => string | null
   opens: boolean
 }
 
@@ -169,7 +165,6 @@ const FACILITIES: readonly Facility[] = [
       ][level - 1],
     cost: (game) => lodgeCost(game.world),
     improve: raiseLodge,
-    refusal: (game) => (game.world.lodge >= LODGE_LEVEL_LIMIT ? ROADS_REFUSAL : null),
     opens: false,
   },
 ]
@@ -190,8 +185,7 @@ export function facilities(game: GameState, party: Expedition): FacilityView[] {
       next: top ? null : (facility.next ?? facility.effect)(game, level + 1),
       cost: top ? null : cost,
       action: top ? null : level === 0 ? 'Build' : `Raise to level ${level + 1}`,
-      refusal: top ? null : facilityRefusal(game, party, facility, cost),
-      barred: top ? null : (facility.refusal?.(game) ?? null),
+      refusal: top ? null : facilityRefusal(game, party, cost),
       opens: facility.opens && level > 0,
     }
   })
@@ -213,10 +207,8 @@ export function setFacilityLevel(game: GameState, id: FacilityId, level: number)
 }
 
 /** The encampment acts for the party at home (`homeParty`): `party` if it is, else the first that is. */
-function facilityRefusal(game: GameState, party: Expedition, facility: Facility, cost: Stock | null): string | null {
+function facilityRefusal(game: GameState, party: Expedition, cost: Stock | null): string | null {
   if (!homeParty(game, party.id)) return noPartyHome(game)
-  const barred = facility.refusal?.(game)
-  if (barred) return barred
   if (cost && !canAfford(game.world.stock, cost)) return `It costs ${describeCost(cost)}, more than the stock holds.`
   return null
 }

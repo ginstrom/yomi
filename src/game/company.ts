@@ -431,7 +431,9 @@ function sightingParty(parties: readonly Expedition[], present: readonly PartyPr
 }
 
 function interruptOf(game: GameState, events: WorldEvent[], partyEvents: PartyEvent[], present: readonly PartyPresence[]): Interrupt | null {
-  const notable = events.find((event) => isNotable(game.world, event, present))
+  const notables = events.filter((event) => isNotable(game.world, event, present))
+  // A route abandoned outranks a raid told the same day: the loss is what the walk's stop should say.
+  const notable = notables[0]?.type === 'route_raided' ? (notables.find((event) => event.type === 'route_abandoned') ?? notables[0]) : notables[0]
   if (notable) {
     const party = notable.type === 'sighted' ? sightingParty(game.parties, present, notable.at, notable.source === true) : null
     return { party, event: notable }

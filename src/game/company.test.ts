@@ -10,6 +10,8 @@ import { MAX_RESERVES } from './guildHall.ts'
 import { newGame, type GameState } from './gameState.ts'
 import type { ItemPlace } from './itemPlace.ts'
 import { readyMadeParty } from './party.ts'
+import { ABANDON_AFTER, roadTo } from './trade.ts'
+import { YIELD_DAYS } from './territory.ts'
 import { parseSave, serializeSave } from './save.ts'
 import { NOTICE_RADIUS, encampment, locationAt, passTurn, routeTo, travel, type MonsterLocation, type WorldState } from './worldMap.ts'
 
@@ -471,7 +473,7 @@ describe('act refused', () => {
     poor.world.stock = { gold: 5, iron: 9 }
     refused(poor.game, poor.party.id, { kind: 'tower' }, /more than the stock holds/)
     const site = withStandingOrder(onGoldSeam())
-    refused(site.game, site.party.id, { kind: 'tower' }, /cannot stand on the encampment or a resource/)
+    refused(site.game, site.party.id, { kind: 'tower' }, /cannot stand on a location/)
     const land = withStandingOrder(onCleanLand())
     land.world.stock = { gold: 20, timber: 12 }
     refused(land.game, land.party.id, { kind: 'improve' }, /held resource/)
@@ -1425,3 +1427,24 @@ describe('actionBlocked', () => {
     expect(actionBlocked(game, party.id, { kind: 'scout' })).toEqual({ refusal: 'The game is over.', party: null })
   })
 })
+
+describe('the interrupt of a day with route events (verification round 3)', () => {
+  it('is the abandonment, not a raid told the same day', () => {
+    const game = newGame(readyMadeParty(), null, 1)
+    const { world } = game
+    world.contacted.push('millbrook', 'saltmere')
+    const millbrook = roadTo(world, 'millbrook')!
+    const saltmere = roadTo(world, 'saltmere')!
+    // Millbrook's route turns raided tomorrow, a yield day; Saltmere's, raided five yield days running, is abandoned on it.
+    world.routes.push({ id: 'route_millbrook', partner: 'millbrook', road: millbrook, opened: 1, raidedDays: 0, raided: false })
+    world.routes.push({ id: 'route_saltmere', partner: 'saltmere', road: saltmere, opened: 1, raidedDays: ABANDON_AFTER - 1, raided: true })
+    world.silent.push('saltmere')
+    world.turn = YIELD_DAYS - 1
+    const at = millbrook[Math.floor(millbrook.length / 2)]
+    world.blight[boardIndex(world.board, at)] = 3
+    const report = passDay(game)!
+    expect(report.events.map((e) => e.type)).toEqual(expect.arrayContaining(['route_raided', 'route_abandoned']))
+    expect(report.interrupt?.event).toMatchObject({ type: 'route_abandoned', route: 'route_saltmere' })
+  })
+})
+

@@ -2,15 +2,16 @@ import { maxHp, maxMana, manaOf, type Character } from '../character/character.t
 import { gainXp, xpToNextLevel } from '../character/progression.ts'
 import type { BattleState } from '../engine/battleEngine.ts'
 import { advanceRefusal, passDay, setOrder } from '../game/company.ts'
-import { MAX_BLIGHT, boardIndex, type WorldEvent } from '../game/blight.ts'
+import { MAX_BLIGHT, SPAWN_KINDS, boardIndex, type WorldEvent } from '../game/blight.ts'
 import { facilities, setFacilityLevel, type FacilityId } from '../game/encampment.ts'
 import { presences, type Expedition, type Order } from '../game/expedition.ts'
 import { ENCOUNTERS, type EncounterId } from '../game/encounters.ts'
 import { selectedParty, type GameState } from '../game/gameState.ts'
 import type { Material } from '../game/territory.ts'
+import { contactPartner, partners } from '../game/trade.ts'
 import { updateSight } from '../game/vision.ts'
-import { isNotable, monstersHere, theName, threatAt, worldActive, type WorldLocation } from '../game/worldMap.ts'
-import { HexBoard, hexToOffset, offsetToHex } from '../grid/hex.ts'
+import { isNotable, monstersHere, theName, threatAt, worldActive, type MonsterLocation, type WorldLocation } from '../game/worldMap.ts'
+import { HexBoard, hexToOffset, offsetToHex, type Hex } from '../grid/hex.ts'
 import { BASE_ITEMS, MAGIC_ITEMS, itemById } from '../inventory/inventory.ts'
 import { MODIFIER_IDS } from '../inventory/modifiers.ts'
 import { RANKS, RUNE_IDS, addToPouch, isRuneKey, pouchKeys, runeKey, runeName } from '../inventory/runes.ts'
@@ -127,6 +128,20 @@ function orderDetail(order: Order): string {
     default:
       return order.kind
   }
+}
+
+/** The hex a command's arguments name: `<col> <row>`, a location's id, or `here` (the default), the party's hex. */
+function hexArgument(args: string[], context: DebugContext): Hex {
+  const { world } = gameOf(context)
+  if (args.length >= 2) {
+    const at = offsetToHex(integer(args[0], 'the column'), integer(args[1], 'the row'))
+    if (!new HexBoard(world.board).contains(at)) throw new DebugError(`${args[0]},${args[1]} is off the map (${world.board.cols}×${world.board.rows}).`)
+    return at
+  }
+  if (args[0] === undefined || args[0] === 'here') return partyOf(context).position
+  const location = world.locations.find((l) => l.id === args[0])
+  if (!location) throw new DebugError(`No location "${args[0]}"; \`locations all\` lists them.`)
+  return location.position
 }
 
 const COMMANDS: Record<string, Command> = {
@@ -372,23 +387,50 @@ const COMMANDS: Record<string, Command> = {
       const { world } = game
       const level = integer(args[0], 'the level')
       if (level < 0 || level > MAX_BLIGHT) throw new DebugError(`The blight level goes from 0 to ${MAX_BLIGHT}.`)
-      let at
-      if (args.length >= 3) {
-        at = offsetToHex(integer(args[1], 'the column'), integer(args[2], 'the row'))
-        if (!new HexBoard(world.board).contains(at)) throw new DebugError(`${args[1]},${args[2]} is off the map (${world.board.cols}×${world.board.rows}).`)
-      } else if (args[1] === undefined || args[1] === 'here') {
-        at = partyOf(context).position
-      } else {
-        const location = world.locations.find((l) => l.id === args[1])
-        if (!location) throw new DebugError(`No location "${args[1]}"; \`locations all\` lists them.`)
-        at = location.position
-      }
+      const at = hexArgument(args.slice(1), context)
       const index = boardIndex(world.board, at)
       world.blight[index] = level
       world.shift[index] = 0
       const { col, row } = hexToOffset(at)
       const here = world.locations.find((l) => l.position.q === at.q && l.position.r === at.r)
       return [`${here ? `${theName(here.name)} ` : 'Hex '}(${col}, ${row}) is now at blight level ${level}${level === 0 ? ' (clear)' : ''}.`]
+    },
+  },
+  spawn: {
+    usage: 'spawn <goblin_raid|kobold_scouts|bandit_camp> <location id | col row>',
+    summary:
+      "Place a nest of a kind at a named hex (a location's, or a column and row) at that hex's threat, with no RNG drawn and no pressure spent; its hex goes to blight 3 and the nest is sighted. A hex where a location or a party stands is refused. Place one within 2 hexes of a road to raid it.",
+    changes: true,
+    run([kind, ...where], context) {
+      const { world } = gameOf(context)
+      const spawnKind = SPAWN_KINDS.find((k) => k.encounter === kind)
+      if (!spawnKind) throw new DebugError(`Expected one of ${SPAWN_KINDS.map((k) => k.encounter).join(', ')}, got "${kind ?? ''}".`)
+      if (where.length === 0) throw new DebugError('Name the hex: a location id, or a column and a row.')
+      const at = hexArgument(where, context)
+      const there = world.locations.find((l) => l.position.q === at.q && l.position.r === at.r)
+      if (there) throw new DebugError(`${theName(there.name)} already stands at ${offset({ position: at })}.`)
+      const { parties } = gameOf(context)
+      if (parties.some((party) => party.position.q === at.q && party.position.r === at.r)) throw new DebugError(`A party stands at ${offset({ position: at })}: move it, or name another hex.`)
+      world.spawns += 1
+      const nest: MonsterLocation = { id: `spawn_${world.spawns}`, kind: 'monsters', name: spawnKind.name, position: at, encounter: spawnKind.encounter, threat: threatAt(at), loot: [] }
+      world.locations.push(nest)
+      world.blight[boardIndex(world.board, at)] = MAX_BLIGHT
+      world.sighted.push(nest.id)
+      // Every change to the land ends with updateSight, so a nest placed in sight shows its corrupted hex.
+      updateSight(world, presences(parties))
+      return [`${nest.name} (${nest.id}) now stands at ${offset({ position: at })}, threat ${nest.threat}.`]
+    },
+  },
+  contact: {
+    usage: 'contact <partner id | all>',
+    summary: 'Contact a trade partner, or every one, as if the party had walked there.',
+    changes: true,
+    run([id], context) {
+      const { world } = gameOf(context)
+      const all = partners(world)
+      const named = id === 'all' ? all : all.filter((p) => p.id === id)
+      if (named.length === 0) throw new DebugError(`No partner "${id ?? ''}"; there are ${all.map((p) => p.id).join(', ')}, or all.`)
+      return named.map((p) => (contactPartner(world, p.id) ? `${p.name} is contacted.` : `${p.name} was contacted already.`))
     },
   },
   days: {
@@ -413,7 +455,7 @@ const COMMANDS: Record<string, Command> = {
         yields.push(...report.events.filter((event) => event.type === 'yield'))
         for (const event of report.events) {
           if (isNotable(game.world, event, present) || event.type === 'spawned') {
-            told.push(`  day ${game.world.turn}: ${describeWorldEvent(event) || `${event.type} ${'name' in event ? event.name : ''}`}`)
+            told.push(`  day ${game.world.turn}: ${describeWorldEvent(event, game.world) || `${event.type} ${'name' in event ? event.name : ''}`}`)
           }
         }
       }

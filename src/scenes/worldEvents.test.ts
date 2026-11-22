@@ -235,3 +235,46 @@ describe('advanceMessage', () => {
     expect(advanceMessage(party)).toBe('2 heroes have points to spend: click a portrait marked "+".')
   })
 })
+
+describe('trade partner lines (stage 8)', () => {
+  it('tell of contact, silence and waking', () => {
+    expect(describeWorldEvent({ type: 'partner_contacted', partner: 'millbrook', name: 'Millbrook', home: 'Oakvale' })).toBe('Millbrook will trade with Oakvale.')
+    expect(describeWorldEvent({ type: 'partner_silent', partner: 'millbrook', name: 'Millbrook' })).toBe('Millbrook has fallen silent under the blight.')
+    expect(describeWorldEvent({ type: 'partner_restored', partner: 'millbrook', name: 'Millbrook' })).toBe('Millbrook is trading again.')
+  })
+
+  it('tell of routes', () => {
+    const base = { route: 'route_millbrook', partner: 'millbrook', name: 'Millbrook' }
+    expect(describeWorldEvent({ type: 'route_opened', ...base, length: 12 })).toBe('A road is opened to Millbrook.')
+    const sightedA = { sighted: ['a'] }
+    expect(describeWorldEvent({ type: 'route_raided', ...base, cause: 'raiders', raider: 'a', raiderName: 'Goblin Brood', days: 0 }, sightedA)).toBe('Raiders on the Millbrook road: the Goblin Brood.')
+    expect(describeWorldEvent({ type: 'route_raided', ...base, cause: 'raiders', raider: 'a', raiderName: 'The Goblin Raiders', days: 0 }, sightedA)).toBe('Raiders on the Millbrook road: the Goblin Raiders.')
+    expect(describeWorldEvent({ type: 'route_raided', ...base, cause: 'corrupted', days: 0 })).toBe('The blight has overrun the Millbrook road.')
+    expect(describeWorldEvent({ type: 'route_raided', ...base, cause: 'silent', days: 0 })).toBe('The Millbrook road is idle: Millbrook is silent.')
+    expect(describeWorldEvent({ type: 'route_raided', ...base, cause: 'silent', days: 1 })).toBe('')
+    expect(describeWorldEvent({ type: 'route_raided', ...base, cause: 'silent', days: 2 })).toBe('')
+    expect(describeWorldEvent({ type: 'route_restored', ...base })).toBe('The Millbrook road is safe again.')
+    expect(describeWorldEvent({ type: 'route_abandoned', ...base })).toBe('The Millbrook road is abandoned.')
+  })
+
+  it('names a raider only once the player has sighted it (verification round 1)', () => {
+    const raided: WorldEvent = { type: 'route_raided', route: 'route_millbrook', partner: 'millbrook', name: 'Millbrook', cause: 'raiders', raider: 'spawn_3', raiderName: 'Goblin Brood', days: 0 }
+    expect(describeWorldEvent(raided, { sighted: [] })).toBe('Raiders on the Millbrook road.')
+    expect(describeWorldEvent(raided)).toBe('Raiders on the Millbrook road.')
+    expect(describeWorldEvent(raided, { sighted: ['spawn_3'] })).toBe('Raiders on the Millbrook road: the Goblin Brood.')
+    expect(describeWorldEvents([raided], null, { sighted: [] })).toBe('Raiders on the Millbrook road.')
+    expect(describeWorldEvents([raided], raided, { sighted: ['spawn_3'] })).toBe('Raiders on the Millbrook road: the Goblin Brood.')
+  })
+
+  it('tells a route yield', () => {
+    const routeYield = (material: 'gold' | 'timber', amount: number): WorldEvent => ({ type: 'yield', site: 'millbrook', name: 'Millbrook', material, amount, source: 'route', route: 'route_millbrook' })
+    expect(describeWorldEvent(routeYield('gold', 2))).toBe('The Millbrook road brings 2 gold.')
+    expect(describeWorldEvent(routeYield('timber', 1))).toBe('The Millbrook road brings 1 timber.')
+  })
+
+  it('sums routes apart from sites and the market', () => {
+    const y = (material: 'gold' | 'timber' | 'iron', amount: number, source?: 'site' | 'market' | 'route'): WorldEvent => ({ type: 'yield', site: 's', name: 'S', material, amount, source })
+    expect(yieldSummary([y('timber', 1, 'route'), y('gold', 2, 'route'), y('gold', 1, 'route')])).toBe('Last yield: routes 3 gold, 1 timber')
+    expect(yieldSummary([y('iron', 4), y('gold', 3, 'market'), y('timber', 1, 'route'), y('gold', 2, 'route')])).toBe('Last yield: sites 4 iron; market 3 gold; routes 2 gold, 1 timber')
+  })
+})

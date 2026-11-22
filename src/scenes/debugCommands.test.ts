@@ -5,6 +5,7 @@ import { newExpedition } from '../game/expedition.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
 import { readyMadeParty } from '../game/party.ts'
 import { UNEXPLORED } from '../game/vision.ts'
+import { boardIndex } from '../game/blight.ts'
 import { SOURCE_ID, threatAt } from '../game/worldMap.ts'
 import { hexToOffset, offsetToHex } from '../grid/hex.ts'
 import { completions, runCommand, COMMAND_NAMES, type DebugContext } from './debugCommands.ts'
@@ -214,6 +215,113 @@ describe('debug commands', () => {
     expect(runCommand('facility builders_lodge 4', context).lines[0]).toMatch(/from 0 to 3/)
     runCommand('give iron_sword@3+light2', context)
     expect(baggage.at(-1)!.name).toBe('Light Masterwork Iron Longsword (II)')
+  })
+
+  describe('spawn', () => {
+    it('places a nest of the kind at a hex, with the next id and the hex’s threat, drawing no RNG', () => {
+      const context = onWorldMap()
+      const { world } = context.source!.game
+      const at = offsetToHex(20, 20)
+      const before = { rng: world.rng, pressure: world.spawnPressure, spawns: world.spawns, count: world.locations.length }
+      const result = runCommand('spawn goblin_raid 20 20', context)
+      expect(result.changed).toBe(true)
+      expect(result.lines[0]).toMatch(/Goblin Brood/)
+      const placed = world.locations.at(-1)!
+      expect(placed).toMatchObject({ id: `spawn_${before.spawns + 1}`, kind: 'monsters', name: 'Goblin Brood', encounter: 'goblin_raid', threat: threatAt(at), loot: [] })
+      expect(placed.position).toEqual(at)
+      expect(world.locations).toHaveLength(before.count + 1)
+      expect(world.spawns).toBe(before.spawns + 1)
+      expect(world.rng).toBe(before.rng)
+      expect(world.spawnPressure).toBe(before.pressure)
+      expect(world.blight[20 * world.board.cols + 20]).toBe(3)
+      expect(world.sighted).toContain(placed.id)
+    })
+
+    it('updates sight: a nest placed in sight shows its corrupted hex as seen (verification round 1)', () => {
+      const context = onWorldMap()
+      const { world } = context.source!.game
+      const at = offsetToHex(10, 21)
+      const index = boardIndex(world.board, at)
+      expect(world.seen[index]).toBeGreaterThanOrEqual(0)
+      expect(world.seen[index]).toBeLessThan(3)
+      runCommand('spawn goblin_raid 10 21', context)
+      expect(world.seen[index]).toBe(3)
+    })
+
+    it('takes a location’s hex, and the other kinds; the next spawn has the next id', () => {
+      const context = onWorldMap()
+      const { world, parties } = context.source!.game
+      const site = world.locations.find((l) => l.id !== 'encampment' && l.kind === 'resource')!
+      parties[0].position = offsetToHex(10, 14)
+      runCommand(`spawn kobold_scouts 11 12`, context)
+      expect(world.locations.at(-1)).toMatchObject({ name: 'Kobold Nest', encounter: 'kobold_scouts', position: offsetToHex(11, 12) })
+      expect(runCommand(`spawn kobold_scouts ${site.id}`, context).changed).toBe(false)
+      runCommand('spawn bandit_camp 4 5', context)
+      expect(world.locations.at(-1)).toMatchObject({ name: 'Bandit Gang', id: `spawn_${world.spawns}` })
+      const first = world.locations.at(-2)!.id
+      expect(first).not.toBe(world.locations.at(-1)!.id)
+    })
+
+    it('refuses an unknown kind, an occupied hex, a hex off the map and a missing kind, changing nothing', () => {
+      const context = onWorldMap()
+      const { world } = context.source!.game
+      const before = JSON.stringify(world)
+      expect(runCommand('spawn dragon 20 20', context)).toMatchObject({ changed: false, lines: [expect.stringMatching(/goblin_raid, kobold_scouts, bandit_camp/)] })
+      expect(runCommand('spawn goblin_raid encampment', context).lines[0]).toMatch(/already stands/)
+      expect(runCommand('spawn goblin_raid millbrook', context).changed).toBe(false)
+      expect(runCommand('spawn goblin_raid 999 999', context).lines[0]).toMatch(/off the map/)
+      expect(runCommand('spawn', context).changed).toBe(false)
+      expect(JSON.stringify(world)).toBe(before)
+    })
+
+    it('needs a hex, and refuses the one a party stands on, here included, so no party stands on a nest unconfronted', () => {
+      const context = onWorldMap()
+      const { world, parties } = context.source!.game
+      parties[0].position = offsetToHex(10, 14)
+      const count = world.locations.length
+      expect(runCommand('spawn goblin_raid', context)).toMatchObject({ changed: false, lines: [expect.stringMatching(/Name the hex/)] })
+      expect(runCommand('spawn goblin_raid here', context).lines[0]).toMatch(/A party stands/)
+      const { col, row } = hexToOffset(parties[0].position)
+      expect(runCommand(`spawn goblin_raid ${col} ${row}`, context).changed).toBe(false)
+      expect(world.locations).toHaveLength(count)
+      expect(world.spawns).toBe(0)
+    })
+
+    it('needs the world map', () => {
+      const context = onWorldMap()
+      context.scenes = ['Battle']
+      context.source!.changed = undefined
+      expect(runCommand('spawn goblin_raid 20 20', context)).toMatchObject({ changed: false })
+    })
+  })
+
+  describe('contact', () => {
+    it('contacts a partner by id, and says so when it is contacted already', () => {
+      const context = onWorldMap()
+      const { world } = context.source!.game
+      const result = runCommand('contact millbrook', context)
+      expect(result.changed).toBe(true)
+      expect(result.lines[0]).toMatch(/Millbrook/)
+      expect(world.contacted).toEqual(['millbrook'])
+      const again = runCommand('contact millbrook', context)
+      expect(again.lines[0]).toMatch(/already/)
+      expect(world.contacted).toEqual(['millbrook'])
+    })
+
+    it('contacts every partner with all, in locations order', () => {
+      const context = onWorldMap()
+      const { world } = context.source!.game
+      runCommand('contact all', context)
+      expect(world.contacted).toEqual(['millbrook', 'saltmere'])
+    })
+
+    it('refuses an unknown id, naming the partners, and no argument', () => {
+      const context = onWorldMap()
+      expect(runCommand('contact nowhere', context)).toMatchObject({ changed: false, lines: [expect.stringMatching(/millbrook, saltmere/)] })
+      expect(runCommand('contact', context).changed).toBe(false)
+      expect(runCommand('contact encampment', context).changed).toBe(false)
+      expect(context.source!.game.world.contacted).toEqual([])
+    })
   })
 
   describe('blight', () => {

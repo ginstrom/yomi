@@ -15,7 +15,7 @@
 //                                 [--player-policy aggressive] [--enemy-policy aggressive]
 //                                 [--player-weapon iron_sword]
 //                                 [--encounter goblin_raid] [--threat 1] [--party-level 1]
-//                                 [--campaign] [--ready-level 7] [--parties 3] [--waiting]
+//                                 [--campaign] [--ready-level 7] [--parties 3] [--waiting] [--trading-post 4]
 //                                 [--plans melee=swordmaster,archery=ranger,magic=cryomancer]
 import { closeSync, mkdirSync, openSync, writeSync } from 'node:fs'
 import { dirname } from 'node:path'
@@ -31,12 +31,13 @@ import { SKILL_IDS, type SkillId } from '../src/character/skills.ts'
 import { ABILITY_IDS, type AbilityId } from '../src/combat/abilities.ts'
 import { ENCOUNTERS, heroId, xpReward, type EncounterId } from '../src/game/encounters.ts'
 import { PREROLLS, autoHeal, readyMadeParty, partyFighters, rewardVictory, type Party } from '../src/game/party.ts'
-import { blightedShare, monsterStrength, type WorldEvent } from '../src/game/blight.ts'
+import { blightAt, blightedShare, boardIndex, monsterStrength, type WorldEvent } from '../src/game/blight.ts'
 import {
   IMPROVEMENT_COSTS,
   IMPROVEMENT_LODGE,
   LODGE_COSTS,
-  LODGE_LEVEL_LIMIT,
+  MAX_LODGE_LEVEL,
+  ROAD_LODGE_LEVEL,
   SHRINE_COSTS,
   TOWER_COST,
   canAfford,
@@ -45,7 +46,9 @@ import {
   nextImprovement,
   raiseLodge,
   raiseShrine,
+  towerHexRefusal,
 } from '../src/game/buildings.ts'
+import { GUARD_RADIUS, ROUTE_TIMBER, isContacted, openRoute, openRouteRefusal, partners, raiders, roadTo, routeLimit, routeOf } from '../src/game/trade.ts'
 import { WORKSHOP_COSTS, craft, craftRefusal, craftTier, highestGrade, upgradeWorkshop } from '../src/game/crafting.ts'
 import { MAX_PARTIES, presenceOf, type DayAction, type Expedition } from '../src/game/expedition.ts'
 import { newGame, partyById, type GameState } from '../src/game/gameState.ts'
@@ -82,7 +85,7 @@ import {
   type OrderRequest,
 } from '../src/game/company.ts'
 import { INFIRMARY_COSTS, raiseInfirmary } from '../src/game/infirmary.ts'
-import { MATERIALS_PER_GOLD, TRADING_POST_COSTS, buy, buyPrice, raiseTradingPost, salePrice, sell, sellMaterial, wares } from '../src/game/tradingPost.ts'
+import { MATERIALS_PER_GOLD, MAX_TRADING_POST_LEVEL, TRADING_POST_COSTS, buy, buyPrice, raiseTradingPost, salePrice, sell, sellMaterial, wares } from '../src/game/tradingPost.ts'
 import { daysToFall, siteImprovement, sites, type Material, type Stock } from '../src/game/territory.ts'
 import {
   ENCAMPMENT_ID,
@@ -91,10 +94,11 @@ import {
   monstersHere,
   worldActive,
   type MonsterLocation,
+  type PartnerLocation,
   type QuietLocation,
   type WorldState,
 } from '../src/game/worldMap.ts'
-import { hexDistance, hexEquals, type Hex } from '../src/grid/hex.ts'
+import { HexBoard, hexDistance, hexEquals, type Hex } from '../src/grid/hex.ts'
 import type { FamilyId } from '../src/inventory/catalog.ts'
 import { GRADES, type Grade } from '../src/inventory/grades.ts'
 import { baseItem, craftedItem, itemById, type EquipmentSlot, type Item } from '../src/inventory/inventory.ts'
@@ -136,6 +140,12 @@ export interface CliArgs {
   plans: Partial<Record<SkillId, PlanId>>
   /** With `campaign`, run each campaign's waiting twin (`waitingIncome`) and print the waiting check; off, `waitingIncomePerDay` is 0. */
   waiting: boolean
+  /**
+   * With `campaign`, the trading post's level the world starts at (1 to `MAX_TRADING_POST_LEVEL`), for measuring
+   * routes, which open from level 4 (`ROUTE_SLOTS`); null, the default, leaves the new world's level 1 untouched.
+   * A measuring flag only: no band is read with it.
+   */
+  tradingPost: number | null
 }
 
 /** The plan a player's hero follows: the one `--plans` names for a skill it is tagged in, else `planFor`'s. */
@@ -205,6 +215,7 @@ export function parseArgs(argv: string[]): CliArgs {
     parties: MAX_PARTIES,
     plans: {},
     waiting: false,
+    tradingPost: null,
   }
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i]
@@ -264,6 +275,13 @@ export function parseArgs(argv: string[]): CliArgs {
       case '--waiting':
         args.waiting = true
         break
+      case '--trading-post': {
+        const raw = value()
+        const n = Number(raw)
+        if (!Number.isInteger(n) || n < 1 || n > MAX_TRADING_POST_LEVEL) throw new Error(`--trading-post must be from 1 to ${MAX_TRADING_POST_LEVEL}, got "${raw}"`)
+        args.tradingPost = n
+        break
+      }
       default:
         throw new Error(`Unknown argument: ${flag}`)
     }
@@ -280,6 +298,9 @@ export function parseArgs(argv: string[]): CliArgs {
   }
   if (!args.campaign && argv.includes('--waiting')) {
     throw new Error('--waiting applies only to --campaign, whose world the twin waits in')
+  }
+  if (!args.campaign && argv.includes('--trading-post')) {
+    throw new Error('--trading-post applies only to --campaign, whose world has the post')
   }
   return args
 }
@@ -381,8 +402,14 @@ export interface CampaignRecord {
   improvementLevels: number[]
   /** The Builders' Lodge's level at the end. */
   lodgeLevel: number
-  /** Gold come in by source: the sites' and the market's yields, and sales at the trading post (`goldFromSales`). */
-  goldBySource: { sites: number; market: number; sales: number }
+  /** Gold come in by source: the sites', the market's and the trade routes' yields, and sales at the trading post (`goldFromSales`). */
+  goldBySource: { sites: number; market: number; routes: number; sales: number }
+  /** Trade partners contacted (`partner_contacted`). */
+  partnersContacted: number
+  /** Trade routes opened at home (`route_opened`), raided (runs of raids that reach a yield day: `route_raided` with `days` 1, the first raided yield day of a run) and abandoned. */
+  routesOpened: number
+  routesRaided: number
+  routesAbandoned: number
   /** The yields' value a day (gold, and every other material at `MATERIALS_PER_GOLD` to the gold piece; sales left out), over `days`. */
   incomePerDay: number
   /** The same for the waiting twin: the campaign's world with the company idle at home, over the same days (`waitingIncome`). */
@@ -560,6 +587,8 @@ export interface Trade {
   runesFused: number
   runesEmbedded: number
   goldOnRunes: number
+  /** The `route_opened` events of the routes opened, for the run to tally. */
+  events: WorldEvent[]
 }
 
 /**
@@ -651,8 +680,9 @@ export function fieldCraft(game: GameState, party: Expedition): Extract<DayActio
 /**
  * What the stock should keep of each material for what the careful party
  * still means to buy: every level left of every building (the Builders' Lodge
- * up to `LODGE_LEVEL_LIMIT`), a watchtower, one of each improvement level the
- * Lodge allows now, and a craft for each place in the party.
+ * up to `lodgeCap`), a watchtower, one of each improvement level the Lodge
+ * allows now, a craft for each place in the party, and while a contacted
+ * partner has no route, a route's timber for each free route slot.
  */
 export function materialNeeds(game: GameState, parties = 1): Stock {
   const { world } = game
@@ -665,12 +695,14 @@ export function materialNeeds(game: GameState, parties = 1): Stock {
   TRADING_POST_COSTS.slice(world.tradingPost).forEach(add)
   WORKSHOP_COSTS.slice(world.workshop).forEach(add)
   INFIRMARY_COSTS.slice(world.infirmary).forEach(add)
-  LODGE_COSTS.slice(world.lodge, LODGE_LEVEL_LIMIT).forEach(add)
+  LODGE_COSTS.slice(world.lodge, lodgeCap(world)).forEach(add)
   add(TOWER_COST)
   IMPROVEMENT_COSTS.forEach((cost, i) => {
     if (world.lodge >= IMPROVEMENT_LODGE[i]) add(cost)
   })
   for (const material of ['iron', 'timber', 'copper', 'crystal'] as const) add({ [material]: 5 * partyLimit(world) })
+  const free = Math.max(0, routeLimit(world) - world.routes.length)
+  if (world.contacted.some((id) => !routeOf(world, id))) add({ timber: ROUTE_TIMBER * free })
   return needs
 }
 
@@ -745,10 +777,30 @@ export function runecraftGear(game: GameState, party: Expedition): { embedded: n
 }
 
 /**
+ * The partners the careful party would open routes to at home now: the
+ * contacted ones whose route `openRouteRefusal` allows, the shortest road
+ * first, ties in contact order. Each is checked again as it is opened.
+ */
+export function routeChoices(game: GameState, party: Expedition): string[] {
+  const { world } = game
+  return world.contacted
+    .filter((id) => openRouteRefusal(game, party, id) === null)
+    .map((id) => ({ id, length: roadTo(world, id)!.length }))
+    .sort((a, b) => a.length - b.length)
+    .map(({ id }) => id)
+}
+
+/** The level the careful party raises the Builders' Lodge to: the level below roads, and `MAX_LODGE_LEVEL` once a route is open (stage 8 decision 12). */
+export function lodgeCap(world: WorldState): number {
+  return world.routes.length > 0 ? MAX_LODGE_LEVEL : ROAD_LODGE_LEVEL - 1
+}
+
+/**
  * At the encampment, after the guild hall: sells the baggage (the careful
  * party fights without loot, so all of it is surplus) and the materials
- * beyond `materialNeeds`; raises the trading post, the workshop, the
- * infirmary and the Builders' Lodge as the stock allows; buys each member the best grade it can of
+ * beyond `materialNeeds`; raises the trading post, the workshop and the
+ * infirmary as the stock allows; opens routes to the contacted partners
+ * (`routeChoices`); raises the Builders' Lodge (to `lodgeCap`); buys each member the best grade it can of
  * its weapon, shield and armour, the old one sold (its runes taken out first
  * where the workshop can, else sold with it); fuses, buys and embeds runes (`runecraftGear`);
  * crafts the best it can on them (`craftGear`); and raises the shrine with
@@ -757,7 +809,7 @@ export function runecraftGear(game: GameState, party: Expedition): { embedded: n
 export function visitFacilities(game: GameState, party: Expedition, parties = 1): Trade {
   const { world } = game
   const trade: Trade = {
-    goldOnGear: 0, goldFromSales: 0, crafted: 0, tierTwoBought: 0, runesBought: 0, runesFused: 0, runesEmbedded: 0, goldOnRunes: 0,
+    goldOnGear: 0, goldFromSales: 0, crafted: 0, tierTwoBought: 0, runesBought: 0, runesFused: 0, runesEmbedded: 0, goldOnRunes: 0, events: [],
   }
   const gold = () => world.stock.gold ?? 0
   const sellAll = () => {
@@ -776,8 +828,12 @@ export function visitFacilities(game: GameState, party: Expedition, parties = 1)
   while (raiseTradingPost(game, party) === null);
   while (upgradeWorkshop(game, party) === null);
   while (raiseInfirmary(game, party) === null);
-  // Last of the buildings for the gold; it stops at `LODGE_LEVEL_LIMIT`, refused until roads come.
-  while (raiseLodge(game, party) === null);
+  // Routes to the contacted partners, the shortest road first; each opened changes the stock and the slots left.
+  for (const id of routeChoices(game, party)) {
+    if (openRouteRefusal(game, party, id) === null) trade.events.push(openRoute(game, party, id))
+  }
+  // Last of the buildings for the gold; to 2, and to 3 (its roads) once a route is open.
+  while (game.world.lodge < lodgeCap(world) && raiseLodge(game, party) === null);
   for (const [member, hero] of party.members.entries()) {
     for (const slot of GEAR_SLOTS) {
       const worn = hero.equipment[slot]
@@ -850,11 +906,79 @@ export function improveErrand(world: WorldState, party: Expedition): QuietLocati
   return nearest(forts) ?? nearest(candidates)
 }
 
+/** Whether some held site is threatened (a threatened watchtower does not count). */
+function heldThreatened(world: WorldState): boolean {
+  return sites(world).some((site) => world.held.includes(site.id) && world.threatened.includes(site.id))
+}
+
+/** How far from the vanguard (or a lone party) an uncontacted trade partner may be for it to walk there first. */
+export const CONTACT_DETOUR = 8
+
+/**
+ * The trade partner the vanguard walks to before its next nest: the nearest
+ * uncontacted one within `CONTACT_DETOUR` of the party (ties in locations
+ * order), none of `skip` (those it has walked to or given up on already);
+ * none until the trading post allows routes (`routeLimit`, from level 4:
+ * before that a contact is of no use, and the walks only move the early game),
+ * and none while a held site is threatened.
+ */
+export function contactErrand(world: WorldState, party: Expedition, skip: ReadonlySet<string> = new Set()): PartnerLocation | null {
+  if (routeLimit(world) === 0) return null
+  if (heldThreatened(world)) return null
+  const distance = (p: PartnerLocation) => hexDistance(party.position, p.position)
+  const near = partners(world).filter((p) => !isContacted(world, p.id) && !skip.has(p.id) && distance(p) <= CONTACT_DETOUR)
+  return near.length === 0 ? null : near.reduce((a, b) => (distance(b) < distance(a) ? b : a))
+}
+
+/** The nests raiding the open routes: `raiders` of each route, once each, in route order. */
+export function routeRaiders(world: WorldState): MonsterLocation[] {
+  const all: MonsterLocation[] = []
+  for (const route of world.routes) for (const nest of raiders(world, route.road)) if (!all.includes(nest)) all.push(nest)
+  return all
+}
+
+/** How far from where it won the careful party walks to raise a watchtower guarding a road. */
+export const TOWER_ERRAND_RADIUS = 6
+
+/**
+ * Where the careful party raises a watchtower guarding a road, if the stock
+ * affords one: the nearest hex within `TOWER_ERRAND_RADIUS` of the party that
+ * takes a tower (`towerHexRefusal`) and lies within `GUARD_RADIUS` of a hex of
+ * an open road that is tainted or blighted with no watchtower within
+ * `GUARD_RADIUS` (parties leave, so they do not count); ties by board index.
+ */
+export function towerErrand(world: WorldState, party: Expedition): Hex | null {
+  if (world.routes.length === 0 || !canAfford(world.stock, TOWER_COST)) return null
+  const unguarded = world.routes.flatMap((route) => route.road).filter((at) => {
+    const level = blightAt(world, at)
+    return level >= 1 && level <= 2 && !world.towers.some((tower) => hexDistance(tower.position, at) <= GUARD_RADIUS)
+  })
+  if (unguarded.length === 0) return null
+  const board = new HexBoard(world.board)
+  const { q, r } = party.position
+  let best: Hex | null = null
+  const better = (h: Hex, than: Hex) => {
+    const a = hexDistance(party.position, h)
+    const b = hexDistance(party.position, than)
+    return a < b || (a === b && boardIndex(world.board, h) < boardIndex(world.board, than))
+  }
+  for (let dq = -TOWER_ERRAND_RADIUS; dq <= TOWER_ERRAND_RADIUS; dq++) {
+    for (let dr = Math.max(-TOWER_ERRAND_RADIUS, -dq - TOWER_ERRAND_RADIUS); dr <= Math.min(TOWER_ERRAND_RADIUS, -dq + TOWER_ERRAND_RADIUS); dr++) {
+      const h = { q: q + dq, r: r + dr }
+      if (!board.contains(h) || (best && !better(h, best))) continue
+      if (!unguarded.some((at) => hexDistance(at, h) <= GUARD_RADIUS) || towerHexRefusal(world, h) !== null) continue
+      best = h
+    }
+  }
+  return best
+}
+
 /**
  * Where a careful party goes next. First the nest pushing hardest on the held
  * site nearest to falling, if the party is up to its threat; then the nearest
- * nest it is up to (a threat no higher than its lowest level), or the nearest
- * of all if none; and the Source once every member has `readyLevel`
+ * nest raiding an open route (`routeRaiders`) that it is up to; then the
+ * nearest nest it is up to (a threat no higher than its lowest level), or the
+ * nearest of all if none; and the Source once every member has `readyLevel`
  * (`SOURCE_READY_LEVEL` unless told otherwise) or nothing else is left.
  */
 export function nextTarget(world: WorldState, party: Expedition, readyLevel = SOURCE_READY_LEVEL, taken: ReadonlySet<string> = new Set()): MonsterLocation | null {
@@ -876,16 +1000,21 @@ export function nextTarget(world: WorldState, party: Expedition, readyLevel = SO
     const pushing = upTo.filter((l) => push(l) > 0)
     if (pushing.length > 0) return pushing.reduce((a, b) => (push(b) > push(a) ? b : a))
   }
+  const near = (a: MonsterLocation, b: MonsterLocation) => (hexDistance(party.position, b.position) < hexDistance(party.position, a.position) ? b : a)
+  const raiding = routeRaiders(world).filter((l) => upTo.includes(l))
+  if (raiding.length > 0) return raiding.reduce(near)
   const pool = upTo.length > 0 ? upTo : nests
   if (pool.length === 0) return null
-  return pool.reduce((a, b) => (hexDistance(party.position, b.position) < hexDistance(party.position, a.position) ? b : a))
+  return pool.reduce(near)
 }
 
 /**
  * Where a party stands in the careful party's round, which runs: home to the
  * guild hall when there is a hall errand (`home`), the hall's and facilities'
- * errands there (`hall`), the walk to the next target (`target`), the battle
- * (`fight`, then `won`), a watchtower (`tower`), the improve errand
+ * errands there (`hall`), the vanguard's walk to a trade partner to contact
+ * (`contact`, from `choose` and back), the walk to the next target (`target`),
+ * the battle (`fight`, then `won`), a watchtower (`tower`, or first the walk
+ * to a hex where one guards a road, `road_tower`), the improve errand
  * (`improve`, then `build` once there), a field craft (`craft`, then
  * `crafted`), camping until healed (`heal`, casting the party's heals, then
  * `camp`, the camp order), and back to the top (`start`). A guard's round
@@ -904,10 +1033,12 @@ export type Phase =
   | 'home'
   | 'hall'
   | 'choose'
+  | 'contact'
   | 'target'
   | 'fight'
   | 'won'
   | 'tower'
+  | 'road_tower'
   | 'improve'
   | 'build'
   | 'craft'
@@ -935,10 +1066,12 @@ export interface Plan {
   /** A guard's: the day it last ran the hall's errands, and last waited on monsters, so neither repeats within a day. */
   hallDay: number
   waitDay: number
+  /** The vanguard's: the partners it has walked to (or given up walking to) on a contact errand, never sought again. */
+  contactsTried: string[]
 }
 
 export function newPlan(): Plan {
-  return { phase: 'start', to: null, target: null, stalled: false, running: null, site: null, skipReinforce: false, recall: false, hallDay: -1, waitDay: -1 }
+  return { phase: 'start', to: null, target: null, stalled: false, running: null, site: null, skipReinforce: false, recall: false, hallDay: -1, waitDay: -1, contactsTried: [] }
 }
 
 /** What the policy has a party do next. */
@@ -992,7 +1125,7 @@ export function setVanguard(run: CampaignRun, id: string): void {
 }
 
 /** A campaign about to begin, from a new game of the run's party unless one is given. */
-export function startCampaign(campaign: number, seed: number, args: CliArgs, firstBattleId = 0, game = newGame(startingParty(args), null, seed)): CampaignRun {
+export function startCampaign(campaign: number, seed: number, args: CliArgs, firstBattleId = 0, game = campaignGame(seed, args)): CampaignRun {
   const record: CampaignRecord = {
     outcome: 'timeout', days: 0, battles: 0, spawns: 0, captured: 0, lost: 0, blighted: 0, healedHp: 0, campDays: 0,
     towersBuilt: 0, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0,
@@ -1001,7 +1134,8 @@ export function startCampaign(campaign: number, seed: number, args: CliArgs, fir
     finalLevels: [], callings: {}, capstones: {}, deathsAtLevel: [], battlesToLevel: {},
     roles: { vanguard: { battles: 0, wipes: 0, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } },
     wipes: 0, promotions: 0, vanguardWalkHomeDays: 0, guardBattles: 0,
-    improvementsBuilt: [0, 0, 0], improvementLevels: [0, 0, 0, 0], lodgeLevel: 0, goldBySource: { sites: 0, market: 0, sales: 0 },
+    improvementsBuilt: [0, 0, 0], improvementLevels: [0, 0, 0, 0], lodgeLevel: 0, goldBySource: { sites: 0, market: 0, routes: 0, sales: 0 },
+    partnersContacted: 0, routesOpened: 0, routesRaided: 0, routesAbandoned: 0,
     incomePerDay: 0, waitingIncomePerDay: 0,
   }
   const vanguard = game.parties[0].id
@@ -1078,10 +1212,30 @@ export function decide(run: CampaignRun, party: Expedition): Decision {
         if (atGuildHall(world, party)) return { kind: 'hall' }
         continue
       case 'choose': {
+        // A trade partner near, before the next nest.
+        const partner = contactErrand(world, party, new Set(plan.contactsTried))
+        if (partner) {
+          plan.contactsTried.push(partner.id)
+          plan.target = null
+          walk(plan, 'contact', partner.position)
+          continue
+        }
         const next = nextTarget(world, party, args.readyLevel, takenTargets(run, party))
         if (!next) return finish('timeout')
         plan.target = next
         walk(plan, 'target', next.position)
+        continue
+      }
+      case 'contact': {
+        // Contact comes with the day the party ends on the partner's hex; a walk given up chooses again, as does one
+        // whose partner was contacted on the way or which a threatened held site calls off.
+        if (isContacted(world, plan.contactsTried.at(-1)!) || heldThreatened(world)) {
+          plan.phase = 'choose'
+          continue
+        }
+        const walked = walking(world, party, plan)
+        if (walked === 'go') return { kind: 'order', order: { kind: 'travel', to: plan.to! } }
+        plan.phase = 'choose'
         continue
       }
       case 'target': {
@@ -1123,11 +1277,24 @@ function afterBattle(world: WorldState, party: Expedition, plan: Plan): Decision
         if (world.status === 'won') return finish('source')
         plan.phase = 'tower'
         continue
-      case 'tower':
-        // A watchtower wherever the party stops on land that takes one and the stock affords it.
+      case 'tower': {
+        // First a watchtower guarding an open road nearby; else one wherever the party stops on land that takes one and the stock affords it.
+        const road = towerErrand(world, party)
+        if (road && !hexEquals(road, party.position)) {
+          walk(plan, 'road_tower', road)
+          continue
+        }
         plan.phase = 'improve'
         if (canBuildTower(world, party) === null) return { kind: 'act', action: { kind: 'tower' } }
         continue
+      }
+      case 'road_tower': {
+        const walked = walking(world, party, plan)
+        if (walked === 'go') return { kind: 'order', order: { kind: 'travel', to: plan.to! } }
+        plan.phase = 'improve'
+        if (walked && canBuildTower(world, party) === null) return { kind: 'act', action: { kind: 'tower' } }
+        continue
+      }
       case 'improve': {
         // The next level of a held site nearby, if the Lodge allows it and the stock affords it; the party camps there.
         const site = improveErrand(world, party)
@@ -1228,7 +1395,8 @@ const byId = (a: { id: string }, b: { id: string }) => (a.id < b.id ? -1 : a.id 
 /**
  * A guard's choice, in order (decision 16): reinforce the vanguard, by
  * meeting it; defend the threatened held site nearest to falling from the
- * nest pushing hardest on it; train on the nearest nest; garrison the
+ * nest pushing hardest on it; defend the open routes from the nearest nest
+ * raiding one (`routeRaiders`); train on the nearest nest; garrison the
  * threatened held resource site with the fewest days to fall; else go home.
  * Only nests of a threat no higher than the guard's lowest level (at least 1),
  * never the Source, and none another party's plan is after; no site another
@@ -1257,10 +1425,12 @@ export function guardChoice(run: CampaignRun, party: Expedition): GuardChoice {
     const pushing = nests.filter((l) => push(l) > 0)
     if (pushing.length > 0) return { kind: 'defend', target: pushing.reduce((a, b) => (push(b) > push(a) ? b : a)) }
   }
-  if (nests.length > 0) {
-    const distance = (l: MonsterLocation) => hexDistance(party.position, l.position)
-    return { kind: 'train', target: nests.reduce((a, b) => (distance(b) < distance(a) ? b : a)) }
-  }
+  const distance = (l: MonsterLocation) => hexDistance(party.position, l.position)
+  const nearest = (a: MonsterLocation, b: MonsterLocation) => (distance(b) < distance(a) ? b : a)
+  const raiding = routeRaiders(world)
+  const raidingNests = nests.filter((l) => raiding.includes(l))
+  if (raidingNests.length > 0) return { kind: 'defend', target: raidingNests.reduce(nearest) }
+  if (nests.length > 0) return { kind: 'train', target: nests.reduce(nearest) }
   const held = takenSites(run, party)
   const garrison = threatened.find(({ site }) => site.kind !== 'encampment' && !held.has(site.id))
   if (garrison) return { kind: 'garrison', site: garrison.site }
@@ -1372,7 +1542,7 @@ export function decideGuard(run: CampaignRun, party: Expedition): Decision {
 }
 
 /** The phases from the battle to camping until healed, which the vanguard and a guard share (`afterBattle`). */
-const AFTER_BATTLE: ReadonlySet<Phase> = new Set(['fight', 'won', 'tower', 'improve', 'build', 'craft', 'crafted', 'heal', 'camp'])
+const AFTER_BATTLE: ReadonlySet<Phase> = new Set(['fight', 'won', 'tower', 'road_tower', 'improve', 'build', 'craft', 'crafted', 'heal', 'camp'])
 
 /** The yields among `events` as value: gold, and every other material at `MATERIALS_PER_GOLD` to the gold piece. */
 export function yieldValue(events: readonly WorldEvent[]): number {
@@ -1383,8 +1553,8 @@ export function yieldValue(events: readonly WorldEvent[]): number {
   return value
 }
 
-/** Sums what a stretch of days brought into the run's record: the world's events counted, and the yields' value. */
-function tally(run: CampaignRun, events: readonly WorldEvent[]): void {
+/** Sums what a stretch of days (or a home visit's routes) brought into the run's record: the world's events counted, and the yields' value. */
+export function tally(run: CampaignRun, events: readonly WorldEvent[]): void {
   const { record } = run
   run.income += yieldValue(events)
   for (const event of events) {
@@ -1394,7 +1564,13 @@ function tally(run: CampaignRun, events: readonly WorldEvent[]): void {
     if (event.type === 'tower_built') record.towersBuilt++
     if (event.type === 'tower_lost') record.towersLost++
     if (event.type === 'site_improved') record.improvementsBuilt[event.level - 1]++
-    if (event.type === 'yield' && event.material === 'gold') record.goldBySource[event.source === 'market' ? 'market' : 'sites'] += event.amount
+    if (event.type === 'yield' && event.material === 'gold') {
+      record.goldBySource[event.source === 'market' ? 'market' : event.source === 'route' ? 'routes' : 'sites'] += event.amount
+    }
+    if (event.type === 'partner_contacted') record.partnersContacted++
+    if (event.type === 'route_opened') record.routesOpened++
+    if (event.type === 'route_raided' && event.days === 1) record.routesRaided++
+    if (event.type === 'route_abandoned') record.routesAbandoned++
   }
 }
 
@@ -1529,6 +1705,7 @@ export function carryOut(run: CampaignRun, party: Expedition, decision: Decision
       record.runesBought += trade.runesBought
       record.runesFused += trade.runesFused
       record.goldOnRunes += trade.goldOnRunes
+      tally(run, trade.events)
       return null
     }
     case 'fight': {
@@ -1718,6 +1895,13 @@ export function finishCampaign(run: CampaignRun, outcome: CampaignOutcome): Camp
   return { battles, record }
 }
 
+/** A campaign's new game, seeded `seed`: the ready-made party, and the trading post at `--trading-post`'s level if given (drawing nothing). */
+function campaignGame(seed: number, args: CliArgs): GameState {
+  const game = newGame(startingParty(args), null, seed)
+  if (args.tradingPost !== null) game.world.tradingPost = args.tradingPost
+  return game
+}
+
 /**
  * The waiting twin (A9): the yields' value a day over `days` of the campaign
  * seeded `seed`, its company left idle at the encampment from the first day.
@@ -1729,7 +1913,7 @@ export function finishCampaign(run: CampaignRun, outcome: CampaignOutcome): Camp
  */
 export function waitingIncome(seed: number, args: CliArgs, days: number): number {
   if (days <= 0) return 0
-  const game = newGame(startingParty(args), null, seed)
+  const game = campaignGame(seed, args)
   let value = 0
   while (game.world.turn < days && worldActive(game.world)) {
     const report = passDay(game)
@@ -2024,8 +2208,13 @@ export interface CampaignSummary {
   avgImprovementsBuilt: number[]
   avgImprovementLevels: number[]
   avgLodgeLevel: number
-  /** Gold a campaign from the sites' yields, the market's and sales. */
-  avgGoldBySource: { sites: number; market: number; sales: number }
+  /** Gold a campaign from the sites' yields, the market's, the routes' and sales. */
+  avgGoldBySource: { sites: number; market: number; routes: number; sales: number }
+  /** Trade partners contacted, and routes opened, raided (runs) and abandoned, a campaign. */
+  avgPartnersContacted: number
+  avgRoutesOpened: number
+  avgRoutesRaided: number
+  avgRoutesAbandoned: number
   /** Income a day (`incomePerDay`) campaigning, and the waiting twin's (`waitingIncomePerDay`). */
   avgIncomePerDay: number
   avgWaitingIncomePerDay: number
@@ -2144,8 +2333,13 @@ export function summarizeCampaigns(events: readonly LoggedEvent[], records: read
     avgGoldBySource: {
       sites: avg((r) => r.goldBySource.sites),
       market: avg((r) => r.goldBySource.market),
+      routes: avg((r) => r.goldBySource.routes),
       sales: avg((r) => r.goldBySource.sales),
     },
+    avgPartnersContacted: avg((r) => r.partnersContacted),
+    avgRoutesOpened: avg((r) => r.routesOpened),
+    avgRoutesRaided: avg((r) => r.routesRaided),
+    avgRoutesAbandoned: avg((r) => r.routesAbandoned),
     avgIncomePerDay: avg((r) => r.incomePerDay),
     avgWaitingIncomePerDay: avg((r) => r.waitingIncomePerDay),
     avgTradingPostLevel: avg((r) => r.tradingPostLevel),
@@ -2188,6 +2382,12 @@ export function summarizeCampaigns(events: readonly LoggedEvent[], records: read
       avgHighestFinalLevel: mean(levels.map((l) => Math.max(...l))),
     }
   }
+}
+
+/** The summary's trade line: partners contacted, and routes opened, raided and abandoned, a campaign. */
+export function tradeLine(summary: Pick<CampaignSummary, 'avgPartnersContacted' | 'avgRoutesOpened' | 'avgRoutesRaided' | 'avgRoutesAbandoned'>): string {
+  const n = (x: number) => x.toFixed(2)
+  return `Trade: ${n(summary.avgPartnersContacted)} partners contacted; routes ${n(summary.avgRoutesOpened)} opened, ${n(summary.avgRoutesRaided)} raided, ${n(summary.avgRoutesAbandoned)} abandoned a campaign`
 }
 
 /** The waiting check's summary line (A9): income a day campaigning against the waiting twin's. */
@@ -2273,7 +2473,9 @@ function main(): void {
     `Improvements: ${outposts.toFixed(1)} outposts, ${works.toFixed(1)} works, ${forts.toFixed(1)} forts built a campaign; held resources at the end: ${held[0]} bare, ${held[1]} outposts, ${held[2]} works, ${held[3]} forts`,
   )
   const gold = summary.avgGoldBySource
-  console.log(`Gold by source: sites ${gold.sites.toFixed(0)}, market ${gold.market.toFixed(0)}, sales ${gold.sales.toFixed(0)} a campaign`)
+  console.log(`Gold by source: sites ${gold.sites.toFixed(0)}, market ${gold.market.toFixed(0)}, routes ${gold.routes.toFixed(0)}, sales ${gold.sales.toFixed(0)} a campaign`)
+  console.log(tradeLine(summary))
+  if (args.tradingPost !== null) console.log(`Trading post started at level ${args.tradingPost} (--trading-post): a measuring run, read against no band`)
   if (args.waiting) console.log(waitingLine(summary))
   console.log(
     `Trading post, workshop, infirmary: levels ${summary.avgTradingPostLevel.toFixed(1)}, ${summary.avgWorkshopLevel.toFixed(1)}, ${summary.avgInfirmaryLevel.toFixed(1)} at the end; ${summary.avgGoldOnGear.toFixed(0)} gold on gear and ${summary.avgGoldFromSales.toFixed(0)} from sales, ${summary.avgCrafted.toFixed(1)} items crafted (${summary.avgFieldCraftDays.toFixed(1)} days in the field) a campaign`,

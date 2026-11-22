@@ -10,7 +10,7 @@ Neutral **trade partners** appear on the map. Once the party has visited one, th
 
 The blight on the road cuts the income. A nest near the road, or a silent partner, raids it. A route raided for 30 days is abandoned. Watchtowers and parties near the road guard it. At Builders' Lodge level 3, open roads push back the blight.
 
-**Status:** ready for planning.
+**Status:** done (see [Implementation notes](#implementation-notes)).
 
 ## 2. Scope
 
@@ -102,3 +102,27 @@ Economy R5 to R10, A4 to A8; company R10 and A8.
 - **The party pulled back to defend roads.** `RAID_RADIUS` and `ABANDON_AFTER` are the levers.
 
 **Done when:** all tests pass, the guard holds, and the play script has been walked.
+
+## Implementation notes
+
+Built as eight steps (`docs/implementation-plans/long-campaign-stage-08/`).
+
+**The figures** (500 campaigns from seed 1 each; "start" is step 01's measure before any change, "end" step 08's on the final tree):
+
+| Run | Source beaten | Days | Battles | Heroes dead in won battles | Sites captured, lost | Land blighted at the end | Gold a campaign (sites, market, routes, sales) | Partners contacted; routes opened, raided, abandoned |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| The guard, `--parties 1`, start | 239 | 286 | 19.5 | 1.1 | 3.4, 0.1 | 38% | 228, 0, —, 42 | — |
+| The guard, `--parties 1`, end | 233 | 284 | 19.3 | 1.2 | 3.3, 0.1 | 38% | 226, 0, 0, 42 | 0.47; 0, 0, 0 |
+| The default company, start | 239 | 286 | 19.5 | 1.1 | 3.4, 0.1 | 38% | 227, 0, —, 42 | — |
+| The default company, end | 232 | 285 | 19.3 | 1.2 | 3.3, 0.1 | 38% | 226, 0, 0, 42 | 0.47; 0, 0, 0 |
+| `--ready-level 10`, start | 434 | 509 | 42.1 | 1.0 | 5.4, 0.5 | 26% | 406, 3, —, 144 | — |
+| `--ready-level 10`, end | 433 | 509 | 42.2 | 1.0 | 5.4, 0.5 | 26% | 406, 3, 1, 147 | 0.54; 0.03, 0, 0 |
+| `--ready-level 10 --trading-post 4` (measuring only, no band) | 487 | 624 | 58.3 | 0.9 | 6.7, 0.7 | 14% | 497, 257, 39, 190 | 1.82; 0.47, 0, 0 |
+
+- *Check 1, the early-game guard:* 233 of 500 with one party, 6 below the start, and the company 232, 7 below; both inside the user's bands (215–250, 220–260; days 284 in 243–297; deaths 1.2, at most 2.0). The move is the partners alone: they stand on the map from day one as clean sources of `PARTNER_STRENGTH` (3), which reshuffles where corrupted land and so the spawns fall; with them taken out of the simulated world the 50-campaign log is byte for byte the start's, and no route opens in these runs (the post never reaches 4), so roads, raids and tower errands are not in it. The contact detour is gated on the post allowing routes (decision 13 as revised by the user): ungated, it moved the guard to 304 of 500 on its own. Not retuned: the design's levers (`ROAD_STRENGTH`, `RAID_RADIUS`, `ABANDON_AFTER`) act on roads and raids, which do not occur here, and the partners' strength is the design's. Explained in `src/game/CLAUDE.md`.
+- *Check 2, `--ready-level 10` with the company:* 433 of 500 (the band 370–420, accepted by the user up to 445; unchanged from 434). Routes open only 0.03 a campaign, as the careful party raises the trading post past 2 almost never under the spend order kept until stage 12 (post 2.1 at the end). By the user's decision (2026-11-22) the check was made targeted: the measuring flag `--trading-post 4` starts the post at the Market. With it, routes open 0.47 a campaign (1.82 partners contacted), route gold is 39 a campaign, 4% of all gold (5% of the yields' gold, beside sites 497 and the market's 257), and no route was raided or abandoned in 500 campaigns: the road keeps out of raid range where it can (decision 6), and the simulated parties weigh raiders near a road before other nests, which likely clears them before a yield day finds them. The Lodge reaches 3 rarely (0.2 at the end), so roads seldom push. The flag moves everything a post level moves (tier-2 gear, market gold), hence the 487 wins, and no band is read with it. Full-campaign route figures, and whether raids happen often enough for `RAID_RADIUS` and `ABANDON_AFTER` to matter, wait for stage 12's spend-order retune.
+
+**Decisions that differ from the design** (the plan index's, in brief, as built): `openRouteRefusal`/`openRoute` take the party and `openRoute` returns `route_opened` (1); contact and silence run daily in `partnerDay` from `updateTerritory`, for any party standing on a partner, and contact is not notable (2); silence is kept for every partner but told, and shown grey on the map, only for one contacted or in sight; a partner is a clean source silent or not (3); partners' goods every second yield day at security ½ or more, as a `source: 'route'` yield (4); `route_raided` every raided yield day with its count, told once, abandoned at the sixth (5); the road keeps more than `RAID_RADIUS` from every nest where it can, else only off nests and their neighbours, and the Routes tab warns "Raided at once" when it cannot (6, the user's decision; this answers the design's open question of a road raided the day it opens); the design's road figures are illustrative: Millbrook's is 14 hexes, Saltmere's 30 (7); previews count towers, not parties (8); watchtowers still need clean land, so "a tower on a tainted road hex" reads as one within 3 hexes of it (9); the overlay colours each segment by its far hex, red throughout while raided, through the fog, and a raided road's hover says it pays nothing (10); the Routes tab shows security, income now and raided days, always present (11); the simulator raises the Lodge to 3 once a route is open (12) and detours to contact only once the post allows routes (13, the user's); `SAVE_VERSION` 28 with no migration, older saves unreadable and the old migration chain removed (15, the user's); routes pay nothing once the encampment is lost (16); sounds reuse cues (17); debug `spawn` and `contact` (18). The Lodge's level 3 sprite was redrawn (carried from stage 7).
+
+**The play script** was walked headless (step 08's record has each part): contact on arrival at Millbrook ("Millbrook will trade with Oakvale."; the party was put two hexes short, as the full walk outlasts a test's time limit), the Routes tab's preview and the cost spent, route yields in `days` and the stock panel, a spawned Brood turning the road red at once, the raid told on the next yield day and "safe again" after it was beaten, abandonment after 30 days with the slot free, a watchtower and a standing party each turning their stretches gold, and at Lodge 3 "The blight is receding here." on the tainted road hexes, none tainted 60 days later.
+

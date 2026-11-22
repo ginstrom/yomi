@@ -769,6 +769,27 @@ describe('worldSounds (step 07)', () => {
   })
 })
 
+describe('worldSounds for trade events (stage 8 step 05)', () => {
+  const cue = (e: Parameters<typeof worldSounds>[0][number]) => worldSounds([e]).map((c) => c.cue)
+  const raided = (days: number) => ({ type: 'route_raided', route: 'route_millbrook', partner: 'millbrook', name: 'Millbrook', cause: 'silent', days }) as const
+
+  it('reuses the existing cues', () => {
+    expect(cue(raided(0))).toEqual(['world.threatened'])
+    expect(cue({ type: 'partner_silent', partner: 'millbrook', name: 'Millbrook' })).toEqual(['world.threatened'])
+    expect(cue({ type: 'route_abandoned', route: 'r', partner: 'millbrook', name: 'Millbrook' })).toEqual(['world.lost'])
+    expect(cue({ type: 'route_restored', route: 'r', partner: 'millbrook', name: 'Millbrook' })).toEqual(['world.captured'])
+    expect(cue({ type: 'partner_restored', partner: 'millbrook', name: 'Millbrook' })).toEqual(['world.captured'])
+    expect(cue({ type: 'partner_contacted', partner: 'millbrook', name: 'Millbrook', home: 'Oakvale' })).toEqual(['world.build'])
+    expect(cue({ type: 'route_opened', route: 'r', partner: 'millbrook', name: 'Millbrook', length: 5 })).toEqual(['world.build'])
+  })
+
+  it('sounds nothing for the yield days\' counts of a raid', () => {
+    expect(cue(raided(1))).toEqual([])
+    expect(cue(raided(2))).toEqual([])
+    expect(cue(raided(5))).toEqual([])
+  })
+})
+
 describe('refusalCue and runeCue (step 07)', () => {
   it('plays the error for a refusal and the success sound otherwise', () => {
     expect(refusalCue('Not enough gold.', 'world.coins')).toBe('ui.error')

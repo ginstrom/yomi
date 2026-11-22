@@ -11,7 +11,9 @@ import { banditStats } from '../src/game/bandits.ts'
 import { newGame } from '../src/game/gameState.ts'
 import { heroId } from '../src/game/encounters.ts'
 import { readyMadeParty } from '../src/game/party.ts'
-import { IMPROVEMENT_COSTS, LODGE_COSTS, LODGE_LEVEL_LIMIT, TOWER_COST } from '../src/game/buildings.ts'
+import { IMPROVEMENT_COSTS, LODGE_COSTS, TOWER_COST, towerHexRefusal } from '../src/game/buildings.ts'
+import { GUARD_RADIUS, ROUTE_TIMBER, isContacted, roadTo, routeLimit, type TradeRoute } from '../src/game/trade.ts'
+import { HexBoard } from '../src/grid/hex.ts'
 import { advance, formParty, moveHero, type DayReport } from '../src/game/company.ts'
 import { MAX_PARTIES, presenceOf, type Expedition } from '../src/game/expedition.ts'
 import { craft } from '../src/game/crafting.ts'
@@ -21,7 +23,7 @@ import { modifiersFor } from '../src/inventory/modifiers.ts'
 import { maxHp, type Character } from '../src/character/character.ts'
 import { worldHealing } from '../src/character/worldCasting.ts'
 import { lootRng, rollRunes } from '../src/game/loot.ts'
-import { MATERIALS_PER_GOLD, runePrice, salePrice } from '../src/game/tradingPost.ts'
+import { MATERIALS_PER_GOLD, MAX_TRADING_POST_LEVEL, runePrice, salePrice } from '../src/game/tradingPost.ts'
 import { pouchKeys } from '../src/inventory/runes.ts'
 import { boardIndex, monsterStrength, type WorldEvent } from '../src/game/blight.ts'
 import { LOSS_LEVEL, daysToFall, type Stock } from '../src/game/territory.ts'
@@ -45,6 +47,7 @@ import {
   runCampaign,
   summarize,
   summarizeCampaigns,
+  tradeLine,
   waitingLine,
   waitingIncome,
   yieldValue,
@@ -73,8 +76,15 @@ import {
   guardChoice,
   needsDecision,
   playRound,
+  lodgeCap,
   strongestParty,
   takenTargets,
+  CONTACT_DETOUR,
+  TOWER_ERRAND_RADIUS,
+  contactErrand,
+  routeChoices,
+  routeRaiders,
+  towerErrand,
   type CampaignRecord,
   type LoggedEvent,
 } from './simulate.ts'
@@ -274,6 +284,40 @@ describe('parseArgs', () => {
     expect(parseArgs(['--campaign', '--waiting']).waiting).toBe(true)
     expect(() => parseArgs(['--waiting'])).toThrow('--waiting applies only to --campaign')
   })
+
+  it('takes --trading-post for a campaign only, 1 to MAX_TRADING_POST_LEVEL, none by default', () => {
+    expect(parseArgs(['--campaign', '--trading-post', '4']).tradingPost).toBe(4)
+    expect(parseArgs(['--campaign', '--trading-post', String(MAX_TRADING_POST_LEVEL)]).tradingPost).toBe(MAX_TRADING_POST_LEVEL)
+    expect(parseArgs(['--campaign']).tradingPost).toBeNull()
+    for (const raw of ['0', String(MAX_TRADING_POST_LEVEL + 1), 'x']) {
+      expect(() => parseArgs(['--campaign', '--trading-post', raw])).toThrow(`--trading-post must be from 1 to ${MAX_TRADING_POST_LEVEL}`)
+    }
+    expect(() => parseArgs(['--trading-post', '4'])).toThrow('--trading-post applies only to --campaign')
+  })
+})
+
+describe('--trading-post', () => {
+  it('starts the campaign and its waiting twin with the post at that level, and leaves it at 1 without', () => {
+    const plain = startCampaign(0, 1, parseArgs(['--campaign']))
+    expect(plain.game.world.tradingPost).toBe(1)
+    expect(routeLimit(plain.game.world)).toBe(0)
+    const raised = startCampaign(0, 1, parseArgs(['--campaign', '--trading-post', '4']))
+    expect(raised.game.world.tradingPost).toBe(4)
+    expect(routeLimit(raised.game.world)).toBe(1)
+    // The waiting twin starts from the same post, so its market pays from day one as the campaign's does.
+    expect(waitingIncome(1, parseArgs(['--campaign', '--trading-post', '4']), 30)).toBeGreaterThan(waitingIncome(1, parseArgs(['--campaign']), 30))
+  })
+
+  it('lets the careful company open routes it could not open from a level 1 post', () => {
+    const count = (flags: string[]) => {
+      const args = parseArgs(['--campaign', '--ready-level', '10', ...flags])
+      let opened = 0
+      for (let c = 0; c < 4; c++) opened += runCampaign(c, 1000 + c, args).record.routesOpened
+      return opened
+    }
+    expect(count([])).toBe(0)
+    expect(count(['--trading-post', '4'])).toBeGreaterThan(0)
+  }, 120_000)
 })
 
 describe('--plans', () => {
@@ -795,8 +839,8 @@ describe('the trading post and crafting in a campaign', () => {
   it('sells the baggage and surplus, builds, buys better grades and crafts at home', () => {
     const game = newGame(undefined, null, 1)
     game.parties[0].baggage.push(game.parties[0].members[0].backpack[0]!)
-    // The Lodge already at its limit (its gold is not under test here), its improvements kept for in the stock.
-    game.world.lodge = LODGE_LEVEL_LIMIT
+    // The Lodge already at its limit without a route (its gold is not under test here), its improvements kept for in the stock.
+    game.world.lodge = lodgeCap(game.world)
     game.world.stock = { gold: 500, iron: 60, timber: 40, stone: 60, copper: 40, salt: 9 }
     const trade = visitFacilities(game, game.parties[0])
     expect(game.parties[0].baggage).toEqual([])
@@ -884,12 +928,12 @@ describe('the trading post and crafting in a campaign', () => {
     expect(game.world.tradingPost).toBe(6)
   })
 
-  it('raises the Builders\' Lodge after the infirmary, to its limit and no further', () => {
+  it('raises the Builders\' Lodge after the infirmary, to 2 without a route and no further', () => {
     const game = newGame(undefined, null, 1)
     game.world.stock = { gold: 5000, silver: 500, stone: 500, crystal: 50, timber: 100, iron: 100, copper: 100 }
     visitFacilities(game, game.parties[0])
-    expect(game.world.lodge).toBe(LODGE_LEVEL_LIMIT)
-    expect(LODGE_LEVEL_LIMIT).toBe(2)
+    expect(game.world.routes).toEqual([])
+    expect(game.world.lodge).toBe(2)
     // Last for the gold: with only the infirmary's first level and the Lodge's to buy, the infirmary comes first.
     const poor = newGame(undefined, null, 1)
     poor.world.tradingPost = 6
@@ -913,7 +957,7 @@ describe('the trading post and crafting in a campaign', () => {
     // Lodge 1 to 2: its second level's 25 stone gone, the fort's 10 stone and 20 iron kept.
     expect((at2.stone ?? 0) - (at1.stone ?? 0)).toBe(IMPROVEMENT_COSTS[2].stone! - LODGE_COSTS[1].stone!)
     expect((at2.iron ?? 0) - (at1.iron ?? 0)).toBe(IMPROVEMENT_COSTS[2].iron)
-    // The Lodge's third level waits for roads, and is never kept for.
+    // The Lodge's third level waits for an open route, and is not kept for before one.
     expect(at2.iron! - at1.iron!).not.toBe(IMPROVEMENT_COSTS[2].iron! + LODGE_COSTS[2].iron!)
   })
 
@@ -979,18 +1023,23 @@ describe('summarizeCampaigns, the improvements and income', () => {
   it('averages improvements by level, the Lodge, gold by source and both incomes, and says whether waiting earns less', () => {
     const base = { ...runCampaign(3, 1, parseArgs(['--campaign', '--parties', '1']), 0).record }
     const records = [
-      { ...base, improvementsBuilt: [2, 1, 0], improvementLevels: [3, 1, 1, 0], lodgeLevel: 2, goldBySource: { sites: 40, market: 10, sales: 30 }, incomePerDay: 3, waitingIncomePerDay: 1 },
-      { ...base, improvementsBuilt: [1, 0, 1], improvementLevels: [4, 0, 0, 1], lodgeLevel: 1, goldBySource: { sites: 20, market: 0, sales: 10 }, incomePerDay: 2, waitingIncomePerDay: 2 },
+      { ...base, improvementsBuilt: [2, 1, 0], improvementLevels: [3, 1, 1, 0], lodgeLevel: 2, goldBySource: { sites: 40, market: 10, routes: 6, sales: 30 }, partnersContacted: 2, routesOpened: 1, routesRaided: 1, routesAbandoned: 0, incomePerDay: 3, waitingIncomePerDay: 1 },
+      { ...base, improvementsBuilt: [1, 0, 1], improvementLevels: [4, 0, 0, 1], lodgeLevel: 1, goldBySource: { sites: 20, market: 0, routes: 0, sales: 10 }, partnersContacted: 1, routesOpened: 0, routesRaided: 0, routesAbandoned: 1, incomePerDay: 2, waitingIncomePerDay: 2 },
     ]
     const summary = summarizeCampaigns([], records)
     expect(summary).toMatchObject({
       avgImprovementsBuilt: [1.5, 0.5, 0.5],
       avgImprovementLevels: [3.5, 0.5, 0.5, 0.5],
       avgLodgeLevel: 1.5,
-      avgGoldBySource: { sites: 30, market: 5, sales: 20 },
+      avgGoldBySource: { sites: 30, market: 5, routes: 3, sales: 20 },
+      avgPartnersContacted: 1.5,
+      avgRoutesOpened: 0.5,
+      avgRoutesRaided: 0.5,
+      avgRoutesAbandoned: 0.5,
       avgIncomePerDay: 2.5,
       avgWaitingIncomePerDay: 1.5,
     })
+    expect(tradeLine(summary)).toBe('Trade: 1.50 partners contacted; routes 0.50 opened, 0.50 raided, 0.50 abandoned a campaign')
     expect(waitingLine(summary)).toBe('Waiting check: income 2.5 a day campaigning, 1.5 waiting at home: waiting earns less')
     expect(waitingLine({ ...summary, avgWaitingIncomePerDay: 2.5 })).toMatch(/waiting earns as much or more$/)
   }, 20_000)
@@ -1197,16 +1246,24 @@ describe('runes in a campaign', () => {
  * is 0 without `--waiting`). Play moved through `materialNeeds` keeping the Lodge's and the post's higher levels'
  * materials and raising the Lodge: days 389, 385, 310, 423, 29 became 390, 385, 310, 423, 29; outcomes unchanged (four
  * Source, one fallen); campaign 1 built an outpost (0 before), campaign 2 lost two heroes (0 before), campaign 4 raised
- * the Lodge to 1. A mismatch means a step changed behaviour.
+ * the Lodge to 1. Re-recorded in stage 8 step 07: every simulated world has the trade partners Millbrook and
+ * Saltmere (clean sources of `PARTNER_STRENGTH` from day 1, so the land, the spawns and everything after them move),
+ * the vanguard detours to contact a partner once the trading post allows routes, routes open at home, the Lodge
+ * may reach 3, raiders are weighed and road towers built; and the record gains `partnersContacted`, `routesOpened`,
+ * `routesRaided`, `routesAbandoned` and `goldBySource.routes`. No route opens in these five (the post ends at 1 or 2):
+ * the move is the partners' land alone (and contacts made on the way, 1, 1, 1, 0, 0). Days 390, 385, 310, 423, 29
+ * became 457, 383, 331, 346, 29; battles 25, 26, 19, 21, 4 became 29, 26, 20, 18, 4; spawns 35, 36, 29, 31, 2 became
+ * 39, 36, 30, 28, 2; outcomes four Source and one fallen became three Source and two fallen (campaign 3 now falls on
+ * day 346). The 50-campaign check moved from 23 to 22 of 50. A mismatch means a step changed behaviour.
  */
 const GUARD_RECORDS: CampaignRecord[] = [
-  { outcome: "source", days: 390, battles: 25, spawns: 35, captured: 5, lost: 0, blighted: 0.38375, healedHp: 370, campDays: 41, towersBuilt: 3, towersLost: 0, deaths: 0, recruits: 2, hallLevel: 3, shrineLevel: 0, tradingPostLevel: 2, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 7, tierTwoBought: 0, crafted: 5, fieldCraftDays: 4, runesFound: 22, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 20, finalLevels: [9, 9, 9, 8, 7], callings: { heavy_knight: 3, ranger: 1, evoker: 1 }, capstones: {}, deathsAtLevel: [], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 25, wipes: 0, finalLevels: [[9, 9, 9, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 91, guardBattles: 0, improvementsBuilt: [1, 0, 0], improvementLevels: [6, 1, 0, 0], lodgeLevel: 0, goldBySource: { sites: 312, market: 0, sales: 7 }, incomePerDay: 1.4282051282051282, waitingIncomePerDay: 0 },
-  { outcome: "source", days: 385, battles: 26, spawns: 36, captured: 4, lost: 0, blighted: 0.33458333333333334, healedHp: 286, campDays: 34, towersBuilt: 3, towersLost: 0, deaths: 2, recruits: 2, hallLevel: 3, shrineLevel: 0, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 6, fieldCraftDays: 3, runesFound: 21, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 20, finalLevels: [9, 9, 9], callings: { heavy_knight: 1, ranger: 1, evoker: 1 }, capstones: {}, deathsAtLevel: [8, 7], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 26, wipes: 0, finalLevels: [[9, 9, 9]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 66, guardBattles: 0, improvementsBuilt: [1, 0, 0], improvementLevels: [5, 1, 0, 0], lodgeLevel: 0, goldBySource: { sites: 308, market: 0, sales: 0 }, incomePerDay: 1.4506493506493507, waitingIncomePerDay: 0 },
-  { outcome: "source", days: 310, battles: 19, spawns: 29, captured: 4, lost: 0, blighted: 0.35083333333333333, healedHp: 193, campDays: 19, towersBuilt: 3, towersLost: 0, deaths: 3, recruits: 3, hallLevel: 3, shrineLevel: 1, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 51, tierTwoBought: 0, crafted: 4, fieldCraftDays: 4, runesFound: 12, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 7], callings: { ranger: 1, evoker: 1, heavy_knight: 1 }, capstones: {}, deathsAtLevel: [2, 8, 7], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 19, wipes: 0, finalLevels: [[8, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 59, guardBattles: 0, improvementsBuilt: [1, 0, 0], improvementLevels: [5, 1, 0, 0], lodgeLevel: 0, goldBySource: { sites: 248, market: 0, sales: 51 }, incomePerDay: 1.2758064516129033, waitingIncomePerDay: 0 },
-  { outcome: "source", days: 423, battles: 21, spawns: 31, captured: 3, lost: 0, blighted: 0.4170833333333333, healedHp: 131, campDays: 35, towersBuilt: 1, towersLost: 0, deaths: 4, recruits: 5, hallLevel: 3, shrineLevel: 3, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 169, tierTwoBought: 0, crafted: 10, fieldCraftDays: 3, runesFound: 15, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 8, 7], callings: { ranger: 1, evoker: 1, heavy_knight: 2 }, capstones: {}, deathsAtLevel: [3, 5, 4, 7], battlesToLevel: { 5: 9 }, roles: { vanguard: { battles: 21, wipes: 0, finalLevels: [[8, 8, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 122, guardBattles: 0, improvementsBuilt: [1, 0, 0], improvementLevels: [4, 1, 0, 0], lodgeLevel: 1, goldBySource: { sites: 336, market: 0, sales: 169 }, incomePerDay: 1.3475177304964538, waitingIncomePerDay: 0 },
-  { outcome: "fallen", days: 29, battles: 4, spawns: 2, captured: 0, lost: 0, blighted: 0.32625, healedHp: 1, campDays: 1, towersBuilt: 0, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 1, fieldCraftDays: 1, runesFound: 2, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [3, 3, 3], callings: { swordmaster: 1, heavy_knight: 1, ranger: 1, evoker: 1 }, capstones: {}, deathsAtLevel: [], battlesToLevel: {}, roles: { vanguard: { battles: 4, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkHomeDays: 0, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [2, 0, 0, 0], lodgeLevel: 0, goldBySource: { sites: 20, market: 0, sales: 0 }, incomePerDay: 0.8620689655172413, waitingIncomePerDay: 0 },
+  { outcome: "source", days: 457, battles: 29, spawns: 39, captured: 6, lost: 0, blighted: 0.28125, healedHp: 394, campDays: 36, towersBuilt: 3, towersLost: 0, deaths: 0, recruits: 2, hallLevel: 3, shrineLevel: 0, tradingPostLevel: 2, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 16, tierTwoBought: 0, crafted: 6, fieldCraftDays: 3, runesFound: 23, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 20, finalLevels: [9, 9, 9, 9, 7], callings: { heavy_knight: 3, ranger: 1, evoker: 1 }, capstones: {}, deathsAtLevel: [], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 29, wipes: 0, finalLevels: [[9, 9, 9, 9, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 88, guardBattles: 0, improvementsBuilt: [2, 0, 0], improvementLevels: [6, 2, 0, 0], lodgeLevel: 0, goldBySource: { sites: 364, market: 0, routes: 0, sales: 16 }, partnersContacted: 1, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, incomePerDay: 1.661925601750547, waitingIncomePerDay: 0 },
+  { outcome: "source", days: 383, battles: 26, spawns: 36, captured: 4, lost: 0, blighted: 0.32208333333333333, healedHp: 286, campDays: 34, towersBuilt: 3, towersLost: 0, deaths: 2, recruits: 2, hallLevel: 3, shrineLevel: 0, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 6, fieldCraftDays: 3, runesFound: 21, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 20, finalLevels: [9, 9, 9], callings: { heavy_knight: 1, ranger: 1, evoker: 1 }, capstones: {}, deathsAtLevel: [8, 7], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 26, wipes: 0, finalLevels: [[9, 9, 9]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 66, guardBattles: 0, improvementsBuilt: [1, 0, 0], improvementLevels: [5, 1, 0, 0], lodgeLevel: 0, goldBySource: { sites: 304, market: 0, routes: 0, sales: 0 }, partnersContacted: 1, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, incomePerDay: 1.433420365535248, waitingIncomePerDay: 0 },
+  { outcome: "source", days: 331, battles: 20, spawns: 30, captured: 4, lost: 0, blighted: 0.33166666666666667, healedHp: 281, campDays: 22, towersBuilt: 3, towersLost: 0, deaths: 2, recruits: 3, hallLevel: 3, shrineLevel: 1, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 51, tierTwoBought: 0, crafted: 4, fieldCraftDays: 4, runesFound: 13, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 7, 7], callings: { ranger: 1, evoker: 1, heavy_knight: 2 }, capstones: {}, deathsAtLevel: [2, 8], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 20, wipes: 0, finalLevels: [[8, 8, 7, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 59, guardBattles: 0, improvementsBuilt: [1, 0, 0], improvementLevels: [5, 1, 0, 0], lodgeLevel: 0, goldBySource: { sites: 264, market: 0, routes: 0, sales: 51 }, partnersContacted: 1, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, incomePerDay: 1.3036253776435045, waitingIncomePerDay: 0 },
+  { outcome: "fallen", days: 346, battles: 18, spawns: 28, captured: 2, lost: 0, blighted: 0.46875, healedHp: 146, campDays: 38, towersBuilt: 1, towersLost: 0, deaths: 2, recruits: 4, hallLevel: 3, shrineLevel: 2, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 117, tierTwoBought: 0, crafted: 8, fieldCraftDays: 3, runesFound: 14, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 7, 7, 7, 7], callings: { ranger: 1, evoker: 1, heavy_knight: 3 }, capstones: {}, deathsAtLevel: [3, 5], battlesToLevel: { 5: 9 }, roles: { vanguard: { battles: 18, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkHomeDays: 97, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [4, 0, 0, 0], lodgeLevel: 1, goldBySource: { sites: 276, market: 0, routes: 0, sales: 117 }, partnersContacted: 0, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, incomePerDay: 1.260115606936416, waitingIncomePerDay: 0 },
+  { outcome: "fallen", days: 29, battles: 4, spawns: 2, captured: 0, lost: 0, blighted: 0.32625, healedHp: 1, campDays: 1, towersBuilt: 0, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 1, fieldCraftDays: 1, runesFound: 2, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [3, 3, 3], callings: { swordmaster: 1, heavy_knight: 1, ranger: 1, evoker: 1 }, capstones: {}, deathsAtLevel: [], battlesToLevel: {}, roles: { vanguard: { battles: 4, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkHomeDays: 0, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [2, 0, 0, 0], lodgeLevel: 0, goldBySource: { sites: 20, market: 0, routes: 0, sales: 0 }, partnersContacted: 0, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, incomePerDay: 0.8620689655172413, waitingIncomePerDay: 0 },
 ]
-const GUARD_EVENTS_SHA256 = 'a179187a675ed7be47daa3fe252174dd8e86858a09cc730785eaae11770211a1'
+const GUARD_EVENTS_SHA256 = 'e638f2a4dcc01534d6b2fcf683a47080dcd0a251df6d365f41d40d263f6f1180'
 
 describe('the campaign’s policy on the day loop', () => {
   const args = parseArgs(['--campaign', '--parties', '1'])
@@ -1557,7 +1614,7 @@ describe('the company’s record', () => {
     // Held resources at the end, the encampment not among them: Iron Vein a works, Gold Seam a fort.
     expect(record.improvementLevels).toEqual([world.held.length - 3, 0, 1, 1])
     expect(record.lodgeLevel).toBe(2)
-    expect(record.goldBySource).toEqual({ sites: 4, market: 3, sales: 12 })
+    expect(record.goldBySource).toEqual({ sites: 4, market: 3, routes: 0, sales: 12 })
     // 4 + 3 gold and 5 iron at 2 to the gold piece, over 10 days.
     expect(record.incomePerDay).toBeCloseTo((4 + 3 + 5 / MATERIALS_PER_GOLD) / 10)
     // The waiting twin runs only with --waiting.
@@ -2039,6 +2096,351 @@ describe('the company policy', () => {
       expect(game.world.turn).toBeGreaterThan(start)
       expect(run.record.guardBattles).toBeGreaterThan(0)
     }, 30_000)
+  })
+})
+
+describe('the simulator’s trade', () => {
+  const args = parseArgs(['--campaign', '--parties', '1'])
+  type Game = ReturnType<typeof newGame>
+  const at = (game: Game, id: string) => game.world.locations.find((l) => l.id === id)!.position
+  const shifted = (h: { q: number; r: number }, dq: number, dr = 0) => ({ q: h.q + dq, r: h.r + dr })
+  const nest = (id: string, position: { q: number; r: number }, threat = 1): MonsterLocation => ({
+    id, kind: 'monsters', name: id, position, encounter: 'goblin_raid', threat, loot: [],
+  })
+  const route = (partner: string, road: { q: number; r: number }[]): TradeRoute => ({ id: `route_${partner}`, partner, road, opened: 0, raidedDays: 0, raided: false })
+  /** Every nest but the Source gone, and these in their place. */
+  const onlyNests = (game: Game, nests: MonsterLocation[]) => {
+    game.world.locations = [...game.world.locations.filter((l) => l.kind !== 'monsters' || l.source), ...nests]
+  }
+
+  describe('contactErrand', () => {
+    it('is the nearest uncontacted partner within CONTACT_DETOUR, none beyond, none once contacted or tried', () => {
+      const game = newGame(undefined, null, 1)
+      game.world.tradingPost = 4
+      const party = game.parties[0]
+      party.position = shifted(at(game, 'millbrook'), -CONTACT_DETOUR)
+      expect(contactErrand(game.world, party)?.id).toBe('millbrook')
+      expect(contactErrand(game.world, party, new Set(['millbrook']))).toBeNull()
+      party.position = shifted(at(game, 'millbrook'), -CONTACT_DETOUR - 1)
+      expect(hexDistance(party.position, at(game, 'saltmere'))).toBeGreaterThan(CONTACT_DETOUR)
+      expect(contactErrand(game.world, party)).toBeNull()
+      party.position = shifted(at(game, 'millbrook'), 2)
+      game.world.contacted.push('millbrook')
+      // Saltmere is 14 hexes off: none.
+      expect(contactErrand(game.world, party)).toBeNull()
+    })
+
+    it('waits while a held site is threatened, a threatened tower not counting', () => {
+      const game = newGame(undefined, null, 1)
+      game.world.tradingPost = 4
+      const party = game.parties[0]
+      party.position = shifted(at(game, 'millbrook'), 3)
+      game.world.threatened = ['tower_1']
+      expect(contactErrand(game.world, party)?.id).toBe('millbrook')
+      game.world.held.push('gold_seam')
+      game.world.threatened = ['gold_seam']
+      expect(contactErrand(game.world, party)).toBeNull()
+    })
+
+    it('is none until the trading post allows routes (level 4)', () => {
+      const game = newGame(undefined, null, 1)
+      const party = game.parties[0]
+      party.position = shifted(at(game, 'millbrook'), 2)
+      for (const level of [1, 2, 3]) {
+        game.world.tradingPost = level
+        expect(contactErrand(game.world, party)).toBeNull()
+      }
+      game.world.tradingPost = 4
+      expect(contactErrand(game.world, party)?.id).toBe('millbrook')
+    })
+
+    it('leaves the vanguard to choose its nest at once below trading post 4', () => {
+      const game = newGame(undefined, null, 1)
+      const party = game.parties[0]
+      party.position = shifted(at(game, 'millbrook'), 4)
+      const run = startCampaign(0, 1, args, 0, game)
+      const plan = planOf(run, party)
+      plan.phase = 'choose'
+      const next = nextTarget(game.world, party, args.readyLevel)!
+      expect(decide(run, party)).toEqual({ kind: 'order', order: { kind: 'travel', to: next.position } })
+      expect(plan.contactsTried).toEqual([])
+    })
+
+    it('takes the first in locations order on a tie', () => {
+      const game = newGame(undefined, null, 1)
+      game.world.tradingPost = 4
+      const party = game.parties[0]
+      const saltmere = game.world.locations.find((l) => l.id === 'saltmere')!
+      saltmere.position = shifted(at(game, 'millbrook'), -6)
+      party.position = shifted(at(game, 'millbrook'), -3)
+      expect(contactErrand(game.world, party)?.id).toBe('millbrook')
+    })
+  })
+
+  it('walks the vanguard to a partner at choose, and back to choosing a nest once it is contacted', () => {
+    const game = newGame(undefined, null, 1)
+    game.world.tradingPost = 4
+    const party = game.parties[0]
+    party.position = shifted(at(game, 'millbrook'), 4)
+    const run = startCampaign(0, 1, args, 0, game)
+    const plan = planOf(run, party)
+    plan.phase = 'choose'
+    expect(decide(run, party)).toEqual({ kind: 'order', order: { kind: 'travel', to: at(game, 'millbrook') } })
+    expect(plan.phase).toBe('contact')
+    for (let i = 0; i < 20 && !isContacted(game.world, 'millbrook'); i++) {
+      const decision = decide(run, party)
+      expect(decision.kind).toBe('order')
+      expect(carryOut(run, party, decision)).toBe('standing')
+      takeDays(run, advance(game, Infinity))
+    }
+    expect(isContacted(game.world, 'millbrook')).toBe(true)
+    expect(run.record.partnersContacted).toBe(1)
+    const next = nextTarget(game.world, party, args.readyLevel)!
+    expect(decide(run, party)).toEqual({ kind: 'order', order: { kind: 'travel', to: next.position } })
+    expect(plan.phase).toBe('target')
+  }, 20_000)
+
+  it('calls the walk off for a partner contacted on the way, or a held site threatened, and chooses a nest', () => {
+    const walkingTo = () => {
+      const game = newGame(undefined, null, 1)
+      game.world.tradingPost = 4
+      const party = game.parties[0]
+      party.position = shifted(at(game, 'millbrook'), 4)
+      const run = startCampaign(0, 1, args, 0, game)
+      const plan = planOf(run, party)
+      plan.phase = 'choose'
+      expect(decide(run, party)).toEqual({ kind: 'order', order: { kind: 'travel', to: at(game, 'millbrook') } })
+      return { game, party, run, plan }
+    }
+    const contacted = walkingTo()
+    contacted.game.world.contacted.push('millbrook')
+    const next = nextTarget(contacted.game.world, contacted.party, args.readyLevel)!
+    expect(decide(contacted.run, contacted.party)).toEqual({ kind: 'order', order: { kind: 'travel', to: next.position } })
+    expect(contacted.plan.phase).toBe('target')
+    const threatened = walkingTo()
+    threatened.game.world.held.push('gold_seam')
+    threatened.game.world.threatened = ['gold_seam']
+    const defend = nextTarget(threatened.game.world, threatened.party, args.readyLevel)!
+    expect(decide(threatened.run, threatened.party)).toEqual({ kind: 'order', order: { kind: 'travel', to: defend.position } })
+    expect(threatened.plan.phase).toBe('target')
+  })
+
+  it('gives up a partner it cannot reach and chooses a nest instead', () => {
+    const game = newGame(undefined, null, 1)
+    game.world.tradingPost = 4
+    const party = game.parties[0]
+    party.position = shifted(at(game, 'millbrook'), 4)
+    const run = startCampaign(0, 1, args, 0, game)
+    const plan = planOf(run, party)
+    plan.phase = 'choose'
+    expect(decide(run, party).kind).toBe('order')
+    plan.stalled = true
+    const next = nextTarget(game.world, party, args.readyLevel)!
+    expect(decide(run, party)).toEqual({ kind: 'order', order: { kind: 'travel', to: next.position } })
+    expect(plan.contactsTried).toEqual(['millbrook'])
+  })
+
+  describe('towerErrand', () => {
+    /** A clean world but one tainted road hex 5 from the party, the stock affording a tower. */
+    const roadWorld = () => {
+      const game = newGame(undefined, null, 1)
+      const { world } = game
+      const party = game.parties[0]
+      party.position = shifted(at(game, ENCAMPMENT_ID), 0, 6)
+      const tainted = shifted(party.position, 4, 1)
+      world.blight.fill(0)
+      world.blight[boardIndex(world.board, tainted)] = 1
+      world.routes = [route('millbrook', [tainted])]
+      world.stock = { ...TOWER_COST }
+      return { game, world, party, tainted }
+    }
+
+    it('is the nearest clean hex that guards an unguarded tainted road hex, ties by board index', () => {
+      const { world, party, tainted } = roadWorld()
+      const chosen = towerErrand(world, party)!
+      expect(chosen).not.toBeNull()
+      expect(hexDistance(chosen, tainted)).toBeLessThanOrEqual(GUARD_RADIUS)
+      expect(towerHexRefusal(world, chosen)).toBeNull()
+      // Every hex that would do is no nearer, and at the same distance no earlier on the board.
+      const fits = new HexBoard(world.board).hexes.filter((h) =>
+        hexDistance(h, party.position) <= TOWER_ERRAND_RADIUS && hexDistance(h, tainted) <= GUARD_RADIUS && towerHexRefusal(world, h) === null)
+      const d = hexDistance(chosen, party.position)
+      expect(d).toBe(5 - GUARD_RADIUS)
+      const ties = fits.filter((h) => hexDistance(h, party.position) === d)
+      expect(ties.length).toBeGreaterThan(1)
+      expect(Math.min(...ties.map((h) => boardIndex(world.board, h)))).toBe(boardIndex(world.board, chosen))
+    })
+
+    it('is none when a tower guards the hex, no route is open, the stock is short, or no hex takes a tower', () => {
+      const guardedBy = roadWorld()
+      guardedBy.world.towers.push({ id: 'tower_1', position: shifted(guardedBy.tainted, 0, GUARD_RADIUS) })
+      expect(towerErrand(guardedBy.world, guardedBy.party)).toBeNull()
+      const noRoute = roadWorld()
+      noRoute.world.routes = []
+      expect(towerErrand(noRoute.world, noRoute.party)).toBeNull()
+      const poor = roadWorld()
+      poor.world.stock = { gold: TOWER_COST.gold }
+      expect(towerErrand(poor.world, poor.party)).toBeNull()
+      const tainted = roadWorld()
+      tainted.world.blight.fill(1)
+      expect(towerErrand(tainted.world, tainted.party)).toBeNull()
+      // A clean road hex needs no guard.
+      const clean = roadWorld()
+      clean.world.blight.fill(0)
+      expect(towerErrand(clean.world, clean.party)).toBeNull()
+    })
+
+    it('walks to the errand after a win and builds the tower there', () => {
+      const { game, party } = roadWorld()
+      const run = startCampaign(0, 1, args, 0, game)
+      const plan = planOf(run, party)
+      const hexTo = towerErrand(game.world, party)!
+      plan.phase = 'tower'
+      expect(decide(run, party)).toEqual({ kind: 'order', order: { kind: 'travel', to: hexTo } })
+      expect(plan.phase).toBe('road_tower')
+      party.position = hexTo
+      expect(decide(run, party)).toEqual({ kind: 'act', action: { kind: 'tower' } })
+      expect(plan.phase).toBe('improve')
+    })
+  })
+
+  it('lists every raider of every route once, in route order', () => {
+    const game = newGame(undefined, null, 1)
+    const { world } = game
+    const home = at(game, ENCAMPMENT_ID)
+    const a = shifted(home, 6)
+    const b = shifted(home, -6)
+    const both = nest('both', shifted(home, 0, 8))
+    world.routes = [route('millbrook', [a, shifted(home, 0, 7)]), route('saltmere', [b, shifted(home, 1, 7)])]
+    onlyNests(game, [nest('near_b', shifted(b, -1)), both, nest('near_a', shifted(a, 2))])
+    expect(routeRaiders(world).map((l) => l.id)).toEqual(['both', 'near_a', 'near_b'])
+  })
+
+  describe('raiders weighed', () => {
+    /** The party at home, a nest 2 hexes off, and a raider 5 hexes off beside an open road. */
+    const raided = () => {
+      const game = newGame(undefined, null, 1)
+      const home = at(game, ENCAMPMENT_ID)
+      const near = nest('near', shifted(home, -2))
+      const raider = nest('raider', shifted(home, 5))
+      onlyNests(game, [near, raider])
+      game.world.routes = [route('millbrook', [shifted(home, 6)])]
+      return { game, near, raider, party: game.parties[0] }
+    }
+
+    it('in nextTarget: after a threatened site’s pusher, before a nearer nest, and only one the party is up to', () => {
+      const { game, near, raider, party } = raided()
+      expect(nextTarget(game.world, party)).toBe(raider)
+      raider.threat = 2
+      expect(nextTarget(game.world, party)).toBe(near)
+      raider.threat = 1
+      const site = at(game, 'gold_seam')
+      const besiegers = nest('besiegers', shifted(site, 1))
+      game.world.locations.push(besiegers)
+      game.world.held.push('gold_seam')
+      game.world.threatened = ['gold_seam']
+      expect(nextTarget(game.world, party)).toBe(besiegers)
+    })
+
+    it('in the guard’s choice: defends against a raider before training', () => {
+      const { game, near, raider } = raided()
+      game.world.guildHall = 4
+      for (const hero of readyMadeParty().slice(0, 3)) game.reserves.push(hero)
+      const guard = formParty(game, 'Guard', { from: 'reserves', index: 0 }) as Expedition
+      while (game.reserves.length > 0) expect(moveHero(game, { from: 'reserves', index: 0 }, { party: guard.id })).toBeNull()
+      const run = startCampaign(0, 1, parseArgs(['--campaign']), 0, game)
+      expect(roleOf(run, guard)).toBe('guard')
+      planOf(run, guard).skipReinforce = true
+      expect(guardChoice(run, guard)).toEqual({ kind: 'defend', target: raider })
+      game.world.routes = []
+      expect(guardChoice(run, guard)).toEqual({ kind: 'train', target: near })
+    })
+  })
+
+  describe('routes opened at home', () => {
+    const atHome = (setUp: (game: Game) => void) => {
+      const game = newGame(undefined, null, 1)
+      game.world.contacted = ['saltmere', 'millbrook']
+      game.world.tradingPost = 6
+      game.world.stock = { gold: 500, timber: 100 }
+      setUp(game)
+      return { game, party: game.parties[0] }
+    }
+
+    it('tries the shortest road first, whatever the contact order, skipping a refused partner and a full post', () => {
+      const { game, party } = atHome(() => {})
+      expect(roadTo(game.world, 'millbrook')!.length).toBeLessThan(roadTo(game.world, 'saltmere')!.length)
+      expect(routeChoices(game, party)).toEqual(['millbrook', 'saltmere'])
+      game.world.silent = ['millbrook']
+      expect(routeChoices(game, party)).toEqual(['saltmere'])
+      game.world.silent = []
+      game.world.tradingPost = 4
+      game.world.routes = [route('saltmere', roadTo(game.world, 'saltmere')!)]
+      expect(routeChoices(game, party)).toEqual([])
+    })
+
+    it('opens what the slots allow, then raises the Lodge to 3 with a route open, and tallies each route once', () => {
+      const { game, party } = atHome((game) => {
+        game.world.tradingPost = 4
+        game.world.workshop = 3
+        game.world.infirmary = 3
+        game.world.stock = { gold: 500, timber: 100, stone: 100, iron: 100 }
+      })
+      const run = startCampaign(0, 1, args, 0, game)
+      expect(carryOut(run, party, { kind: 'hall' })).toBeNull()
+      // The post stays at 4 (no silver for 5): one slot, the shorter road.
+      expect(game.world.tradingPost).toBe(4)
+      expect(game.world.routes.map((r) => r.partner)).toEqual(['millbrook'])
+      expect(game.world.lodge).toBe(3)
+      expect(run.record.routesOpened).toBe(1)
+      expect(run.record.routesOpened).toBe(game.world.routesOpened)
+    })
+
+    it('raises the Lodge to 2 only, with no partner contacted', () => {
+      const { game, party } = atHome((game) => {
+        game.world.contacted = []
+        game.world.stock = { gold: 500, timber: 100, stone: 100, iron: 100 }
+      })
+      visitFacilities(game, party)
+      expect(game.world.routes).toEqual([])
+      expect(game.world.lodge).toBe(2)
+    })
+  })
+
+  it('keeps a route’s timber for each free slot while a contacted partner has no route, and none otherwise', () => {
+    const game = newGame(undefined, null, 1)
+    const { world } = game
+    world.tradingPost = 5
+    const none = materialNeeds(game).timber ?? 0
+    world.contacted = ['millbrook']
+    expect((materialNeeds(game).timber ?? 0) - none).toBe(2 * ROUTE_TIMBER)
+    world.contacted = ['millbrook', 'saltmere']
+    world.routes = [route('millbrook', [at(game, 'millbrook')])]
+    expect((materialNeeds(game).timber ?? 0) - none).toBe(ROUTE_TIMBER)
+    world.contacted = ['millbrook']
+    expect((materialNeeds(game).timber ?? 0) - none).toBe(0)
+    world.tradingPost = 3
+    world.routes = []
+    expect((materialNeeds(game).timber ?? 0) - none).toBe(0)
+  })
+
+  it('tallies the trade events: contacts, raid runs, abandonments and route gold', () => {
+    const game = newGame(undefined, null, 1)
+    const run = startCampaign(0, 1, args, 0, game)
+    const report = (events: WorldEvent[]): DayReport => ({ events, partyEvents: [], parties: [], interrupt: null })
+    const named = { route: 'route_millbrook', partner: 'millbrook', name: 'Millbrook' }
+    takeDays(run, [
+      report([
+        { type: 'partner_contacted', partner: 'millbrook', name: 'Millbrook', home: 'Home' },
+        { type: 'yield', site: 'millbrook', name: 'Millbrook', material: 'gold', amount: 2, source: 'route', route: 'route_millbrook' },
+        { type: 'yield', site: 'millbrook', name: 'Millbrook', material: 'timber', amount: 1, source: 'route', route: 'route_millbrook' },
+      ]),
+      report([{ type: 'route_raided', ...named, cause: 'raiders', raider: 'x', raiderName: 'X', days: 1 }]),
+      report([{ type: 'route_raided', ...named, cause: 'raiders', raider: 'x', raiderName: 'X', days: 2 }, { type: 'route_abandoned', ...named }]),
+    ])
+    expect(run.record).toMatchObject({ partnersContacted: 1, routesRaided: 1, routesAbandoned: 1, routesOpened: 0 })
+    expect(run.record.goldBySource).toEqual({ sites: 0, market: 0, routes: 2, sales: 0 })
+    expect(run.income).toBeCloseTo(2 + 1 / MATERIALS_PER_GOLD)
   })
 })
 

@@ -5,10 +5,9 @@ import {
   IMPROVEMENT_COSTS,
   IMPROVEMENT_LODGE,
   LODGE_COSTS,
-  LODGE_LEVEL_LIMIT,
   MAX_LODGE_LEVEL,
   MAX_SHRINE_LEVEL,
-  ROADS_REFUSAL,
+  ROAD_LODGE_LEVEL,
   SHRINE_COSTS,
   TOWER_COST,
   TOWER_SPACING,
@@ -27,6 +26,7 @@ import {
   raiseShrine,
   shrineCost,
   spend,
+  towerHexRefusal,
 } from './buildings.ts'
 import { presences } from './expedition.ts'
 import { newGame } from './gameState.ts'
@@ -87,7 +87,7 @@ describe('a watchtower', () => {
 
     const { world: onHome, party: onHomeParty } = ready()
     onHomeParty.position = offsetToHex(9, 19)
-    expect(canBuildTower(onHome, onHomeParty)).toMatch(/encampment or a resource/)
+    expect(canBuildTower(onHome, onHomeParty)).toMatch(/cannot stand on a location/)
 
     const { game: crowdedGame, world: crowded, party: crowdedParty } = ready()
     buildTower(crowdedGame, crowdedParty)
@@ -99,6 +99,22 @@ describe('a watchtower', () => {
     const { world: among, party: amongParty } = ready()
     among.locations.push({ ...(among.locations.find((l) => l.kind === 'monsters') as MonsterLocation), id: 'here', position: amongParty.position })
     expect(canBuildTower(among, amongParty)).not.toBeNull()
+  })
+
+  it('is judged for any hex by towerHexRefusal, in towerSiteRefusal\'s words', () => {
+    const { game, world, party } = ready()
+    const here = party.position
+    expect(towerHexRefusal(world, here)).toBeNull()
+    expect(towerHexRefusal(world, offsetToHex(9, 19))).toBe('A watchtower cannot stand on a location.')
+    world.blight[boardIndex(world.board, here)] = 1
+    expect(towerHexRefusal(world, here)).toBe('A watchtower needs clean land.')
+    world.blight[boardIndex(world.board, here)] = 0
+    buildTower(game, party)
+    expect(towerHexRefusal(world, here)).toBe('A watchtower already stands here.')
+    expect(towerHexRefusal(world, offsetToHex(7 + TOWER_SPACING - 1, 17))).toBe(`Too near another watchtower: they must stand ${TOWER_SPACING} hexes apart.`)
+    expect(towerHexRefusal(world, offsetToHex(7 + TOWER_SPACING, 17))).toBeNull()
+    world.status = 'lost'
+    expect(towerHexRefusal(world, offsetToHex(7 + TOWER_SPACING, 17))).toBe('Nothing can be built here now.')
   })
 
   it('pushes back the blight with TOWER_STRENGTH and sees TOWER_VISION hexes around', () => {
@@ -473,11 +489,11 @@ describe('the Builders\' Lodge (economy A2)', () => {
     const { world } = atHome()
     expect(LODGE_COSTS).toEqual([{ gold: 30, timber: 20 }, { gold: 60, stone: 25 }, { gold: 100, iron: 20, stone: 20 }])
     expect(MAX_LODGE_LEVEL).toBe(3)
-    expect(LODGE_LEVEL_LIMIT).toBe(2)
+    expect(ROAD_LODGE_LEVEL).toBe(3)
     expect([0, 1, 2, 3].map((lodge) => ((world.lodge = lodge), lodgeCost(world)))).toEqual([...LODGE_COSTS, null])
   })
 
-  it('is raised at home to level 1 and 2, the stock paying, and no further until roads', () => {
+  it('is raised at home to level 1, 2 and 3, the stock paying, and no further', () => {
     const { game, world, party } = atHome()
     expect(raiseLodge(game, party)).toBeNull()
     expect(world.lodge).toBe(1)
@@ -485,13 +501,21 @@ describe('the Builders\' Lodge (economy A2)', () => {
     expect(raiseLodge(game, party)).toBeNull()
     expect(world.lodge).toBe(2)
     expect(world.stock).toEqual({ gold: 410, timber: 80, stone: 75, iron: 100 })
-    expect(raiseLodge(game, party)).toBe(ROADS_REFUSAL)
-    expect(ROADS_REFUSAL).toBe('Roads come with trade routes.')
+    expect(raiseLodge(game, party)).toBeNull()
+    expect(world.lodge).toBe(3)
+    expect(world.stock).toEqual({ gold: 310, timber: 80, stone: 55, iron: 80 })
+    expect(raiseLodge(game, party)).toBe("The Builders' Lodge is as great as it gets.")
+    expect(world.lodge).toBe(3)
+    expect(world.stock).toEqual({ gold: 310, timber: 80, stone: 55, iron: 80 })
+  })
+
+  it('refuses level 3 for a short stock in the stock\'s words, changing nothing', () => {
+    const { game, world, party } = atHome()
+    world.lodge = 2
+    world.stock = { gold: 100, iron: 20, stone: 19 }
+    expect(raiseLodge(game, party)).toBe('The next level costs 100 gold, 20 iron, 20 stone, more than the stock holds.')
     expect(world.lodge).toBe(2)
-    expect(world.stock).toEqual({ gold: 410, timber: 80, stone: 75, iron: 100 })
-    // Set to 3 (as the debug console may), it is refused the same.
-    world.lodge = 3
-    expect(raiseLodge(game, party)).toBe(ROADS_REFUSAL)
+    expect(world.stock).toEqual({ gold: 100, iron: 20, stone: 19 })
   })
 
   it('is refused away from home or without the stock, changing nothing', () => {

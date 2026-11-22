@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { WorldState, WorldStatus } from '../src/game/worldMap.ts'
+import { roadTo } from '../src/game/trade.ts'
 import { hexDistance, offsetToHex, type Hex } from '../src/grid/hex.ts'
 import { WORLD_LAYOUT, boardHexCenter, boardPixelSize, type Point } from '../src/scenes/boardGeometry.ts'
 import { clampOrigin, mapOrigin, pannedOrigin } from '../src/scenes/mapScroll.ts'
@@ -1165,5 +1166,60 @@ describe('the world map', () => {
     expect(await game.page.evaluate(() => localStorage.getItem('yomi.save.1'))).toBeNull()
     await game.click(lost.buttons.menu)
     await game.waitForScenes(['Menu'])
+  })
+
+  it('draws an open road by its security, a partner greyed when silent, and tells of them on hover (stage 8 step 05)', async () => {
+    const game = await games.open()
+    const start = await game.newGame()
+    // No Routes tab or contact command here yet: plant Millbrook contacted and a road to it in the save.
+    const road = roadTo(start.world, 'millbrook')!
+    const millbrook = start.world.locations.find((l) => l.id === 'millbrook')!
+    await game.page.evaluate((planted) => {
+      const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
+      saved.game.world.contacted.push('millbrook')
+      saved.game.world.routes.push({ id: 'route_millbrook', partner: 'millbrook', road: planted, opened: 1, raidedDays: 0, raided: false })
+      localStorage.setItem('yomi.save.1', JSON.stringify(saved))
+    }, road)
+    await game.click((await game.reload()).buttons.continue)
+    await game.waitForScenes(['World'])
+    const planted = await game.settled('World')
+    expect(planted.roads).toHaveLength(1)
+    expect(planted.roads[0].route).toBe('route_millbrook')
+    expect(planted.roads[0].shades).toHaveLength(road.length)
+    expect(planted.roads[0].shades.every((shade) => shade !== 'raided')).toBe(true)
+    expect(planted.partners.find((p) => p.id === 'millbrook')).toMatchObject({ contacted: true, silent: false, grey: false })
+
+    // The road is the company's own, told through the fog; the partner shows once its land is seen.
+    const hexOnRoad = road[Math.floor(road.length / 2)]
+    await game.hover(worldHexOnScreen(planted, hexOnRoad))
+    const told = await game.waitFor('World', (w) => w.info.includes('The Millbrook road: security'))
+    expect(told.info).toContain('gold every 5 days')
+
+    const debug = async (line: string) => {
+      await game.press('Shift+Backquote')
+      await game.page.locator('#yomi-debug input').fill(line)
+      await game.press('Enter')
+      await game.press('Escape')
+    }
+    await debug('reveal')
+    // Millbrook lies off the view from home: the debug move brings the party, and the view, to it.
+    await debug('goto millbrook')
+    const revealed = await game.waitFor('World', (w) => w.partners.find((p) => p.id === 'millbrook')?.drawn === true && w.partyAt.q === millbrook.position.q && !w.walking)
+    await game.hover(worldHexOnScreen(revealed, millbrook.position))
+    const partner = await game.waitFor('World', (w) => w.info.startsWith('Millbrook'))
+    expect(partner.info).toContain('Trade partner: timber.')
+    expect(partner.info).toContain('Route open')
+
+    // The blight reaching Millbrook silences it, and with it the whole road turns red.
+    await debug('blight 2 millbrook')
+    await debug('days 1')
+    const silent = await game.waitFor('World', (w) => w.partners.find((p) => p.id === 'millbrook')?.silent === true)
+    // The drawn icon and label are grey, not just the state.
+    expect(silent.partners.find((p) => p.id === 'millbrook')!.grey).toBe(true)
+    expect(silent.partners.find((p) => p.id === 'saltmere')!.grey).toBe(false)
+    expect(silent.roads[0].shades.every((shade) => shade === 'raided')).toBe(true)
+    await game.hover(worldHexOnScreen(silent, millbrook.position))
+    const quiet = await game.waitFor('World', (w) => w.info.includes('Silent while the blight holds its land.'))
+    expect(quiet.info).toContain('Raided: Millbrook is silent.')
   })
 })

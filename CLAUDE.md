@@ -38,7 +38,7 @@ Pass `model: "sonnet"` for work that is not too complex: searching, reading and 
 | `src/engine/` | battle state machine, AI (`POLICIES`), headless loop (`autoPlay.ts`) | yes |
 | `src/character/` | the persistent `Character`, creation, skill trees, progression | yes |
 | `src/inventory/` | gear catalog, grades, modifiers, runes | yes |
-| `src/game/` | everything outside battle: encounters, the day loop, world map, blight, encampment, `GameState`, saving | yes |
+| `src/game/` | everything outside battle: encounters, the day loop, world map, blight, trade partners and routes, encampment, `GameState`, saving | yes |
 | `src/story/` | cutscenes and tutorial (change no rule) | yes |
 | `src/scenes/` | Phaser scenes and their Phaser-free helpers | yes |
 | `scripts/` | the simulator and balance bands | yes |
@@ -52,7 +52,7 @@ Contracts that span directories (each guide has the detail):
 - **Refusals.** An action on the game state returns why it was refused, or null, and checks everything before changing anything.
 - **Saves.** Raise `SAVE_VERSION` when `GameState`, `Character`, `WorldState` or `BattleSnapshot` changes shape; no migration unless a design asks. Items save by id, so new items must be in `BASE_ITEMS` or `MAGIC_ITEMS`.
 - **Balance.** Constants are tuned against the user's bands (`yomi-balance` skill); a change that moves play fails the refactor guard (`scripts/simulate.test.ts`).
-- **Import cycles** (`skills`/`perks`/`trees`, `blight`/`territory`/`worldMap`, `company` and the day-passing modules) are safe only while nothing calls across at module load.
+- **Import cycles** (`skills`/`perks`/`trees`, `blight`/`territory`/`worldMap`/`trade`, `company` and the day-passing modules) are safe only while nothing calls across at module load.
 
 ## Tests
 

@@ -1,0 +1,41 @@
+# Feature: long campaign, stage 8 (trade partners and routes)
+
+## State
+
+- Request (user's words):
+  > The next thing is stage 8 of the long campaign: trade partners and routes. Its design is docs/designs/long-campaign/stage-08-trade-routes.md and it is marked "ready for planning". [...] I'd start with the bookkeeping commit, then cut a long-campaign-stage-08 branch off main and run the orchestrator.
+- Slug `long-campaign-stage-08` · Phase 6, PR #10 open (42cde46..c66a473) · Next action: merge PR #10, then stage 9 · Branch: `long-campaign-stage-08`, off main (after the bookkeeping commit for #8/#9).
+- Path: Large, but the stage design is the approved design. Straight to planning, as stages 2–7 did.
+- Links:
+  - Stages overview: `docs/designs/long-campaign/index.md`
+  - Design: `docs/designs/long-campaign/stage-08-trade-routes.md` (status "ready for planning")
+  - Reference: `docs/designs/long-campaign/reference/economy-and-trade-routes.md` §4.3–§4.6, §5; `reference/multiple-parties.md` R10
+  - Previous stage: `docs/features/long-campaign-stage-07.md` (carried-forward notes)
+  - Plan: [`docs/implementation-plans/long-campaign-stage-08/index.md`](../implementation-plans/long-campaign-stage-08/index.md) (8 steps)
+  - Plan log (history): `docs/implementation-plans/long-campaign-stage-08/log.md`
+- Open questions: none (the road's raid range settled by the user, 2026-11-21).
+- Tiers (engineer / reviewer): planner opus; 01, 02, 07, 08 opus / opus; 03–06 sonnet / opus; no escalations. Verification: overall review opus, QA sonnet, simulated user sonnet.
+- Verification: overall review at b1bb013: ready for a PR (npm test 2546, build, 50-check b50f7b50…, e2e world/encampment/saves); QA at 0c45352: 7/8, the overlap fixed in b1bb013; simulated user at a12cddd: goals 1–3 met, 4 partly, 5 found (friction fixed in rounds 1–2). Evidence: `.git/pr-review/long-campaign-stage-08/evidence/`.
+- Carried forward:
+  - Accepted, not fixed: a road's shape (avoiding unsighted nests, decision 6) can hint at nests in the fog; the Routes preview's security, income and corruption cause use the true blight, not `seen` (follows C6 and decision 8); the overlay shades fogged road hexes by true blight (user, decision 10).
+  - Stage 9: the Routes tab shows at most 4 rows with no paging (a test trips when PARTNERS exceeds it).
+  - For the user, outside stage 8: the world header doesn't refresh behind the trading post (stale gold in shots); world-blight.png shows no corrupted land.
+  - Stage 9: a route whose raid cause comes and goes between yield days is never abandoned (by the reset rule); unmeasured.
+  - For the user: in the --trading-post 4 check no route was ever raided or abandoned (500 campaigns), so RAID_RADIUS / ABANDON_AFTER are unjudged by the simulator.
+  - From stage 7, not this stage: market income and the simulator's spend order (works, forts, market levels) wait for stage 12's retune.
+
+## Decision log
+
+| Date | Decision | By | Alternatives | Reason |
+|---|---|---|---|---|
+| 2026-11-21 | Skip architecture and design; the stage design is the approved design | orchestrator | new design | Marked ready for planning; precedent stages 2–7 |
+| 2026-11-21 | Own branch `long-campaign-stage-08` off main | user | commit on main | Precedent: one branch and PR per stage |
+| 2026-11-21 | No save migration: SAVE_VERSION 27 → 28, old saves unreadable (plan decision 15 revised) | user | `migrateFrom27` | User's choice; root CLAUDE.md: no migration unless a design asks |
+| 2026-11-21 | The road prefers paths more than RAID_RADIUS from every nest, falling back to avoiding nests and their neighbours | user | keep the design's rule, warn in the preview | No route raided on the day it opens |
+| 2026-11-21 | Plan decisions 5 (raid told once, abandon on sixth raided yield day), 9 (towers within 3 hexes of a tainted road hex), 12 (simulator Lodge 3 once a route is open) stand | user | change them | Recommended |
+| 2026-11-21 | Accept the planner's other departures (index decisions) and tiers (01, 02, 07, 08 opus/opus; 03–06 sonnet/opus) | orchestrator | follow the design to the letter | Routine engineering choices |
+| 2026-11-22 | The simulator's contact detour runs only once the trading post allows routes (level 4); decision 13 revised | user | accept the out-of-band move (304/500); detour only near the path | As planned, one party went 239 → 304 (band 215–250) from the detour alone; gated, the 50-check returns to baseline |
+| 2026-11-22 | Step 05 follow-ups: grey a partner only when contacted or in sight; a raided road's hover says it pays nothing | orchestrator | as contracted | Decision 3 (silence told only for contacted); a raided route pays nothing |
+| 2026-11-22 | Step 08: add a measurement-only simulator flag that starts the trading post at level 4 and reports routes opened, raided and their gold share; full-campaign route figures wait for stage 12's spend-order retune | user | defer only; raise the post now | Routes open 0.03 a campaign at ready level 10 under the kept spend order |
+| 2026-11-22 | Verification UX: the road hover counts parties (preview stays towers-only); a raid is told the day the road turns red (counting stays on yield days); the Routes offer names the good, the reason for low security and where corruption is; Open stays allowed; fogged road colours stay live | user | keep decisions 5 and 8 as planned; a confirm click; shade by last seen | Simulated user and QA friction |
+| 2026-11-22 | A route's raid count resets when the road is told safe again (any day) | user | count only on yield days, reword the manual | 'Safe again' should mean a fresh 30 days |

@@ -38,6 +38,11 @@ import { addPanelButton, fitText } from './panelButton.ts'
 import { runeEffectLines, runeSocketLine } from './runecraftView.ts'
 import { createPips } from './socketPips.ts'
 import { overlayScale } from './overlayScale.ts'
+import { ROUTE_ROWS, minimapBoard, minimapPoints, routeNotes, routeOffer, routeRows, routeState, type RouteRow } from './routesTab.ts'
+import { describeWorldEvent } from './worldEvents.ts'
+import { ROAD_COLORS } from './roadsView.ts'
+import { encampment, encampmentName } from '../game/worldMap.ts'
+import { openRoute, openRouteRefusal, routeLimit } from '../game/trade.ts'
 
 interface TradingPostData {
   game: GameState
@@ -45,7 +50,7 @@ interface TradingPostData {
   party?: string
 }
 
-type Tab = 'buy' | 'sell'
+type Tab = 'buy' | 'sell' | 'routes'
 
 /** The slots the post sells for, with the short word on their buttons. */
 const SLOT_BUTTONS: ReadonlyArray<readonly [EquipmentSlot, string]> = [
@@ -103,6 +108,9 @@ const CONFIRM_Y = 432
 const CONFIRM_ALL_Y = CONFIRM_Y - 40
 const REFUSAL_Y = 380
 const MESSAGE_Y = 462
+/** The minimap stack's lowest point: above a message line of up to two lines centred on `MESSAGE_Y`. */
+const STACK_BOTTOM = MESSAGE_Y - 20
+const STACK_GAP = 6
 const BUTTON_Y = 495
 /** The Buy tab's filter: the slot buttons (and Runes) across the frame, the families of the slot under them, eight to a row. */
 const SLOT_Y = 130
@@ -116,6 +124,14 @@ const GOLD = '#e8c766'
 const DIM = '#8a7a5a'
 const TEXT = '#d8c9a3'
 const REFUSED = '#ffb74d'
+const RAIDED = '#ef5350'
+
+/** The Routes tab: a line to each partner, an Open button at its right, and the selected road on a minimap. */
+const ROUTE_TOP = 150
+const ROUTE_ROW_H = 72
+const ROUTE_TEXT_W = LIST_W - 112
+const OPEN_W = 88
+const MINIMAP = { x: DETAILS_X, y: ROUTE_TOP, width: DETAILS_W, height: 150 }
 
 /**
  * The trading post, entered from the encampment (EncampmentScene) over the
@@ -140,6 +156,16 @@ export class TradingPostScene extends Phaser.Scene {
   private slotAt = new Map<EquipmentSlot, Point>()
   private runesAt: Point | null = null
   private familyAt = new Map<FamilyId | null, Point>()
+  /** The Routes tab's chosen partner; the first row when none is (or it is gone). */
+  private routeChosen: string | null = null
+  private routeLines: Array<{ row: RouteRow; line: string; open: Point | null; openEnabled: boolean; selected: boolean }> = []
+  /** The refusal drawn under the minimap, or null. */
+  private routeRefusal: string | null = null
+  /** The notes drawn under the minimap (`routeNotes`). */
+  private routeNotes: string[] = []
+  private messageHeight = 0
+  /** The bottom of the stack under the minimap, in the frame's units, or null with none drawn. */
+  private routeStackBottom: number | null = null
 
   constructor() {
     super('TradingPost')
@@ -158,6 +184,7 @@ export class TradingPostScene extends Phaser.Scene {
     this.page = 0
     this.filter = { ...OPENING_FILTER }
     this.selected = null
+    this.routeChosen = null
     this.message = ''
     this.bg = this.add.rectangle(0, 0, 1, 1, 0x000000, 0.7).setOrigin(0).setInteractive()
     this.frame = this.add.container(0, 0)
@@ -199,12 +226,26 @@ export class TradingPostScene extends Phaser.Scene {
       buttons: {
         buyTab: control('buyTab'),
         sellTab: control('sellTab'),
+        routesTab: control('routesTab'),
         confirm: control('confirm'),
         confirmAll: control('confirmAll'),
         prev: control('prev'),
         next: control('next'),
         close: control('close'),
       },
+      routes: this.routeLines.map(({ row, line, open, openEnabled, selected }) => ({
+        partner: row.partner,
+        status: row.status,
+        line,
+        open: open ? { ...onScreen(open), visible: true, enabled: openEnabled, width: OPEN_W * this.frame.scale } : null,
+        selected,
+      })),
+      routeRefusal: this.routeRefusal,
+      routeNotes: [...this.routeNotes],
+      routeStack:
+        this.routeStackBottom === null
+          ? null
+          : { bottom: y + this.routeStackBottom * scale, messageTop: y + (MESSAGE_Y - Math.max(this.messageHeight, 16) / 2) * scale },
     }
   }
 
@@ -227,6 +268,7 @@ export class TradingPostScene extends Phaser.Scene {
     const game = this.gameState
     const apOf = (member: number) => deriveCombatStats(this.expedition.members[member]).actionPoints
     const { slot, family } = this.filter
+    if (this.tab === 'routes') return []
     if (this.tab === 'buy') {
       if (slot === 'runes') {
         return runeWares(game.world).map((key) => ({ id: `rune:${key}`, kind: 'rune', label: runeName(key), detail: '', price: runePrice(key), rune: key, ap: TYPICAL_AP }))
@@ -288,6 +330,10 @@ export class TradingPostScene extends Phaser.Scene {
   private render(): void {
     this.frame.removeAll(true)
     this.controls = {}
+    this.routeLines = []
+    this.routeRefusal = null
+    this.routeNotes = []
+    this.routeStackBottom = null
     this.rowAt = new Map()
     this.slotAt = new Map()
     this.runesAt = null
@@ -302,15 +348,14 @@ export class TradingPostScene extends Phaser.Scene {
       this.add
         .text(CENTRE_X, TITLE_Y + 28, `${actingFor(this.gameState, this.expedition)}${tradingPostName(world.tradingPost)}, level ${world.tradingPost}.  Gold in the stock: ${world.stock.gold ?? 0}`, { fontFamily: FONT, fontSize: '13px', color: DIM })
         .setOrigin(0.5),
-      this.add
-        .text(CENTRE_X, MESSAGE_Y, this.message, { fontFamily: FONT, fontSize: '13px', color: TEXT, align: 'center', wordWrap: { width: FRAME_W - 40 } })
-        .setOrigin(0.5),
+      this.messageLine(),
     ])
     this.button('buyTab', { x: 140, y: TAB_Y, width: 120, height: 30 }, 'Buy', () => this.show('buy'), true, this.tab === 'buy')
     this.button('sellTab', { x: 280, y: TAB_Y, width: 120, height: 30 }, 'Sell', () => this.show('sell'), true, this.tab === 'sell')
+    this.button('routesTab', { x: 420, y: TAB_Y, width: 120, height: 30 }, 'Routes', () => this.show('routes'), true, this.tab === 'routes')
     if (this.tab === 'buy') this.drawFilter()
     rows.slice(this.page * this.rowsPerPage, (this.page + 1) * this.rowsPerPage).forEach((row, i) => this.drawRow(row, this.listTop + i * ROW_H))
-    if (rows.length === 0) {
+    if (rows.length === 0 && this.tab !== 'routes') {
       const none =
         this.tab === 'sell'
           ? 'Nothing to sell: worn gear must be taken off first.'
@@ -325,7 +370,8 @@ export class TradingPostScene extends Phaser.Scene {
       this.frame.add(this.add.text(LIST_X + LIST_W / 2, pageY, `Page ${this.page + 1} of ${pages}`, { fontFamily: FONT, fontSize: '12px', color: DIM }).setOrigin(0.5))
       this.button('next', { x: LIST_X + LIST_W - 60, y: pageY, width: 100, height: 26 }, 'Next', () => this.turnPage(1), this.page < pages - 1)
     }
-    this.drawDetails(rows.find((row) => row.id === this.selected) ?? null)
+    if (this.tab === 'routes') this.drawRoutes()
+    else this.drawDetails(rows.find((row) => row.id === this.selected) ?? null)
     this.button('close', { x: CENTRE_X, y: BUTTON_Y, width: 160, height: 36 }, 'Close', () => this.close())
   }
 
@@ -416,11 +462,140 @@ export class TradingPostScene extends Phaser.Scene {
     }
   }
 
+  // ---- the Routes tab ----------------------------------------------------------
+
+  private drawRoutes(): void {
+    const { world } = this.gameState
+    const all = routeRows(this.gameState, this.expedition)
+    const rows = all.slice(0, ROUTE_ROWS)
+    // The row clicked, else the first.
+    const chosen = rows.find((r) => r.partner === this.routeChosen) ?? rows[0] ?? null
+    const limit = routeLimit(world)
+    const heading =
+      limit === 0
+        ? `Routes need the ${tradingPostName(4)} (trading post level 4).`
+        : rows.length === 0
+          ? `No partner trades with ${encampmentName(world)} yet: walk to one on the map.`
+          : `Routes: ${world.routes.length} of ${limit} open.`
+    this.frame.add(this.add.text(LIST_X + 4, 126, heading, { fontFamily: FONT, fontSize: '13px', color: limit === 0 ? REFUSED : GOLD, wordWrap: { width: LIST_W } }))
+    rows.forEach((row, i) => this.drawRouteRow(row, ROUTE_TOP + i * ROUTE_ROW_H, row === chosen))
+    this.drawMinimap(chosen)
+  }
+
+  private drawRouteRow(row: RouteRow, y: number, marked: boolean): void {
+    const centre = { x: LIST_X + LIST_W / 2, y: y + ROUTE_ROW_H / 2 }
+    const line = row.status === 'closed' ? routeOffer(row) : routeState(row)
+    const back = this.add
+      .rectangle(centre.x, centre.y, LIST_W, ROUTE_ROW_H - 4, marked ? 0x3a2f1c : 0x1b1712, 0.95)
+      .setStrokeStyle(1, marked ? 0xc9a227 : 0x3a3024)
+      .setInteractive({ useHandCursor: true })
+    back.on('pointerdown', () => {
+      playCue(this, 'ui.click')
+      this.time.delayedCall(0, () => this.chooseRoute(row.partner))
+    })
+    const color = row.status === 'raided' ? RAIDED : row.silent ? DIM : marked ? GOLD : TEXT
+    const text = this.add.text(LIST_X + 8, centre.y, line, { fontFamily: FONT, fontSize: '12px', color, wordWrap: { width: ROUTE_TEXT_W }, lineSpacing: 2 }).setOrigin(0, 0.5)
+    this.frame.add([back, text])
+    let open: Point | null = null
+    if (row.status === 'closed') {
+      open = { x: LIST_X + LIST_W - OPEN_W / 2 - 8, y: centre.y }
+      // A refused Open is faint but clickable: its click tells the refusal.
+      addPanelButton(this, this.frame, { ...open, width: OPEN_W, height: 28 }, 'Open', () => this.time.delayedCall(0, () => this.onOpenRoute(row)), {
+        enabled: true,
+        dimmed: row.refusal !== null,
+        fontSize: 13,
+        cue: null,
+      })
+    }
+    this.routeLines.push({ row, line, open, openEnabled: row.status === 'closed' && row.refusal === null, selected: marked })
+  }
+
+  /** The board's outline, the known nests and partners, the home, and the chosen row's road. */
+  private drawMinimap(row: RouteRow | null): void {
+    const { world } = this.gameState
+    const board = minimapBoard(world.board, MINIMAP)
+    const home = encampment(world).position
+    const g = this.add.graphics()
+    g.fillStyle(0x1b1712, 1).fillRect(board.x, board.y, board.width, board.height)
+    g.lineStyle(1, 0x6b5a3a, 1).strokeRect(board.x, board.y, board.width, board.height)
+    const at = (hex: typeof home): Point => minimapPoints(world.board, [], hex, MINIMAP)[0]
+    for (const nest of world.locations.filter((l) => l.kind === 'monsters' && world.sighted.includes(l.id))) {
+      const p = at(nest.position)
+      g.fillStyle(0xb23a3a, 1).fillRect(p.x - 2, p.y - 2, 4, 4)
+    }
+    for (const partner of world.contacted.map((id) => world.locations.find((l) => l.id === id)).filter((l) => l !== undefined)) {
+      const p = at(partner.position)
+      g.fillStyle(0xe8c766, 1).fillCircle(p.x, p.y, 3)
+    }
+    if (row?.road) {
+      const points = minimapPoints(world.board, row.road, home, MINIMAP)
+      g.lineStyle(2, row.status === 'raided' || row.raid ? ROAD_COLORS.raided : ROAD_COLORS.secure, 1).beginPath().moveTo(points[0].x, points[0].y)
+      for (const p of points.slice(1)) g.lineTo(p.x, p.y)
+      g.strokePath()
+    }
+    const h = at(home)
+    g.fillStyle(0xffffff, 1).fillCircle(h.x, h.y, 4)
+    this.frame.add(g)
+    // The road's length is in its row; a caption only when there is no road to draw.
+    const caption = row ? (row.road ? null : `No road to ${row.name}`) : 'Nothing to show yet.'
+    // Under the minimap, stacked: the caption, the notes (the raid, why security is short, the good's condition), the refusal.
+    // Told once: once Open was clicked, the message line says the refusal.
+    const refusal = row?.status === 'closed' && row.refusal && row.refusal !== this.message ? row.refusal : null
+    // With a refusal to tell, the good's condition gives way to it.
+    const notes = row ? routeNotes(row, { good: refusal === null }) : []
+    const items: { text: string; color: string; kind: 'caption' | 'note' | 'refusal' }[] = [
+      ...(caption ? [{ text: caption, color: DIM, kind: 'caption' as const }] : []),
+      ...notes.map((text) => ({ text, color: TEXT, kind: 'note' as const })),
+      ...(refusal ? [{ text: refusal, color: REFUSED, kind: 'refusal' as const }] : []),
+    ]
+    const top = MINIMAP.y + MINIMAP.height + 8
+    const texts = items.map((item) => this.add.text(DETAILS_X, 0, item.text, { fontFamily: FONT, fontSize: '12px', color: item.color, wordWrap: { width: DETAILS_W }, lineSpacing: 2 }))
+    const height = () => texts.reduce((sum, t) => sum + (t.active ? t.height + STACK_GAP : 0), 0)
+    // Kept above the message line: the notes give way from the last (the good's, then security's), never the refusal.
+    for (let i = items.length - 1; i >= 0 && top + height() > STACK_BOTTOM; i--) {
+      if (items[i].kind === 'note') texts[i].destroy()
+    }
+    let y = top
+    this.routeNotes = []
+    items.forEach((item, i) => {
+      if (!texts[i].active) return
+      texts[i].setY(y)
+      this.frame.add(texts[i])
+      y += texts[i].height + STACK_GAP
+      if (item.kind === 'note') this.routeNotes.push(item.text)
+      if (item.kind === 'refusal') this.routeRefusal = item.text
+    })
+    this.routeStackBottom = y - STACK_GAP
+  }
+
+  /** The message line, centred on `MESSAGE_Y`; its height is kept for the probe. */
+  private messageLine(): Phaser.GameObjects.Text {
+    const text = this.add
+      .text(CENTRE_X, MESSAGE_Y, this.message, { fontFamily: FONT, fontSize: '13px', color: TEXT, align: 'center', wordWrap: { width: FRAME_W - 40 } })
+      .setOrigin(0.5)
+    this.messageHeight = this.message ? text.height : 0
+    return text
+  }
+
+  private chooseRoute(partner: string): void {
+    this.routeChosen = partner
+    this.render()
+  }
+
+  /** Opens the route, or says why not; the road is drawn on the minimap after. */
+  private onOpenRoute(row: RouteRow): void {
+    const refusal = openRouteRefusal(this.gameState, this.expedition, row.partner)
+    playCue(this, refusalCue(refusal, 'world.build'))
+    this.message = refusal ?? describeWorldEvent(openRoute(this.gameState, this.expedition, row.partner))
+    this.routeChosen = row.partner
+    this.render()
+  }
+
   private button(key: keyof TradingPostProbe['buttons'], at: Rect, label: string, onClick: () => void, enabled = true, marked = false): void {
     this.controls[key] = { at, enabled }
     // The tabs sound a tab; a confirm sounds its own outcome (a refused one is faint but still clickable, and sounds the refusal); the rest a click or a back.
     const confirms = key === 'confirm' || key === 'confirmAll'
-    const cue = confirms ? null : key === 'buyTab' || key === 'sellTab' ? 'ui.tab' : buttonCue(label)
+    const cue = confirms ? null : key === 'buyTab' || key === 'sellTab' || key === 'routesTab' ? 'ui.tab' : buttonCue(label)
     // Next tick: the redraw a click leads to destroys the button whose handler this runs in.
     addPanelButton(this, this.frame, at, label, () => this.time.delayedCall(0, onClick), { enabled: enabled || confirms, dimmed: confirms && !enabled, marked, fontSize: 13, cue })
   }
@@ -439,6 +614,7 @@ export class TradingPostScene extends Phaser.Scene {
     this.page = 0
     this.filter = { ...OPENING_FILTER }
     this.selected = null
+    this.routeChosen = null
     this.message = ''
     this.render()
   }

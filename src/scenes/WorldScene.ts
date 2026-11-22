@@ -11,6 +11,7 @@ import { newGame, selectedParty, type GameState } from '../game/gameState.ts'
 import { SAVE_FAILED_MESSAGE, SAVE_WARNED_KEY, deleteSlot, saveGame } from '../game/saveSlots.ts'
 import { craftTier } from '../game/crafting.ts'
 import { FORECAST_SLICE_MS, Forecaster, forecastHint, forecastLabel, worldForecastStart, workFor, type Forecast } from '../game/forecast.ts'
+import { isContacted, isSilent, partners } from '../game/trade.ts'
 import { daysToFall, improvementName, siteImprovement } from '../game/territory.ts'
 import { UNEXPLORED, knownBlightedShare, visibleHexes } from '../game/vision.ts'
 import {
@@ -46,6 +47,7 @@ import { BANNER_SPRITES, PARTY_LIST_W, bannerOf, deployedParties, figureOffsets,
 import { UnitFigure } from './UnitFigure.ts'
 import { heroLook, SPRITE_ATLAS, spriteAnim, spriteFrame } from './unitLook.ts'
 import { FRAME_ACTIVE_COLOR, HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
+import { ROAD_COLORS, roadSegments, silenceShown, type RoadSegment } from './roadsView.ts'
 import { advanceMessage, describeDays, describeOthers, describeStanding, describeWalk, describeWorldEvent, describeWorldEvents, yieldSummary } from './worldEvents.ts'
 import { improveLabel } from './improveButton.ts'
 import { hexInfo } from './hexInfo.ts'
@@ -71,7 +73,21 @@ const LOCATION_SPRITES: Record<LocationKind, string> = {
   monsters: 'map_monsters',
   encampment: 'map_encampment',
   resource: 'map_resource',
+  partner: 'map_partner_village',
 }
+/** Each trade partner's own sprite; a partner without one uses `LOCATION_SPRITES.partner`. */
+const PARTNER_SPRITES: Record<string, string> = { millbrook: 'map_partner_village', saltmere: 'map_partner_port' }
+/** A silent partner's sprite and label, greyed. */
+const SILENT_TINT = 0x9e9e9e
+const SILENT_LABEL = '#9e9e9e'
+/** A partner's name colour: a warm trade gold, apart from held green. */
+const PARTNER_LABEL = '#ffe082'
+/** The road overlay: dash and gap lengths along a segment, line widths, and the dark edge's colour. */
+const ROAD_DASH = 9
+const ROAD_GAP = 6
+const ROAD_WIDTH = 3
+const ROAD_EDGE_WIDTH = 6
+const ROAD_EDGE = 0x1b1b1b
 /** A watchtower's sprite, which is not a location's. */
 const TOWER_SPRITE = 'map_watchtower'
 /** A fort's palisade, drawn over its resource's icon. */
@@ -110,7 +126,7 @@ const ROUTE_COLOR = 0xffffff
 const ROUTE_EDGE = 0x000000
 const MONSTERS_OUTLINE = 0xe53935
 /** The standing route: what is left of the selected party's travel order, drawn while no hover route is. */
-const ORDER_ROUTE_COLOR = 0xffd54f
+const ORDER_ROUTE_COLOR = 0x81d4fa
 const PARTY_OUTLINE = 0xffffff
 const WALK_STEP_MS = 140
 
@@ -258,6 +274,14 @@ export class WorldScene extends Phaser.Scene {
   private siteLabels!: Phaser.GameObjects.Container
   /** The ids of the locations drawn, and the levels of the land, to tell when they must be drawn again. */
   private drawnLocations = ''
+  /** The roads layer: dashed segments between hex centres, in `ROAD_COLORS`. */
+  private roadMarks!: Phaser.GameObjects.Graphics
+  /** The segments as drawn now, and their key. */
+  private drawnRoads: RoadSegment[] = []
+  private drawnRoadsKey = ''
+  /** The partners' sprites and labels as drawn now, for the probe's `grey`. */
+  private partnerSprites = new Map<string, Phaser.GameObjects.Sprite>()
+  private partnerLabels = new Map<string, Phaser.GameObjects.Text>()
   private drawnBlight = ''
   /** The hexes in sight as of the last refresh, by `boardIndex`. */
   private visible = new Set<number>()
@@ -309,6 +333,9 @@ export class WorldScene extends Phaser.Scene {
     const map = boardPixelSize(this.world.board, WORLD_LAYOUT)
     this.blightLayer = this.add.renderTexture(0, 0, Math.ceil(map.width), Math.ceil(map.height)).setOrigin(0)
     this.blightSprites = this.add.container(0, 0)
+    this.roadMarks = this.add.graphics()
+    this.drawnRoads = []
+    this.drawnRoadsKey = ''
     this.hoverMarks = this.add.graphics()
     this.partyMark = this.add.graphics()
     this.siteSprites = this.add.container(0, 0)
@@ -319,7 +346,7 @@ export class WorldScene extends Phaser.Scene {
     this.selectedMark = this.add.graphics()
     this.partyLayer = this.add.container(0, 0, [this.selectedMark])
     this.figures = new Map()
-    this.mapLayer.add([this.blightLayer, this.blightSprites, this.hoverMarks, this.partyMark, this.siteSprites, this.partyLayer, this.siteLabels])
+    this.mapLayer.add([this.blightLayer, this.blightSprites, this.roadMarks, this.hoverMarks, this.partyMark, this.siteSprites, this.partyLayer, this.siteLabels])
     this.syncFigures()
 
     this.headerBar = this.add.rectangle(0, 0, 0, 0, BAR_COLOR, BAR_ALPHA).setOrigin(0)
@@ -606,6 +633,17 @@ export class WorldScene extends Phaser.Scene {
       improveLabel: this.improveButton.visible ? (this.improveButton.getData('text') as Phaser.GameObjects.Text).text : null,
       status: this.statusText.text,
       palisades: this.palisades,
+      roads: this.world.routes.map((route) => ({
+        route: route.id,
+        shades: this.drawnRoads.filter((s) => s.route === route.id).map((s) => s.shade),
+      })),
+      partners: partners(this.world).map((p) => ({
+        id: p.id,
+        contacted: isContacted(this.world, p.id),
+        silent: isSilent(this.world, p.id),
+        grey: this.partnerGrey(p.id),
+        drawn: this.knowledgeOf(p) !== 'hidden',
+      })),
       buttons: {
         scout,
         wait,
@@ -674,28 +712,68 @@ export class WorldScene extends Phaser.Scene {
     return this.visible.has(i) ? 'seen' : 'remembered'
   }
 
+  /** The open roads, dashed between hex centres in their security's colour; redrawn only when a shade changes. Drawn through the fog: the roads are the company's own. */
+  private refreshRoads(): void {
+    const segments = roadSegments(this.world, this.presences())
+    const key = segments.map((s) => `${s.route}:${s.from.q},${s.from.r}:${s.shade}`).join()
+    if (key === this.drawnRoadsKey) return
+    this.drawnRoadsKey = key
+    this.drawnRoads = segments
+    const g = this.roadMarks.clear()
+    for (const edge of [true, false]) {
+      for (const seg of segments) {
+        const a = boardHexCenter(seg.from, WORLD_LAYOUT)
+        const b = boardHexCenter(seg.to, WORLD_LAYOUT)
+        const length = Math.hypot(b.x - a.x, b.y - a.y)
+        g.lineStyle(edge ? ROAD_EDGE_WIDTH : ROAD_WIDTH, edge ? ROAD_EDGE : ROAD_COLORS[seg.shade], edge ? 0.7 : 1)
+        for (let d = 0; d < length; d += ROAD_DASH + ROAD_GAP) {
+          const from = d / length
+          const to = Math.min(length, d + ROAD_DASH) / length
+          g.lineBetween(a.x + (b.x - a.x) * from, a.y + (b.y - a.y) * from, a.x + (b.x - a.x) * to, a.y + (b.y - a.y) * to)
+        }
+      }
+    }
+  }
+
+  /** Whether a partner is drawn grey: silent, and the player may know it (contacted, or in sight now). */
+  private greyed(id: string): boolean {
+    return silenceShown(this.world, id, this.visible.has(boardIndex(this.world.board, partners(this.world).find((p) => p.id === id)!.position)))
+  }
+
+  /** Whether a partner's drawn sprite is tinted grey and its drawn label is grey, for the probe. */
+  private partnerGrey(id: string): boolean {
+    const sprite = this.partnerSprites.get(id)
+    const label = this.partnerLabels.get(id)
+    return !!sprite && !!label && sprite.isTinted && sprite.tintTopLeft === SILENT_TINT && label.style.color === SILENT_LABEL
+  }
+
   /** Every known location's sprite, under the party, faded where out of sight; drawn again only when that changes. */
   private refreshLocations(): void {
     const key = [
-      ...this.world.locations.map((l) => `${l.id}:${this.knowledgeOf(l)}`),
+      ...this.world.locations.map((l) => `${l.id}:${this.knowledgeOf(l)}${l.kind === 'partner' && this.greyed(l.id) ? ':silent' : ''}`),
       ...this.world.towers.map((t) => t.id),
       ...this.world.locations.filter((l) => siteImprovement(this.world, l.id) === 3).map((l) => `fort:${l.id}`),
     ].join()
     if (key === this.drawnLocations) return
     this.drawnLocations = key
+    this.partnerSprites.clear()
     this.siteSprites.removeAll(true)
     this.palisades = 0
     for (const [i, location] of this.world.locations.entries()) {
       const knowledge = this.knowledgeOf(location)
       if (knowledge === 'hidden') continue
       const { x, y } = boardHexCenter(location.position, WORLD_LAYOUT)
-      const sprite = LOCATION_SPRITES[location.kind]
+      const sprite = location.kind === 'partner' ? (PARTNER_SPRITES[location.id] ?? LOCATION_SPRITES.partner) : LOCATION_SPRITES[location.kind]
       const source = location.kind === 'monsters' && location.source
       const figure = this.add
         .sprite(x, y + LOCATION_Y, SPRITE_ATLAS, spriteFrame(sprite, 'base'))
         .setScale(source ? SOURCE_SCALE : LOCATION_SCALE)
         .play({ key: spriteAnim(sprite, 'idle'), delay: (i * LOCATION_STAGGER_MS) % 1000 })
       if (source) figure.setTint(SOURCE_TINT)
+      if (location.kind === 'partner') {
+        this.partnerSprites.set(location.id, figure)
+        if (this.greyed(location.id)) figure.setTint(SILENT_TINT)
+      }
       if (knowledge === 'remembered') figure.setAlpha(REMEMBERED_ALPHA)
       this.siteSprites.add(figure)
       // A fort's palisade rings its resource's icon.
@@ -723,6 +801,7 @@ export class WorldScene extends Phaser.Scene {
   /** Every known location's name over the party, so none is hidden: a held site's starred, and a threatened one's with the days until it falls. */
   private refreshLabels(): void {
     this.siteLabels.removeAll(true)
+    this.partnerLabels.clear()
     for (const location of this.world.locations) {
       const knowledge = this.knowledgeOf(location)
       if (knowledge === 'hidden') continue
@@ -734,21 +813,21 @@ export class WorldScene extends Phaser.Scene {
           : null
       const lines = [held ? `${location.name} *` : location.name]
       const built = siteImprovement(this.world, location.id)
-      if (built !== 0 && location.kind !== 'monsters') lines.push(improvementName(location, built))
+      if (built !== 0 && location.kind === 'resource') lines.push(improvementName(location, built))
       if (days !== null) lines.push(`falls in ${days}d`)
-      this.siteLabels.add(
-        this.add
+      const label = this.add
           .text(x, y + LABEL_Y, lines.join('\n'), {
             fontFamily: 'monospace',
             fontSize: '11px',
-            color: labelColor(location, held, days !== null),
+            color: labelColor(location, held, days !== null, location.kind === 'partner' && this.greyed(location.id)),
             stroke: '#000000',
             strokeThickness: 3,
             align: 'center',
           })
           .setOrigin(0.5, 0)
-          .setAlpha(knowledge === 'remembered' ? REMEMBERED_ALPHA + 0.25 : 1),
-      )
+          .setAlpha(knowledge === 'remembered' ? REMEMBERED_ALPHA + 0.25 : 1)
+      this.siteLabels.add(label)
+      if (location.kind === 'partner') this.partnerLabels.set(location.id, label)
     }
     // A tower goes unnamed until the blight gains on it.
     for (const tower of this.world.towers) {
@@ -1087,6 +1166,7 @@ export class WorldScene extends Phaser.Scene {
       this.partyMark.lineStyle(2, NEUTRAL_RING, 0.9).strokeCircle(c.x, c.y, WORLD_LAYOUT.hexSize * 0.6)
     }
     this.refreshBlight()
+    this.refreshRoads()
     this.refreshLocations()
     this.refreshLabels()
 
@@ -1561,7 +1641,7 @@ export class WorldScene extends Phaser.Scene {
     if (!report) return
     // The first event is the building's own; the rest are the day's.
     const [built, ...day] = report.events
-    this.ownDays(describeWorldEvent(built), [report], describeOthers(this.gameState, this.expedition(), [{ ...report, events: day }]))
+    this.ownDays(describeWorldEvent(built, this.world), [report], describeOthers(this.gameState, this.expedition(), [{ ...report, events: day }]))
   }
 
   /**
@@ -1702,7 +1782,7 @@ export class WorldScene extends Phaser.Scene {
     playCue(this, kind === 'embed' ? 'world.rune.embed' : 'world.craft')
     playCues(this, worldSounds(events).map((sound) => ({ ...sound, delayMs: sound.delayMs + WORLD_SOUND_GAP_MS })))
     this.noteYield(events)
-    const told = describeWorldEvents(events, events.find((event) => isNotable(this.world, event, this.presences())) ?? null)
+    const told = describeWorldEvents(events, events.find((event) => isNotable(this.world, event, this.presences())) ?? null, this.world)
     this.messageText.setText(`A day's work makes the ${item}.${told ? ` ${told}` : ''}`)
     this.checkOutcome()
     // After the redraw and save the resume does.
@@ -1727,8 +1807,10 @@ export class WorldScene extends Phaser.Scene {
 }
 
 /** A location's name colour: monsters reddish, the Source violet, held sites green, threatened ones orange. */
-function labelColor(location: WorldLocation, held: boolean, threatened: boolean): string {
+function labelColor(location: WorldLocation, held: boolean, threatened: boolean, silent = false): string {
   if (location.kind === 'monsters') return location.source ? '#ce93d8' : '#ffab91'
+  // A trade partner is never held or threatened: trade gold, grey while silent.
+  if (location.kind === 'partner') return silent ? SILENT_LABEL : PARTNER_LABEL
   if (threatened) return '#ffb74d'
   return held ? '#a5d6a7' : '#ffffff'
 }

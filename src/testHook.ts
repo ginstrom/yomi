@@ -188,6 +188,10 @@ export interface WorldProbe {
   status: string
   /** How many forts' palisades (`map_fort`) the map draws. */
   palisades: number
+  /** Each open route's id and the shades of its segments as drawn now, from the encampment out. */
+  roads: { route: string; shades: ('secure' | 'tainted' | 'raided')[] }[]
+  /** Each trade partner: whether it is contacted, silent, its sprite on the map now (not hidden by the fog), and `grey`: its drawn sprite is tinted grey and its drawn label grey (a silent partner the player may know of: contacted, or in sight). */
+  partners: { id: string; contacted: boolean; silent: boolean; drawn: boolean; grey: boolean }[]
   /**
    * Scout, Wait, Attack and Auto-resolve show among monsters, the camp buttons and the time buttons elsewhere (so, with the game still going); `campUntilHealed` is enabled while someone is wounded.
    * `end` and `endless` show on the victory screen, `menu` on the defeat screen.
@@ -275,7 +279,7 @@ export interface EncampmentProbe {
 export interface TradingPostProbe {
   /** The id of the party the post acts for. */
   actingFor: string
-  tab: 'buy' | 'sell'
+  tab: 'buy' | 'sell' | 'routes'
   /** The gold in the stock. */
   gold: number
   /** What the last action did, or why it was refused. */
@@ -300,12 +304,25 @@ export interface TradingPostProbe {
   buttons: {
     buyTab: ButtonProbe
     sellTab: ButtonProbe
+    routesTab: ButtonProbe
     confirm: ButtonProbe
     confirmAll: ButtonProbe
     prev: ButtonProbe
     next: ButtonProbe
     close: ButtonProbe
   }
+  /**
+   * The Routes tab's lines, one for each contacted partner in contact order (empty on the other tabs): the
+   * route's status, the line shown, and its Open button (null for an open or raided route). `selected` is
+   * the partner id whose road the minimap draws, or null.
+   */
+  routes: Array<{ partner: string; status: 'open' | 'raided' | 'closed'; line: string; open: ButtonProbe | null; selected: boolean }>
+  /** The refusal shown under the Routes tab's minimap for the chosen closed row, or null; never the same words as `message`. */
+  routeRefusal: string | null
+  /** The chosen row's notes under the minimap (`routeNotes`: why security is short of 100%, the good's condition). */
+  routeNotes: string[]
+  /** The bottom of the stack under the minimap and the top of the message line, on screen; null with no stack. The stack stays above the message. */
+  routeStack: { bottom: number; messageTop: number } | null
 }
 
 export interface CraftingProbe {

@@ -4,6 +4,7 @@ import { newExpedition, presences } from '../game/expedition.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
 import { readyMadeParty } from '../game/party.ts'
 import { UNEXPLORED, visibleHexes } from '../game/vision.ts'
+import { roadTo } from '../game/trade.ts'
 import { ENCAMPMENT_ID } from '../game/worldMap.ts'
 import type { Hex } from '../grid/hex.ts'
 import { hexInfo } from './hexInfo.ts'
@@ -113,5 +114,68 @@ describe('hexInfo', () => {
     const { lines } = hexInfo(game, party, new Set(), at)
     expect(lines).toContain('Blight: blighted (as last seen).')
     expect(lines).toContain('Out of sight.')
+  })
+})
+
+describe('hexInfo of a trade partner', () => {
+  it('names it and its good, with no resource lines', () => {
+    const { game, world } = solo()
+    const millbrook = world.locations.find((l) => l.id === 'millbrook')!
+    world.seen[boardIndex(world.board, millbrook.position)] = 1
+    const { title, lines } = info(game, millbrook.position)
+    expect(title).toBe('Millbrook')
+    expect(lines).toContain('Trade partner: timber.')
+    expect(lines.some((l) => /Resource|Yields|Next:|Strength/.test(l))).toBe(false)
+  })
+})
+
+function solo2() {
+  const it = solo()
+  return { ...it, at: it.world.locations.find((l) => l.id === 'millbrook')!.position }
+}
+
+describe('hexInfo of a partner and its road (stage 8)', () => {
+  function withRoute() {
+    const it = solo()
+    it.world.contacted.push('millbrook')
+    const road = roadTo(it.world, 'millbrook')!
+    it.world.routes.push({ id: 'route_millbrook', partner: 'millbrook', road, opened: 1, raidedDays: 0, raided: false })
+    const millbrook = it.world.locations.find((l) => l.id === 'millbrook')!
+    return { ...it, road, at: millbrook.position }
+  }
+
+  it('hides a partner until its hex is seen, then tells it', () => {
+    const { game, world, at } = withRoute()
+    world.seen[boardIndex(world.board, at)] = UNEXPLORED
+    expect(info(game, at).title).toBe('Unexplored')
+    world.seen[boardIndex(world.board, at)] = 0
+    const shown = info(game, at)
+    expect(shown.title).toBe('Millbrook')
+    expect(shown.lines).toContain('Trade partner: timber.')
+    expect(shown.lines.some((l) => l.startsWith('Route open: security '))).toBe(true)
+    expect(shown.lines.some((l) => l.startsWith('The Millbrook road:'))).toBe(true)
+  })
+
+  it('keeps an uncontacted partner\'s silence from a player who cannot see it', () => {
+    const { game, world, at } = solo2()
+    world.seen[boardIndex(world.board, at)] = 0
+    world.silent.push('millbrook')
+    expect(info(game, at).lines).not.toContain('Silent while the blight holds its land.')
+    world.contacted.push('millbrook')
+    expect(info(game, at).lines).toContain('Silent while the blight holds its land.')
+  })
+
+  it('tells the road on an unexplored road hex', () => {
+    const { game, world, road } = withRoute()
+    const hex = road[2]
+    world.seen[boardIndex(world.board, hex)] = UNEXPLORED
+    const shown = info(game, hex)
+    expect(shown.title).toBe('Unexplored')
+    expect(shown.lines.some((l) => l.startsWith('The Millbrook road: security'))).toBe(true)
+  })
+
+  it('tells nothing of roads off them', () => {
+    const { game } = withRoute()
+    expect(info(game).lines.some((l) => l.includes('road'))).toBe(false)
   })
 })

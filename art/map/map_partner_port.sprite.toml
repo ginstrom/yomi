@@ -1,0 +1,42 @@
+# A trade partner on the world map: Saltmere, a fishing port on the south
+# coast. Two tiled huts on grass, flat white salt pans and a salt heap, and a
+# small bay at the lower left with a fishing boat at its mooring.
+canvas = "map"
+outline = "auto"
+
+[frames.base.runs]
+# the huts
+2 = [[5, "oo"]]
+3 = [[4, "orro"], [14, "oo"]]
+4 = [[3, "orrrro"], [13, "orro"]]
+5 = [[3, "TTTTTT"], [12, "orrrro"]]
+6 = [[3, "TbTNTT"], [12, "TTTTTT"]]
+7 = [[3, "TTTNTT"], [12, "TbTNTT"]]
+8 = [[1, "gegggggeggg"], [12, "TTTNTT"], [18, "geggg"]]
+# grass, the salt heap and the flat pans
+9 = [[1, "gggegggggeggggegggggeg"]]
+10 = [[10, "W"], [12, "aaaaaaaaaa"]]
+11 = [[9, "WWW"], [12, "aWWWaWWWWa"]]
+12 = [[9, "wWw"], [12, "aaaaaaaaaa"]]
+# a ground strip under the pans, and the bay (stepped shore) with the boat
+13 = [[1, "bbbbb"], [6, "ggegggggeggggggge"]]
+14 = [[1, "bbbb"], [5, "r"], [6, "bb"]]
+15 = [[1, "bbb"], [4, "Wn"], [6, "bbbb"]]
+16 = [[1, "bb"], [3, "WWn"], [6, "bbcbb"]]
+17 = [[1, "bb"], [3, "WWn"], [6, "bbbbb"]]
+18 = [[1, "bb"], [3, "nnnnnn"], [9, "bb"]]
+19 = [[1, "bbb"], [4, "NNNN"], [8, "bcb"]]
+20 = [[2, "bbbbbbbb"]]
+
+# The water shimmers.
+[frames.swell]
+from = "base"
+
+[frames.swell.runs]
+16 = [[6, "bbbbb"]]
+19 = [[8, "bbb"]]
+20 = [[2, "bbcbbbbb"]]
+
+[anim.idle]
+frames = ["base", "swell"]
+ms = 600

@@ -6,13 +6,13 @@ The measure is the share of 500 campaigns from seed 1 that beat the Source witho
 
 The bands, set by the user (the targets; keep them):
 
-| Measure | Band | Now (seed 1: stage 7 where marked, else the skill trees' step 30) |
+| Measure | Band | Now (seed 1: stage 8 or 7 where marked, else the skill trees' step 30) |
 | --- | --- | --- |
-| One party (`--parties 1`) | 215 to 250 | 239 (286 days, 19.5 battles, 1.1 dead; stage 7) |
-| Default company | 220 to 260 | 239 (stage 7) |
-| `--ready-level 10` | 370 to 420 | 434 (509 days), accepted up to 445 |
-| Heroes dead a campaign | at most 2.0 | 1.1 (stage 7) |
-| Days a campaign | 243 to 297 | 286 (stage 7) |
+| One party (`--parties 1`) | 215 to 250 | 233 (284 days, 19.3 battles, 1.2 dead; stage 8) |
+| Default company | 220 to 260 | 232 (stage 8) |
+| `--ready-level 10` | 370 to 420 | 433 (509 days; stage 8), accepted up to 445 |
+| Heroes dead a campaign | at most 2.0 | 1.2 (stage 8) |
+| Days a campaign | 243 to 297 | 284 (stage 8) |
 | GR3 | at least 470 | 500 |
 | BC3 | 400 to 470 | 455 |
 | BC4 | 430 to 490 | 454 |

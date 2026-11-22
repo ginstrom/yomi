@@ -13,6 +13,7 @@ describe('the encampment screen', () => {
     expect(facilityFrame({ id: 'guild_hall', level: 1 })).toBe('camp_guild_hall/level_1')
     expect(facilityFrame({ id: 'builders_lodge', level: 1 })).toBe('camp_lodge/level_1')
     expect(facilityFrame({ id: 'builders_lodge', level: 2 })).toBe('camp_lodge/level_2')
+    expect(facilityFrame({ id: 'builders_lodge', level: 3 })).toBe('camp_lodge/level_3')
     expect(facilityFrame({ id: 'builders_lodge', level: 0 })).toBe('camp_plot/base')
   })
 
