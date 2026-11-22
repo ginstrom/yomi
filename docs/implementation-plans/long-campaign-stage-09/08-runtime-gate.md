@@ -166,3 +166,16 @@ Each run may pass 9 minutes: start it detached and wait on it in the foreground,
 - [ ] One commit, "Stage 9 step 08: the runtime gate" (the log, this record, `running.md` and any approved optimisation), no attribution lines, files staged by path; the index's row 08 updated with status and commit.
 
 ## 7. Execution record
+
+**Status: stopped at the checkpoint (over the gate), awaiting the orchestrator's decision.** Figures, loads and the profile in [`log.md`](log.md), "Step 08: the runtime gate" and "Step 08: the profile".
+
+- **Start:** at `22407a9`; `npm test` 102 files, 2611 tests passed; the 50-campaign check's hash `57fdea15…76e53e75`, equal to step 05's (26 of 50).
+- **Timed alone** (no other simulation of this repository; other projects' jobs loaded the machine, load averages sampled each minute and recorded):
+  - day cost after: `passTurn` 2.099, `advanceDay` 1.854 ms a day (median of three at load about 6.5), against step 01's 0.666 and 0.628: 3.2 × and 3.0 ×; a first set of three, taken as a load spike began (2.4 to 6.5 ms), discarded and recorded;
+  - `one` (500): 21:08 wall, peak RSS 316 MB, `logs/s9-08-one.txt` (288 of 500, against the band's 215 to 250: for step 09 to judge);
+  - long (100): 20:15 wall, peak RSS 352 MB, `logs/s9-08-long.txt` (0 of 100 beat the Source);
+  - a profiled 20-campaign long run: 4:04, `logs/s9-08-prof/`.
+- **The gate: over.** The long run × 5 is about 101 minutes; the `one` run is at the gate (21 minutes under load). `advanceDay` profiled: the world's day is about 47% of a long run (`advanceDay` 33%, of which `netAt` 17%, its per-hex `geometry` lookup 6%, the fields memo and rebuilds 6%, `spawn` 2%; `updateTerritory` 4.5%; `updateSight` 1%); the simulator's walking orders' full-board route search (`routeTo`) 17%; battles 19%.
+- **No optimisation made.** `running.md`'s run-time line is not yet corrected: it waits for the decision (an approved optimisation changes the figures).
+- **Departures:** the runs used `node scripts/simulate.ts` directly (what `npm run simulate` runs) so `/usr/bin/time -l` measures the simulator itself; the 20-campaign profile run doubles as the long run's first projection; this progress commit is separate from the step's final one, so the record of the stop is in git.
+- **Orchestrator's decision:** (pending)

@@ -71,3 +71,46 @@ Step 06: engineer sonnet, reviewer opus; three partner sprites (map_partner_hold
 - 50-campaign check after the fix: SHA-256 `57fdea1553a35b1af0e33b74a11ea9fe0a0e2f62ef9e5c80972af59276e53e75`. **26 of 50** (step 04: 28; the step's first version: 28); 325 days (317; 356), 18.9 battles (18.5; 17.3), 32.5 spawns (31.1; 36.3), 3.4 sites captured and 0.1 lost, 27% of the land blighted at the end (26%; 65%), 0.60 partners contacted. The vanguard walked 294.1 days (288.0). Battles by threat: 1: 101, 2: 184, 3: 134, 4: 279, 5: 247 (won 0.931); none above 5. Step 04's profile is back; the reviewer's probe gave home-ring spawns 14.5 a campaign and home blight 25.1% on the same 50 (not re-measured here). The 2-win drop from step 04 is within 50 campaigns' noise (about ±3.5); the far partners' and sites' land is the remaining change.
 - Refactor guard re-recorded again (decision 11's second re-record, the same step), against step 04's figures: outcomes unchanged (Source, Source, Source, fallen, fallen); days 433, 416, 328, 359, 29 → 417, 414, 351, 362, 29; battles 26, 24, 18, 22, 4 → 19, 24, 19, 22, 4; spawns 46, 43, 31, 35, 0 → 52, 50, 34, 36, 0; sites captured 6, 4, 3, 5, 0 → 3, 4, 3, 5, 0; blighted at the end 0.299, 0.285, 0.272, 0.280, 0.118 → 0.374, 0.355, 0.274, 0.299, 0.118; partners contacted unchanged; events hash `31f97ff2…d70f9f` → `e4dd3391…6cb394`.
 - **For step 09 (a design question, not to tune):** in the real long campaign (no `--near-source`) the outer rings' fixed nests stand and corrupt the far land, so the home country will see about half the spawns it did (home-ring spawns 13.3 → 5.7 a campaign in the near-Source figures before the fix).
+
+## Step 08: the runtime gate (2026-11-22/23)
+
+All at `22407a9` (step 05's review round), the only dirty file the plan index (row 08 marked in progress). Each run alone: no other simulation of this repository (`pgrep -f "node.*scripts/simulate.ts"` empty before each), the orchestrator running nothing else here. Unrelated jobs from other projects (Steam, a podman VM, another project's vitest runs, two `while :; do :; done` shells) loaded the 10-core machine throughout: load averages, sampled each minute, are given with every figure. Node 26; the simulator run as `node scripts/simulate.ts …` (what `npm run simulate` runs) under `/usr/bin/time -l`.
+
+- **50-campaign check at the start:** SHA-256 `57fdea1553a35b1af0e33b74a11ea9fe0a0e2f62ef9e5c80972af59276e53e75`, equal to step 05's; 26 of 50. Wall 1:50 (load 7.3 to 7.6).
+- **Day cost after** (`node scripts/dayCost.ts`, 1000 days, seed 1; board 140 × 72, 60 monster locations at the end). Two sets of three:
+
+  | Set | Load (1 min) | `passTurn` ms a day | `advanceDay` ms a day |
+  | --- | --- | --- | --- |
+  | First (23:18) | 7.3 → 13.8 (rising) | 2.438, 4.029, 6.506 | 2.277, 5.755, 6.290 |
+  | Second (23:46) | 6.8 → 6.1 | 2.149, 2.005, 2.099 | 1.854, 1.970, 1.809 |
+
+  The first set ran into a load spike and is discarded. **After (second set, median): `passTurn` 2.099 ms, `advanceDay` 1.854 ms a day**, against step 01's stage-8 0.666 and 0.628 ms: **3.2 × and 3.0 ×** (the board is 4.2 × the hexes; step 01's 60 × 40 world ended with 24 monster locations, this one with 60).
+- **The `one` run** (`--campaign --battles 500 --seed 1 --parties 1 --ready-level 7 --near-source --log none`, `logs/s9-08-one.txt`): **21:08 wall** (1268 s; user 1344 s), 23:20:00 to 23:41:08, load (1 min) 5.1 to 32.8, mostly 6 to 14 (`logs/s9-08-one.load`). Peak RSS 316 MB. Figures, not judged here (step 09): 288 of 500 beat the Source (the band `one` is 215 to 250, Now 233), 331 days, 18.8 battles, 33.3 spawns, 27% blighted at the end.
+- **A 20-campaign long run under the profiler** (`node --cpu-prof --cpu-prof-dir=logs/s9-08-prof scripts/simulate.ts --campaign --battles 20 --seed 1 --log none`, `logs/s9-08-prof20.txt`): 4:04 wall (244 s), load 7.6 to 17.8; peak RSS 342 MB.
+- **The long run** (`--campaign --battles 100 --seed 1 --log none`, `logs/s9-08-long.txt`): **20:15 wall** (1214.5 s; user 1291 s), 23:46:48 to 00:07:03, load (1 min) 5.6 to 24.1, mostly 6 to 13 (`logs/s9-08-long.load`). **Peak RSS 352 MB** (`maximum resident set size` 352,223,232 bytes). × 5 projects 500 long campaigns to about **101 minutes**. Figures (report only): 0 of 100 beat the Source, 99 fell, 1 out of days; 1602 days, 50.3 battles, 60.1 spawns a campaign; 9.7 parties wiped a campaign; battles won by threat: 7 0.956, 9 0.808, 12 0.485, 15 0.739, 18 0.038 (79 fought), 20 0 (18 fought); levels at the end 4.8 lowest, 5.9 highest on average.
+- **The gate: over.** The long run's time × 5 (about 101 minutes) is five times the gate's "about 20 minutes"; the `one` run (21:08 under load) is at the gate, a little over. Profiled; stopped for the orchestrator.
+
+### Step 08: the profile
+
+`logs/s9-08-prof/CPU.20261122.234137.18481.0.001.cpuprofile` (the 20-campaign long run above; 243.8 s sampled). Shares are of the whole run; "inclusive" counts a sample once if the function is anywhere on its stack. Summed by a script over the profile's JSON (kept outside the repository).
+
+| Where | Inclusive | Notes |
+| --- | --- | --- |
+| The world's day (`passDay` in `company.ts`) | 46.7% | |
+| · `advanceDay` (blight) | 32.8% | self 12.0% (the per-hex loop: `pinned.has`, the level and shift update, `before` copy) |
+| · · `netAt` | 17.3% | self 8.5%; calls `geometry(world.board)` once a hex (6.3%, building the key string `${cols}x${rows}` and a `Map` lookup 10,080 times a day) and `hexDistance` once a hex per party (4.2% all callers) |
+| · · `fields` (memo key and rebuilds) | 6.0% | `addSource` rebuilds 4.1%, the rest the `JSON.stringify` key and `sources` (self 1.5%) |
+| · · `spawn` (corrupted scan) | 1.8% | |
+| · `updateTerritory` (with `daysToFall`) | 4.5% | `daysToFall` 4.2% |
+| · `partyDay` | 5.2% | |
+| · `updateSight` | 0.8% | |
+| The simulator's orders (`carryOut`) | 46.4% | |
+| · `routeTo` (`worldMap.ts`) | 17.4% | a full-board breadth-first search (`reachableHexes` with `maxSteps` the board's size, a path array kept for every hex) each time a party is given a walking order (`setOrder` ← `startTravel`); `reachableHexes`' self time 19.0% is mostly this (13.8% + 1.0%) |
+| · battles (`playOut` in `autoPlay.ts`) | 19.4% | of which `legalActions` 15.8%, `reachable` (the battle's move search, also `reachableHexes`) 9.1% |
+| · `roadTo` (trade) | 1.3% | |
+| · `nextTarget` | 0.0% | |
+| Garbage collection | 5.2% | |
+
+Top self time: `reachableHexes` 19.0%, `advanceDay` 12.0%, `netAt` 8.5%, `geometry` 6.3%, GC 5.2%, `hexDistance` 4.2%, `passTurn` 3.1%, `routeTo` 2.4%, `partyDay` 2.0%, `perkBonus` 1.7%, `fields` 1.5%, `passable` 1.5%, `addSource` 1.5%.
+
+So the time goes to the world's day (about 47%, two thirds of it `advanceDay`), the walking orders' route search (about 17%) and the battles (about 19%).
