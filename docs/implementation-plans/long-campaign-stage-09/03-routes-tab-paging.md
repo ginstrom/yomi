@@ -86,3 +86,10 @@ The trading post's Routes tab shows its partner rows page by page once there are
 - [ ] One commit, "Stage 9 step 03: the Routes tab pages", files staged by path, no attribution lines; the index's row 03 updated with status and commit.
 
 ## 7. Execution record
+
+Engineer (sonnet), worktree branch `worktree-agent-a5482eb04e40c66ed`.
+
+- `TradingPostScene.ts`: `rowsPerPage`, `pageY` and the `pages` count in `render` learned the Routes tab (`ROUTE_ROWS` a page, count from `routeRows`), so the one shared pager is drawn and the probe's `prev` / `next` are the Routes tab's; `drawRoutes` slices by `this.page`; `turnPage` sets `routeChosen` to the new page's first row; `show` resets to page 1. Layout: with more than four rows they are 64 px tall (`ROUTE_PAGED_ROW_H`; 72 otherwise, so the two-partner tab looks as before) and the pager sits at y 424, clear of the message line (462) and Close. `routesTab.ts` doc comment updated; the `PARTNERS.length <= ROUTE_ROWS` test removed with its two imports. No Phaser-free helper extracted: the in-browser test carries the paging check.
+- In-browser test (`e2e/encampment.test.ts`, "pages the Routes tab ..."): plants a save with three extra contacted partners (stonehollow, elder_glade, emberwatch) at 840x560; checks four rows, the pager under them, Next selects the page's first row (emberwatch alone), Prev returns to page 1 with millbrook selected.
+- Docs: `docs/reference/scenes.md` Routes paragraph and the manual's Routes bullet; screenshot left to step 10.
+- Results: `npm run test:browser -- -t "Routes tab"` 3 passed. `npm test`: 2544 passed, 1 failed: `scripts/records.test.ts` "keeps each new plan index under 32000 bytes" (stage 9 index.md is 34741 bytes; not from this step, and this run may not edit the index). Refactor guard green, fixture untouched; the 50-campaign check was not needed (no rule change). Index row 03 not edited, per the run brief.
