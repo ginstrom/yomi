@@ -12,6 +12,7 @@ import {
   ENCAMPMENT_ID,
   NOTICE_RADIUS,
   SOURCE_ID,
+  SOURCE_PLACE,
   THREAT_BAND,
   clearLocation,
   encampment,
@@ -71,6 +72,21 @@ describe('newWorld', () => {
   it('shows monsters, resources and trade partners, and no settlement of the party\'s but the encampment', () => {
     expect(new Set(world.locations.map((l) => l.kind))).toEqual(new Set(['monsters', 'encampment', 'resource', 'partner']))
     expect(world.locations.filter((l) => l.kind === 'encampment').map((l) => l.id)).toEqual([ENCAMPMENT_ID])
+  })
+
+  it('puts the Source where it is told, at the threat it is told', () => {
+    const position = offsetToHex(40, 30)
+    const placed = newWorld(1, undefined, PARTNERS, { position, threat: 9 })
+    const source = placed.locations.find((l) => l.id === SOURCE_ID)
+    expect(source).toMatchObject({ kind: 'monsters', name: 'The Blight Source', encounter: 'source_guardians', source: true, threat: 9 })
+    expect(hexEquals(source!.position, position)).toBe(true)
+    expect(placed.locations[placed.locations.length - 1]).toBe(source)
+  })
+
+  it('places the Source at SOURCE_PLACE by default, the same world as passing it', () => {
+    const source = world.locations.find((l) => l.id === SOURCE_ID)
+    expect(source).toMatchObject({ position: SOURCE_PLACE.position, threat: SOURCE_PLACE.threat })
+    expect(newWorld(7, undefined, PARTNERS, SOURCE_PLACE)).toEqual(newWorld(7))
   })
 
   it('names the encampment as the player chose, or Oakvale by default', () => {

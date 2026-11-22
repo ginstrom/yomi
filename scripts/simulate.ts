@@ -15,7 +15,8 @@
 //                                 [--player-policy aggressive] [--enemy-policy aggressive]
 //                                 [--player-weapon iron_sword]
 //                                 [--encounter goblin_raid] [--threat 1] [--party-level 1]
-//                                 [--campaign] [--ready-level 7] [--parties 3] [--waiting] [--trading-post 4]
+//                                 [--log jsonl|none]
+//                                 [--campaign] [--ready-level 18] [--parties 3] [--waiting] [--trading-post 4] [--near-source]
 //                                 [--plans melee=swordmaster,archery=ranger,magic=cryomancer]
 import { closeSync, mkdirSync, openSync, writeSync } from 'node:fs'
 import { dirname } from 'node:path'
@@ -48,7 +49,7 @@ import {
   raiseShrine,
   towerHexRefusal,
 } from '../src/game/buildings.ts'
-import { GUARD_RADIUS, ROUTE_TIMBER, isContacted, openRoute, openRouteRefusal, partners, raiders, roadTo, routeLimit, routeOf } from '../src/game/trade.ts'
+import { ABANDON_AFTER, GUARD_RADIUS, ROUTE_TIMBER, isContacted, openRoute, openRouteRefusal, partners, raiders, roadTo, routeLimit, routeOf } from '../src/game/trade.ts'
 import { WORKSHOP_COSTS, craft, craftRefusal, craftTier, highestGrade, upgradeWorkshop } from '../src/game/crafting.ts'
 import { MAX_PARTIES, presenceOf, type DayAction, type Expedition } from '../src/game/expedition.ts'
 import { newGame, partyById, type GameState } from '../src/game/gameState.ts'
@@ -86,19 +87,22 @@ import {
 } from '../src/game/company.ts'
 import { INFIRMARY_COSTS, raiseInfirmary } from '../src/game/infirmary.ts'
 import { MATERIALS_PER_GOLD, MAX_TRADING_POST_LEVEL, TRADING_POST_COSTS, buy, buyPrice, raiseTradingPost, salePrice, sell, sellMaterial, wares } from '../src/game/tradingPost.ts'
-import { daysToFall, siteImprovement, sites, type Material, type Stock } from '../src/game/territory.ts'
+import { YIELD_DAYS, daysToFall, siteImprovement, sites, type Material, type Stock } from '../src/game/territory.ts'
 import {
   ENCAMPMENT_ID,
+  PARTNERS,
   clearLocation,
   encampment,
   monstersHere,
+  newWorld,
   worldActive,
   type MonsterLocation,
   type PartnerLocation,
   type QuietLocation,
+  type SourcePlace,
   type WorldState,
 } from '../src/game/worldMap.ts'
-import { HexBoard, hexDistance, hexEquals, type Hex } from '../src/grid/hex.ts'
+import { HexBoard, hexDistance, hexEquals, offsetToHex, type Hex } from '../src/grid/hex.ts'
 import type { FamilyId } from '../src/inventory/catalog.ts'
 import { GRADES, type Grade } from '../src/inventory/grades.ts'
 import { baseItem, craftedItem, itemById, type EquipmentSlot, type Item } from '../src/inventory/inventory.ts'
@@ -114,6 +118,8 @@ export interface CliArgs {
   /** How many battles to fight, or with `campaign` how many campaigns. */
   battles: number
   outPath: string
+  /** Where the battles' events go: `'jsonl'` writes them to `outPath`; `'none'` writes no file (every printed figure is the same). */
+  log: 'jsonl' | 'none'
   seed: number | null
   maxRounds: number
   policies: Record<Side, PolicyName>
@@ -146,6 +152,12 @@ export interface CliArgs {
    * A measuring flag only: no band is read with it.
    */
   tradingPost: number | null
+  /**
+   * With `campaign`, each campaign's world (and its waiting twin's) puts the Source at `NEAR_SOURCE`, where it
+   * stood before stage 9, at threat 5: the stand-in the early figures, the refactor guard and the 50-campaign
+   * check are measured with (decision 2 of stage 9's plan). Off, the Source stands at `SOURCE_PLACE`.
+   */
+  nearSource: boolean
 }
 
 /** The plan a player's hero follows: the one `--plans` names for a skill it is tagged in, else `planFor`'s. */
@@ -203,6 +215,7 @@ export function parseArgs(argv: string[]): CliArgs {
   const args: CliArgs = {
     battles: 1000,
     outPath: 'logs/battles.jsonl',
+    log: 'jsonl',
     seed: null,
     maxRounds: 200,
     policies: { player: 'aggressive', enemy: 'aggressive' },
@@ -216,6 +229,7 @@ export function parseArgs(argv: string[]): CliArgs {
     plans: {},
     waiting: false,
     tradingPost: null,
+    nearSource: false,
   }
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i]
@@ -231,6 +245,12 @@ export function parseArgs(argv: string[]): CliArgs {
       case '--out':
         args.outPath = value()
         break
+      case '--log': {
+        const raw = value()
+        if (raw !== 'jsonl' && raw !== 'none') throw new Error(`--log must be jsonl or none, got "${raw}"`)
+        args.log = raw
+        break
+      }
       case '--seed':
         args.seed = Number(value())
         if (!Number.isInteger(args.seed)) throw new Error(`--seed must be an integer`)
@@ -282,6 +302,9 @@ export function parseArgs(argv: string[]): CliArgs {
         args.tradingPost = n
         break
       }
+      case '--near-source':
+        args.nearSource = true
+        break
       default:
         throw new Error(`Unknown argument: ${flag}`)
     }
@@ -301,6 +324,9 @@ export function parseArgs(argv: string[]): CliArgs {
   }
   if (!args.campaign && argv.includes('--trading-post')) {
     throw new Error('--trading-post applies only to --campaign, whose world has the post')
+  }
+  if (!args.campaign && argv.includes('--near-source')) {
+    throw new Error('--near-source applies only to --campaign, whose world has the Source')
   }
   return args
 }
@@ -364,10 +390,15 @@ export function runBattle(battleId: number, seed: number, args: CliArgs): Logged
 /** Seeds apart for the battles of one campaign: more than a campaign fights. */
 export const CAMPAIGN_SEED_STEP = 1000
 
-/** The days a campaign may last before it is called off. */
-export const MAX_CAMPAIGN_DAYS = 2000
-/** The level every member must reach before the party marches on the Source, unless nothing else is left. */
-export const SOURCE_READY_LEVEL = 7
+/** The days a campaign may last before it is called off: room for the long campaign to level 20 (campaign §5.7). */
+export const MAX_CAMPAIGN_DAYS = 6000
+/** The level every member must reach before the party marches on the Source, unless nothing else is left: the long campaign's (the early-game guard runs `--ready-level 7`). */
+export const SOURCE_READY_LEVEL = 18
+/**
+ * `--near-source`'s Source: where it stood before stage 9, at threat 5. On today's map it is
+ * `SOURCE_PLACE`; stage 9 step 04 moves its position to `earlyHex(58, 19)` as the map grows.
+ */
+export const NEAR_SOURCE: SourcePlace = { position: offsetToHex(58, 19), threat: 5 }
 
 /** How a campaign ended: the Source beaten, the company fallen (no hero left), the encampment lost, or out of days (or of routes). */
 export type CampaignOutcome = 'source' | 'fallen' | 'encampment' | 'timeout'
@@ -410,6 +441,15 @@ export interface CampaignRecord {
   routesOpened: number
   routesRaided: number
   routesAbandoned: number
+  /** Raids told: `route_raided` with `days` 0, each a road turned raided. */
+  routeRaidsTold: number
+  /**
+   * Flickers: a `route_restored` after which the same route turns raided again (`route_raided`, `days` 0)
+   * within `ABANDON_AFTER * YIELD_DAYS` days, the case whose raid count starts afresh and is never abandoned.
+   */
+  routeFlickers: number
+  /** Routes raided on `ABANDON_AFTER` or more yield days in all (`route_raided` with `days` >= 1) and not abandoned by the end. */
+  routesRaidedLong: number
   /** The yields' value a day (gold, and every other material at `MATERIALS_PER_GOLD` to the gold piece; sales left out), over `days`. */
   incomePerDay: number
   /** The same for the waiting twin: the campaign's world with the company idle at home, over the same days (`waitingIncome`). */
@@ -449,6 +489,8 @@ export interface CampaignRecord {
   wipes: number
   /** Heroes moved from a guard to the vanguard (step 10). */
   promotions: number
+  /** Days the vanguard (a lone party is the vanguard) walked, on any errand; `vanguardWalkHomeDays` counts those walking home. */
+  vanguardWalkDays: number
   /** Days the vanguard walked on its way home to the guild hall. */
   vanguardWalkHomeDays: number
   /** Battles fought by guards. */
@@ -1110,6 +1152,15 @@ export interface CampaignRun {
   roles: Map<string, Role>
   /** The yields' value so far (`yieldValue`), which `incomePerDay` is made of. */
   income: number
+  /** Each trade route's raids so far, by route id, for the record's route counts (`tally`). */
+  routes: Map<string, RouteTally>
+}
+
+/** What `tally` keeps of one trade route: the turn it was last told safe (null once a raid answered it), its raided yield days in all, and whether it was abandoned. */
+export interface RouteTally {
+  restoredOn: number | null
+  raidedDays: number
+  abandoned: boolean
 }
 
 /** Party `party`'s role in the run, a guard's for a party the run has no role for. */
@@ -1133,14 +1184,14 @@ export function startCampaign(campaign: number, seed: number, args: CliArgs, fir
     runesFound: 0, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0,
     finalLevels: [], callings: {}, capstones: {}, deathsAtLevel: [], battlesToLevel: {},
     roles: { vanguard: { battles: 0, wipes: 0, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } },
-    wipes: 0, promotions: 0, vanguardWalkHomeDays: 0, guardBattles: 0,
+    wipes: 0, promotions: 0, vanguardWalkDays: 0, vanguardWalkHomeDays: 0, guardBattles: 0,
     improvementsBuilt: [0, 0, 0], improvementLevels: [0, 0, 0, 0], lodgeLevel: 0, goldBySource: { sites: 0, market: 0, routes: 0, sales: 0 },
-    partnersContacted: 0, routesOpened: 0, routesRaided: 0, routesAbandoned: 0,
+    partnersContacted: 0, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0,
     incomePerDay: 0, waitingIncomePerDay: 0,
   }
   const vanguard = game.parties[0].id
   const roles = new Map<string, Role>(game.parties.map((party) => [party.id, party.id === vanguard ? 'vanguard' : 'guard']))
-  return { campaign, seed, args, firstBattleId, game, battles: [], record, income: 0, plans: new Map(game.parties.map((party) => [party.id, newPlan()])), vanguard, roles }
+  return { campaign, seed, args, firstBattleId, game, battles: [], record, income: 0, routes: new Map(), plans: new Map(game.parties.map((party) => [party.id, newPlan()])), vanguard, roles }
 }
 
 /** The plan of party `party`, a new one if it has none yet. */
@@ -1553,8 +1604,11 @@ export function yieldValue(events: readonly WorldEvent[]): number {
   return value
 }
 
-/** Sums what a stretch of days (or a home visit's routes) brought into the run's record: the world's events counted, and the yields' value. */
-export function tally(run: CampaignRun, events: readonly WorldEvent[]): void {
+/**
+ * Sums what a stretch of days (or a home visit's routes) brought into the run's record: the world's events counted,
+ * and the yields' value. `turn` is the world turn the events came on, for the routes' flickers.
+ */
+export function tally(run: CampaignRun, events: readonly WorldEvent[], turn = run.game.world.turn): void {
   const { record } = run
   run.income += yieldValue(events)
   for (const event of events) {
@@ -1571,7 +1625,24 @@ export function tally(run: CampaignRun, events: readonly WorldEvent[]): void {
     if (event.type === 'route_opened') record.routesOpened++
     if (event.type === 'route_raided' && event.days === 1) record.routesRaided++
     if (event.type === 'route_abandoned') record.routesAbandoned++
+    if (event.type === 'route_raided' || event.type === 'route_restored' || event.type === 'route_abandoned') tallyRoute(run, event, turn)
   }
+}
+
+/** Counts a route event into the record's raids told, flickers and long-raided routes. */
+function tallyRoute(run: CampaignRun, event: Extract<WorldEvent, { route: string }>, turn: number): void {
+  const { record } = run
+  let route = run.routes.get(event.route)
+  if (!route) run.routes.set(event.route, (route = { restoredOn: null, raidedDays: 0, abandoned: false }))
+  if (event.type === 'route_restored') route.restoredOn = turn
+  if (event.type === 'route_abandoned') route.abandoned = true
+  if (event.type === 'route_raided' && event.days === 0) {
+    record.routeRaidsTold++
+    if (route.restoredOn !== null && turn - route.restoredOn <= ABANDON_AFTER * YIELD_DAYS) record.routeFlickers++
+    route.restoredOn = null
+  }
+  if (event.type === 'route_raided' && event.days >= 1) route.raidedDays++
+  record.routesRaidedLong = [...run.routes.values()].filter((r) => r.raidedDays >= ABANDON_AFTER && !r.abandoned).length
 }
 
 /**
@@ -1802,7 +1873,8 @@ export function carryOut(run: CampaignRun, party: Expedition, decision: Decision
  */
 export function takeDays(run: CampaignRun, reports: readonly DayReport[]): void {
   const { game, record } = run
-  for (const report of reports) tally(run, report.events)
+  // Each report is a day passed, the last ending on the world's turn now.
+  reports.forEach((report, i) => tally(run, report.events, game.world.turn - (reports.length - 1 - i)))
   if (game.parties.some((party) => planOf(run, party).running === 'camp')) record.campDays += reports.length
   for (const party of game.parties) {
     const plan = planOf(run, party)
@@ -1814,6 +1886,7 @@ export function takeDays(run: CampaignRun, reports: readonly DayReport[]): void 
       if (party.id === run.vanguard && plan.phase === 'home') record.vanguardWalkHomeDays += days.filter((day) => day?.walked).length
       party.confronting = monstersHere(game.world, party)?.id ?? null
     }
+    if (party.id === run.vanguard) record.vanguardWalkDays += days.filter((day) => day?.walked).length
     for (const day of days) record.healedHp += (day?.rested ?? 0) + (day?.cast ?? 0)
     if (plan.running === 'day') {
       // A field craft made is a day in the field; the simulator embeds only at the workshop.
@@ -1895,9 +1968,14 @@ export function finishCampaign(run: CampaignRun, outcome: CampaignOutcome): Camp
   return { battles, record }
 }
 
-/** A campaign's new game, seeded `seed`: the ready-made party, and the trading post at `--trading-post`'s level if given (drawing nothing). */
-function campaignGame(seed: number, args: CliArgs): GameState {
+/**
+ * A campaign's new game, seeded `seed`: the ready-made party; with `--near-source` the world rebuilt with the Source
+ * at `NEAR_SOURCE` (the encampment, where the party stands, is the same); and the trading post at `--trading-post`'s
+ * level if given. Draws nothing more than `newGame`.
+ */
+export function campaignGame(seed: number, args: CliArgs): GameState {
   const game = newGame(startingParty(args), null, seed)
+  if (args.nearSource) game.world = newWorld(seed, undefined, PARTNERS, NEAR_SOURCE)
   if (args.tradingPost !== null) game.world.tradingPost = args.tradingPost
   return game
 }
@@ -2215,6 +2293,10 @@ export interface CampaignSummary {
   avgRoutesOpened: number
   avgRoutesRaided: number
   avgRoutesAbandoned: number
+  /** Raids told, flickers and long-raided routes (`routeRaidsTold`, `routeFlickers`, `routesRaidedLong`), a campaign. */
+  avgRouteRaidsTold: number
+  avgRouteFlickers: number
+  avgRoutesRaidedLong: number
   /** Income a day (`incomePerDay`) campaigning, and the waiting twin's (`waitingIncomePerDay`). */
   avgIncomePerDay: number
   avgWaitingIncomePerDay: number
@@ -2244,6 +2326,8 @@ export interface CampaignSummary {
   /** Parties wiped, heroes promoted to the vanguard, the vanguard's days walking home and the guards' battles, a campaign. */
   avgWipes: number
   avgPromotions: number
+  /** The vanguard's walked days a campaign, on any errand (`vanguardWalkDays`). */
+  avgVanguardWalkDays: number
   avgVanguardWalkHomeDays: number
   avgGuardBattles: number
   /** How many campaigns ended with the guild hall at level 4 or more (a second party allowed), and at 5 (a third). */
@@ -2340,6 +2424,9 @@ export function summarizeCampaigns(events: readonly LoggedEvent[], records: read
     avgRoutesOpened: avg((r) => r.routesOpened),
     avgRoutesRaided: avg((r) => r.routesRaided),
     avgRoutesAbandoned: avg((r) => r.routesAbandoned),
+    avgRouteRaidsTold: avg((r) => r.routeRaidsTold),
+    avgRouteFlickers: avg((r) => r.routeFlickers),
+    avgRoutesRaidedLong: avg((r) => r.routesRaidedLong),
     avgIncomePerDay: avg((r) => r.incomePerDay),
     avgWaitingIncomePerDay: avg((r) => r.waitingIncomePerDay),
     avgTradingPostLevel: avg((r) => r.tradingPostLevel),
@@ -2362,6 +2449,7 @@ export function summarizeCampaigns(events: readonly LoggedEvent[], records: read
     byThreat: threats.rows(),
     avgWipes: avg((r) => r.wipes),
     avgPromotions: avg((r) => r.promotions),
+    avgVanguardWalkDays: avg((r) => r.vanguardWalkDays),
     avgVanguardWalkHomeDays: avg((r) => r.vanguardWalkHomeDays),
     avgGuardBattles: avg((r) => r.guardBattles),
     hallFour: records.filter((r) => r.hallLevel >= 4).length,
@@ -2384,10 +2472,23 @@ export function summarizeCampaigns(events: readonly LoggedEvent[], records: read
   }
 }
 
-/** The summary's trade line: partners contacted, and routes opened, raided and abandoned, a campaign. */
-export function tradeLine(summary: Pick<CampaignSummary, 'avgPartnersContacted' | 'avgRoutesOpened' | 'avgRoutesRaided' | 'avgRoutesAbandoned'>): string {
+/** The summary's trade line: partners contacted; routes opened, raided and abandoned; raids told, flickers and long-raided routes, a campaign. */
+export function tradeLine(
+  summary: Pick<
+    CampaignSummary,
+    'avgPartnersContacted' | 'avgRoutesOpened' | 'avgRoutesRaided' | 'avgRoutesAbandoned' | 'avgRouteRaidsTold' | 'avgRouteFlickers' | 'avgRoutesRaidedLong'
+  >,
+): string {
   const n = (x: number) => x.toFixed(2)
-  return `Trade: ${n(summary.avgPartnersContacted)} partners contacted; routes ${n(summary.avgRoutesOpened)} opened, ${n(summary.avgRoutesRaided)} raided, ${n(summary.avgRoutesAbandoned)} abandoned a campaign`
+  return (
+    `Trade: ${n(summary.avgPartnersContacted)} partners contacted; routes ${n(summary.avgRoutesOpened)} opened, ${n(summary.avgRoutesRaided)} raided, ${n(summary.avgRoutesAbandoned)} abandoned a campaign; ` +
+    `${n(summary.avgRouteRaidsTold)} raids told, ${n(summary.avgRouteFlickers)} flickers (raided again within ${ABANDON_AFTER * YIELD_DAYS} days of safe), ${n(summary.avgRoutesRaidedLong)} routes raided ${ABANDON_AFTER}+ yield days and kept`
+  )
+}
+
+/** The summary's walking line: the vanguard's walked days a campaign, and those walking home. */
+export function walkingLine(summary: Pick<CampaignSummary, 'avgVanguardWalkDays' | 'avgVanguardWalkHomeDays'>): string {
+  return `Walking: the vanguard walked ${summary.avgVanguardWalkDays.toFixed(1)} days a campaign, ${summary.avgVanguardWalkHomeDays.toFixed(1)} of them walking home`
 }
 
 /** The waiting check's summary line (A9): income a day campaigning against the waiting twin's. */
@@ -2422,13 +2523,17 @@ function main(): void {
   const threats = new ThreatTally()
   const records: CampaignRecord[] = []
 
-  // Written a battle at a time: a run of campaigns is too long to hold in memory.
-  mkdirSync(dirname(args.outPath), { recursive: true })
-  const out = openSync(args.outPath, 'w')
+  // Written a battle at a time: a run of campaigns is too long to hold in memory. With --log none, no file at all.
+  let out: number | null = null
+  if (args.log === 'jsonl') {
+    mkdirSync(dirname(args.outPath), { recursive: true })
+    out = openSync(args.outPath, 'w')
+  }
+  const destination = out === null ? 'no log' : args.outPath
   let battles = 0
   const log = (events: readonly LoggedEvent[]) => {
     battles++
-    writeSync(out, events.map((event) => JSON.stringify(event)).join('\n') + '\n')
+    if (out !== null) writeSync(out, events.map((event) => JSON.stringify(event)).join('\n') + '\n')
     for (const event of events) {
       tally.add(event)
       threats.add(event)
@@ -2441,12 +2546,12 @@ function main(): void {
       records.push(record)
     } else log(runBattle(run, (baseSeed + run) >>> 0, args))
   }
-  closeSync(out)
+  if (out !== null) closeSync(out)
 
   const versus = `seed ${baseSeed}, player ${args.policies.player} vs enemy ${args.policies.enemy}`
   if (!args.campaign) {
     console.log(
-      `Simulated ${args.battles} battles of ${args.encounter} at threat ${args.threat}, party level ${args.partyLevel} (${versus}) -> ${args.outPath}`,
+      `Simulated ${args.battles} battles of ${args.encounter} at threat ${args.threat}, party level ${args.partyLevel} (${versus}) -> ${destination}`,
     )
     const { playerTechniques, enemyTechniques, ...scalars } = tally.summary(battles)
     console.table(scalars)
@@ -2458,7 +2563,7 @@ function main(): void {
   const summary = { ...summarizeCampaigns([], records), byThreat: threats.rows() }
   const { outcomes } = summary
   const pct = (n: number) => `${((n / summary.campaigns) * 100).toFixed(1)}%`
-  console.log(`Simulated ${args.battles} campaigns, ${battles} battles in all (${versus}) -> ${args.outPath}`)
+  console.log(`Simulated ${args.battles} campaigns, ${battles} battles in all (${versus}) -> ${destination}`)
   console.log(
     `Beat the Source: ${outcomes.source} of ${summary.campaigns} (${pct(outcomes.source)}); party fell: ${outcomes.fallen} (${pct(outcomes.fallen)}); encampment lost: ${outcomes.encampment} (${pct(outcomes.encampment)}); out of days: ${outcomes.timeout}`,
   )
@@ -2475,6 +2580,7 @@ function main(): void {
   const gold = summary.avgGoldBySource
   console.log(`Gold by source: sites ${gold.sites.toFixed(0)}, market ${gold.market.toFixed(0)}, routes ${gold.routes.toFixed(0)}, sales ${gold.sales.toFixed(0)} a campaign`)
   console.log(tradeLine(summary))
+  if (args.nearSource) console.log(`Source near (--near-source): at threat ${NEAR_SOURCE.threat}, where it stood before stage 9`)
   if (args.tradingPost !== null) console.log(`Trading post started at level ${args.tradingPost} (--trading-post): a measuring run, read against no band`)
   if (args.waiting) console.log(waitingLine(summary))
   console.log(
@@ -2500,6 +2606,7 @@ function main(): void {
   console.log(
     `Company (${args.parties} ${args.parties === 1 ? 'party' : 'parties'} allowed, the hall raised to ${hallCap(args.parties)} at most): ${summary.avgWipes.toFixed(1)} parties wiped, ${summary.avgPromotions.toFixed(1)} promotions, ${summary.avgVanguardWalkHomeDays.toFixed(1)} days the vanguard walked home and ${summary.avgGuardBattles.toFixed(1)} guard battles a campaign; the hall at level 4 or more at the end in ${summary.hallFour} campaigns, 5 in ${summary.hallFive}`,
   )
+  console.log(walkingLine(summary))
   for (const role of ['vanguard', 'guard'] as const) {
     const r = summary.roles[role]
     console.log(

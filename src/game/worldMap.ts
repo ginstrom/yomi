@@ -157,6 +157,14 @@ export const SOURCE_ID = 'blight_source'
 /** The threat the Source is fought at once it stands in the far ring (long-campaign stage 9; the map places it there from step 04), and the threat of rune loot's Source row. */
 export const SOURCE_THREAT = 20
 
+/** Where the Source stands and the threat it is fought at. */
+export interface SourcePlace {
+  position: Hex
+  threat: number
+}
+/** The Source's place on the map: today's (58, 19) at threat 5 (a literal, not `threatAt`: the import-cycle rule); stage 9 step 04 moves it to the far ring at `SOURCE_THREAT`. */
+export const SOURCE_PLACE: SourcePlace = { position: offsetToHex(58, 19), threat: 5 }
+
 /** How far from the party a spawn must be to stop it travelling or camping. */
 export const NOTICE_RADIUS = 8
 
@@ -207,12 +215,14 @@ export const PARTNERS: readonly PartnerLocation[] = [
  * A new world, the blight seeded from its sources; `seed` is the world RNG's,
  * which only spawns draw from, and `encampmentName` what the player called
  * home. `partners` are placed as copies after the resources and before the
- * monsters (tests may pass none).
+ * monsters (tests may pass none). `source` is where the Source stands and its
+ * threat (the simulator's `--near-source` passes its own).
  */
 export function newWorld(
   seed: number = randomSeed(),
   encampmentName: string = DEFAULT_ENCAMPMENT_NAME,
   partners: readonly PartnerLocation[] = PARTNERS,
+  source: SourcePlace = SOURCE_PLACE,
 ): WorldState {
   const world: WorldState = {
     board: WORLD_SIZE,
@@ -244,7 +254,12 @@ export function newWorld(
       monsters('bandit_hideout', 'Bandit Hideout', 47, 13, 'bandit_camp', [STORM_WAND]),
       monsters('salamander_pool', 'Salamander Pool', 54, 28, 'salamander_pool', [SAGE_CIRCLET]),
       monsters('spider_nest', 'Spider Nest', 57, 10, 'spider_nest', [EMBERBLADE]),
-      { ...(monsters(SOURCE_ID, 'The Blight Source', 58, 19, 'source_guardians', [STORM_WAND]) as MonsterLocation), source: true },
+      {
+        ...(monsters(SOURCE_ID, 'The Blight Source', 58, 19, 'source_guardians', [STORM_WAND]) as MonsterLocation),
+        position: { ...source.position },
+        threat: source.threat,
+        source: true,
+      },
     ],
     blight: [],
     shift: [],

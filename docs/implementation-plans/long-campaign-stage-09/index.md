@@ -65,11 +65,11 @@ Each task file copies its contracts unchanged. "Existing" means at `08854d3`.
 
 ### C1. The far encounters, bandit gear and rune loot (step 01)
 
-`encounters.ts`: `banditCompany` (8–13, 4 foes) and `freebooterHost` (14–20, 4 then 5 from 17), after `salamander_pool` in `ENCOUNTERS`; bands widened: Spider Nest 4–9, Salamander Pool 5–9, Source Guardians 1–20 (5 foes from 6), threats 1–5 unchanged; `MAX_THREAT` stays until step 04. `bandits.ts`: `banditGear` Masterwork steel (tier 2, grade 3) from threat 8. `worldMap.ts`: `SOURCE_THREAT = 20`. `loot.ts`: `rollRunes` by row (≤ 8 drawing exactly as today; 9–13, 14–19, ≥ `SOURCE_THREAT`). `scripts/dayCost.ts`: ms a day of `passTurn` and `advanceDay`. Full text: the task files of steps 01, 04, 05.
+`encounters.ts`: `banditCompany` (8–13, 4 foes) and `freebooterHost` (14–20, 4 then 5 from 17), after `salamander_pool` in `ENCOUNTERS`; bands widened: Spider Nest 4–9, Salamander Pool 5–9, Source Guardians 1–20 (5 foes from 6), threats 1–5 unchanged; `MAX_THREAT` stays until step 04. `bandits.ts`: `banditGear` Masterwork steel (tier 2, grade 3) from threat 8. `worldMap.ts`: `SOURCE_THREAT = 20`. `loot.ts`: `rollRunes` by row (≤ 8 drawing exactly as today; 9–13, 14–19, ≥ `SOURCE_THREAT`). `scripts/dayCost.ts`: ms a day of `passTurn` and `advanceDay`. Full text: the task files of steps 01, 04, 05, 10.
 
 ### C2. The simulator's long-campaign settings and the Source's place (step 02)
 
-`worldMap.ts`: `SourcePlace`, `SOURCE_PLACE` (today's place at step 02, `SOURCE_THREAT` far out from step 04), `newWorld(..., source)`. `simulate.ts`: `SOURCE_READY_LEVEL = 18`, `MAX_CAMPAIGN_DAYS = 6000`, `NEAR_SOURCE`, `--log none`, `--near-source`; `CampaignRecord` gains `vanguardWalkDays`, `routeRaidsTold`, `routeFlickers`, `routesRaidedLong`; the refactor guard's args gain `--ready-level 7 --near-source`; `bands.md`'s measure names gain the flags and the long-campaign measures and report-only cells. Full text: the task files of steps 02, 04, 08, 09.
+`worldMap.ts`: `SourcePlace`, `SOURCE_PLACE` (today's place at step 02, `SOURCE_THREAT` far out from step 04), `newWorld(..., source)`. `simulate.ts`: `SOURCE_READY_LEVEL = 18`, `MAX_CAMPAIGN_DAYS = 6000`, `NEAR_SOURCE`, `--log none`, `--near-source`; `CampaignRecord` gains `vanguardWalkDays`, `routeRaidsTold`, `routeFlickers`, `routesRaidedLong`; the refactor guard's args gain `--ready-level 7 --near-source`; `bands.md`'s measure names gain the flags and the long-campaign measures and report-only cells. Full text: the task files of steps 02, 04, 08, 09, 10.
 
 ### C3. The Routes tab pages (step 03)
 
@@ -83,11 +83,11 @@ Each task file copies its contracts unchanged. "Existing" means at `08854d3`.
 
 ### C4. The board and the rings (step 04)
 
-`worldMap.ts`: `THREAT_RINGS` and `threatAt` by ring (`THREAT_BAND` and `MAX_THREAT` go), `WORLD_SIZE` 140 × 72, `EARLY_SHIFT` and `earlyHex` (decision 1), `SOURCE_PLACE` at (131, 36), threat 20. `blight.ts`: `BLIGHT_THREAT_CAP = 5`, `SPAWN_DIVISOR = 840`, `MAX_MONSTER_LOCATIONS = 60`, `SPAWN_KINDS` gains the four new kinds with `fromThreat: 7`. `SAVE_VERSION` 30; `NEAR_SOURCE` at `earlyHex(58, 19)`. Full text: the task files of steps 04, 05, 07.
+`worldMap.ts`: `THREAT_RINGS` and `threatAt` by ring (`THREAT_BAND` and `MAX_THREAT` go), `WORLD_SIZE` 140 × 72, `EARLY_SHIFT` and `earlyHex` (decision 1), `SOURCE_PLACE` at (131, 36), threat 20. `blight.ts`: `BLIGHT_THREAT_CAP = 5`, `SPAWN_DIVISOR = 840`, `MAX_MONSTER_LOCATIONS = 60`, `SPAWN_KINDS` gains the four new kinds with `fromThreat: 7`. `SAVE_VERSION` 30; `NEAR_SOURCE` at `earlyHex(58, 19)`. Full text: the task files of steps 04, 05, 07, 10.
 
 ### C5. The outer rings' content (step 05)
 
-`territory.ts`: seven new materials and resource sites (rings 7 to 18) and their works names. `worldMap.ts`: partners Stonehollow (ring 7), Elder Glade (12), Emberwatch (15); fixed outer nests, 4 to 6 a ring, by ring; `newWorld`'s location order. `debugCommands.ts`: `MATERIALS` gains the seven. Full text: the task files of steps 05, 07.
+`territory.ts`: seven new materials and resource sites (rings 7 to 18) and their works names. `worldMap.ts`: partners Stonehollow (ring 7), Elder Glade (12), Emberwatch (15); fixed outer nests, 4 to 6 a ring, by ring; `newWorld`'s location order. `debugCommands.ts`: `MATERIALS` gains the seven. Full text: the task files of steps 05, 07, 10.
 
 ### C6. Partner sprites (step 06)
 
@@ -108,12 +108,12 @@ Each task file copies its contracts unchanged. "Existing" means at `08854d3`.
 
 | Step | Task | Outcome | Depends on | Engineer / reviewer | Status |
 | --- | --- | --- | --- | --- | --- |
-| 01 | [Baseline and the far encounters](01-baseline-and-encounters.md) | Stage baseline (`one`, `company`, `rl10`, 50-check, day cost by a new `scripts/dayCost.ts`, rerun in step 08); Bandit Company, Freebooter Host, widened bands, the Source's band, bandit gear, rune loot rows, `SOURCE_THREAT` (C1); policy snapshot re-recorded; guard identical | — | opus / opus | done (see `git log --grep "Stage 9 step 01"`) |
-| 02 | [The simulator's long-campaign settings](02-simulator-settings.md) | `--log none`, `--near-source` and `SourcePlace`, ready level 18, 6000 days, walk and route-flicker fields, guard args, measure names (C2); guard identical | 01 | opus / opus | pending |
-| 03 | [The Routes tab pages](03-routes-tab-paging.md) | Routes tab paging (C3); manual text; in-browser test | — | sonnet / opus | pending |
+| 01 | [Baseline and the far encounters](01-baseline-and-encounters.md) | Stage baseline (`one`, `company`, `rl10`, 50-check, day cost by a new `scripts/dayCost.ts`, rerun in step 08); Bandit Company, Freebooter Host, widened bands, the Source's band, bandit gear, rune loot rows, `SOURCE_THREAT` (C1); policy snapshot re-recorded; guard identical | — | opus / opus | done (8badf43, 0796d4a) |
+| 02 | [The simulator's long-campaign settings](02-simulator-settings.md) | `--log none`, `--near-source` and `SourcePlace`, ready level 18, 6000 days, walk and route-flicker fields, guard args, measure names (C2); guard identical | 01 | opus / opus | done ("Stage 9 step 02: the simulator's long-campaign settings") |
+| 03 | [The Routes tab pages](03-routes-tab-paging.md) | Routes tab paging (C3); manual text; in-browser test | — | sonnet / opus | done (0820d94, 69d5ebc, af27c27; 3 review rounds) |
 | 04 | [The board and the rings](04-board-and-rings.md) | 140 × 72, ring table, the shift, the Source at 20, blight cap, spawns by band, `SPAWN_DIVISOR`, save 30, coordinates in tests and `e2e/` (C4); room made in `src/game/CLAUDE.md`; guard re-recorded | 02 | opus / opus | pending |
 | 05 | [The outer rings' content](05-outer-content.md) | Outer nests, seven sites and their materials, three far partners (C5); guard re-recorded | 03, 04 | opus / opus | pending |
-| 06 | [Partner sprites](06-partner-sprites.md) | `map_partner_hold`, `map_partner_glade`, `map_partner_pass` (C6) | — | sonnet / opus | pending |
+| 06 | [Partner sprites](06-partner-sprites.md) | `map_partner_hold`, `map_partner_glade`, `map_partner_pass` (C6) | — | sonnet / opus | done (f5f1ce0; 1 review round, clean) |
 | 07 | [The world map at the new size](07-world-map.md) | Tiled blight layer, scrolling to every edge, fog and growth cost checked, partner sprites mapped, debug `spawn` by band (C7); manual text; in-browser tests | 05, 06 | sonnet / opus | pending |
 | 08 | [The runtime gate](08-runtime-gate.md) | Day cost after; 500-campaign early run and 100-campaign long run timed; **checkpoint**: over about 20 minutes, `advanceDay` profiled and the orchestrator decides | 05 | opus / opus | pending |
 | 09 | [Measure and judge](09-measure.md) | Early figures with `--near-source` against the baseline, long-campaign baseline (100), company against one party, routes raided, abandoned and flickering, new cells, the Source made winnable | 08 | opus / opus | pending |

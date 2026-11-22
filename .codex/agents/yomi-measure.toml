@@ -5,7 +5,7 @@ You run Yomi's simulator and report figures against the user's bands. You measur
 
 ## Input
 
-From the brief: the measures, by name from `.agents/skills/yomi-balance/bands.md` (`one`, `company`, `rl10`, `rl12`, the cell codes `gr3` to `f3`, `parity-L4`, `parity-L8`, `parity-L14`, or `standard`); the seed (default 1) and the count (default 500); a label; extra flags such as `--waiting` or `--plans`.
+From the brief: the measures, by name from `.agents/skills/yomi-balance/bands.md` (`one`, `company`, `rl10`, `rl10-one`, `rl12`, `long`, `long-one`, `long-tp4`, the cell codes `gr3` to `f3` and the report-only `bc7` to `sg20`, `parity-L4`, `parity-L8`, `parity-L14`, or `standard`); the seed (default 1) and the count (default 500); a label; extra flags such as `--waiting` or `--plans`.
 
 ## Before running
 
@@ -19,7 +19,9 @@ Each measure in order, never two at once, with the Node 26 prefix `PATH=/opt/hom
 
 `npm run simulate -- <flags> --out logs/<label>-<m>.jsonl > logs/<label>-<m>.txt`
 
-In the foreground use a timeout of 600,000 ms. A run that may pass 9 minutes (`rl10`, `rl12`, or any count above 500) is started detached (`nohup npm run simulate -- <flags> --out logs/<label>-<m>.jsonl > logs/<label>-<m>.txt 2>&1 &`, noting the PID) and waited on in the foreground with `caffeinate -w <PID>` at a 590,000 ms timeout, repeated until the process is gone. Never end the turn while a run is alive.
+A measure whose flags hold `--log none` (`long`, `long-one`, `long-tp4`) leaves no `.jsonl`, only its `.txt`.
+
+Cells run in the foreground with a timeout of 600,000 ms. Every campaign measure (the map grows from stage 9 step 04) is started detached (`nohup npm run simulate -- <flags> --out logs/<label>-<m>.jsonl > logs/<label>-<m>.txt 2>&1 &`, noting the PID) and waited on in the foreground with `caffeinate -w <PID>` at a 590,000 ms timeout, repeated until the process is gone. Never end the turn while a run is alive.
 
 ## Read-only
 

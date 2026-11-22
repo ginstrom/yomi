@@ -43,6 +43,12 @@ A cell is `--encounter E --threat T --party-level L`, 500 battles from seed 1 (`
 | SG7 | `source_guardians` 5, L7 | 0 within 40 |
 | SG10 | `source_guardians` 5, L10 | above 2 |
 | F1, F2, F3 | `goblin_raid` 1, 2, 3, L1 | report only (500, 500, 463) |
+| BC7 | `bandit_camp` 7, L7 | report only |
+| SN7, SN9 | `spider_nest` 7, 9, L7, L9 | report only |
+| SP7, SP9 | `salamander_pool` 7, 9, L7, L9 | report only |
+| BCO9, BCO12 | `bandit_company` 9, 12, L9, L12 | report only |
+| FH15, FH18 | `freebooter_host` 15, 18, L15, L18 | report only |
+| SG20-18, SG20 | `source_guardians` 20, L18 and L20 | report only |
 
 ## Measure names for `yomi-measure`
 
@@ -50,17 +56,22 @@ Each runs from the seed and count the brief gives (default seed 1, 500). The ban
 
 | Name | Flags |
 | --- | --- |
-| `one` | `--campaign --parties 1` |
-| `company` | `--campaign` |
-| `rl10` | `--campaign --ready-level 10` (may pass 9 minutes) |
-| `rl12` | `--campaign --ready-level 12` (report only; may pass 9 minutes) |
+| `one` | `--campaign --parties 1 --ready-level 7 --near-source` |
+| `company` | `--campaign --ready-level 7 --near-source` |
+| `rl10` | `--campaign --ready-level 10 --near-source` (may pass 9 minutes) |
+| `rl10-one` | `--campaign --parties 1 --ready-level 10 --near-source` (report only) |
+| `rl12` | `--campaign --ready-level 12 --near-source` (report only; may pass 9 minutes) |
+| `long` | `--campaign --log none`, count 100 unless the brief says otherwise (report only; the long campaign, ready level 18) |
+| `long-one` | `long` with `--parties 1` (report only) |
+| `long-tp4` | `long` with `--trading-post 4` (report only) |
 | `gr3`, `bc3`, `bc4`, `bc5`, `sn5`, `sp5`, `tl5`, `sg7`, `sg10`, `f1`, `f2`, `f3` | the cell code's `--encounter`, `--threat`, `--party-level` |
+| `bc7`, `sn7`, `sn9`, `sp7`, `sp9`, `bco9`, `bco12`, `fh15`, `fh18`, `sg20-18`, `sg20` | the cell code's flags (report only) |
 | `parity-L4` | `--encounter bandit_camp --threat 4 --party-level 4 --plans <role>=<plan>`, one run per plan of `AUTO_PLANS`, in its role's slot (`melee`, `archery` or `magic`) |
 | `parity-L8` | `--encounter hobgoblin_warband --threat 5 --party-level 8 --plans <role>=<plan>`, one run per plan (reported, not gated) |
 | `parity-L14` | `--encounter bandit_camp --threat 7 --party-level 14 --plans <role>=<plan>`, one run per plan (reported, not gated) |
 | `standard` | every row of the bands table: `one`, `company`, `rl10`, then the cells `gr3`, `bc3`, `bc4`, `bc5`, `sn5`, `sp5`, `sg7`, `sg10` (`tl5` is report-only, not a band row) |
 
-`--waiting` or `--plans` may be added by the brief. Heroes dead and days a campaign come from the `one` run.
+The early measures (`one`, `company`, `rl10`, `rl10-one`, `rl12`) run with `--near-source`, the Source where it stood before stage 9 at threat 5, so they keep their meaning as the map grows (stage 9's plan, decision 2). `--waiting` or `--plans` may be added by the brief. Heroes dead and days a campaign come from the `one` run.
 
 ## History
 

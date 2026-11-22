@@ -175,3 +175,25 @@ routesRaidedLong: number     // routes raided on ABANDON_AFTER or more yield day
 - [ ] One commit, "Stage 9 step 02: the simulator's long-campaign settings", no attribution lines, files staged by path; the index's row 02 updated with status and commit.
 
 ## 7. Execution record
+
+Engineer: model unset (opus), 2026-11-22, at `c07152a`.
+
+**Built.** `SourcePlace`, `SOURCE_PLACE` (`offsetToHex(58, 19)`, threat 5, a literal) and `newWorld`'s fourth parameter (the Source location keeps its id, name, encounter, loot, key order and last place; its `position` and `threat` come from `source`). `simulate.ts`: `SOURCE_READY_LEVEL` 18, `MAX_CAMPAIGN_DAYS` 6000, `NEAR_SOURCE`, `--log jsonl|none`, `--near-source` (campaign only), `campaignGame` (now exported) rebuilding the world with `NEAR_SOURCE` (so the waiting twin shares it), the four record fields with `CampaignRun.routes` (`RouteTally` by route id), `summarizeCampaigns` averages, the trade line extended and a new `walkingLine`. The guard pinned and its records given the new fields. Docs: `bands.md`, `running.md`, `guards.md`, `yomi-measure` (`.claude` and `.codex`), root `CLAUDE.md`, `docs/reference/simulator.md`; `scripts/CLAUDE.md` had no wrong line.
+
+**Verification.**
+- 50-campaign check before: `b50f7b50…904e52` (matches step 01). After, with `--ready-level 7 --near-source`: `b50f7b50626d6e2832deb18c44a808b9be0521002698dc97c1fa8216db904e52`, identical; 0 campaigns out of days. Recorded in `log.md`.
+- Printed lines after: `Trade: 0.50 partners contacted; routes 0.00 opened, 0.00 raided, 0.00 abandoned a campaign; 0.00 raids told, 0.00 flickers (raided again within 30 days of safe), 0.00 routes raided 6+ yield days and kept`; `Walking: the vanguard walked 249.5 days a campaign, 55.6 of them walking home`.
+- `npx vitest run scripts/simulate.test.ts src/game/worldMap.test.ts`: 230 passed. `npm test`: tsc clean, 102 files, 2588 tests passed.
+- The guard: only the four new fields added (`vanguardWalkDays` 412, 341, 300, 303, 26; route fields 0); `GUARD_EVENTS_SHA256` unchanged.
+- `grep -rn "SOURCE_READY_LEVEL\|MAX_CAMPAIGN_DAYS\|ready-level" CLAUDE.md scripts/CLAUDE.md .claude docs/reference .codex`: no stale default.
+
+**Choices and departures.**
+- `tally` takes the events' world turn (default the world's turn now); `takeDays` passes each report's turn (the last report on the world's turn, each earlier one a day before). World events carry no turn, so this is how the 30-day window is measured.
+- A flicker is counted at most once per `route_restored` (a second raid before another restoring is not another flicker). `routesRaidedLong` is kept current in `tally` rather than computed in `finishCampaign`, so the hand-built tests reach it through `tally`.
+- `--out` is accepted and ignored with `--log none` (said in `simulator.md`); the header reads `-> no log`.
+- The `--log none` test spawns `node scripts/simulate.ts` with 3 single battles (`main` is not reachable without a process).
+- A line `Source near (--near-source): at threat 5, where it stood before stage 9` is printed with `--near-source`, as `--trading-post` prints its own: not asked for in §4.6.
+- `guards.md` (not named in §4.9) also took the pinned guard args and the 50-check command: it stated the old ones.
+- The other existing simulator tests that parse `--campaign` alone now run at ready level 18; all pass unchanged.
+
+**For later steps.** Step 04 changes `SOURCE_PLACE` and `NEAR_SOURCE.position`; the near-Source world is `newWorld(seed, undefined, PARTNERS, NEAR_SOURCE)` in `campaignGame`. Step 09 reads `routeRaidsTold`, `routeFlickers`, `routesRaidedLong` and `vanguardWalkDays` from the `Trade:` and `Walking:` lines.
