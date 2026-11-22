@@ -130,7 +130,9 @@ const RAIDED = '#ef5350'
 const ROUTE_TOP = 150
 const ROUTE_ROW_H = 72
 /** A route row's height once the tab pages, leaving room for the pager under four rows. */
-const ROUTE_PAGED_ROW_H = 64
+const ROUTE_PAGED_ROW_H = 70
+/** Where paged rows start: a few px above `ROUTE_TOP`, under the one-line heading, so a four-line offer fits its row. */
+const ROUTE_PAGED_TOP = 142
 const ROUTE_TEXT_W = LIST_W - 112
 const OPEN_W = 88
 const MINIMAP = { x: DETAILS_X, y: ROUTE_TOP, width: DETAILS_W, height: 150 }
@@ -160,6 +162,8 @@ export class TradingPostScene extends Phaser.Scene {
   private familyAt = new Map<FamilyId | null, Point>()
   /** The Routes tab's chosen partner; the first row when none is (or it is gone). */
   private routeChosen: string | null = null
+  /** The Routes tab's rows, asked once a render. */
+  private routeAll: RouteRow[] = []
   private routeLines: Array<{ row: RouteRow; line: string; open: Point | null; openEnabled: boolean; selected: boolean }> = []
   /** The refusal drawn under the minimap, or null. */
   private routeRefusal: string | null = null
@@ -261,7 +265,7 @@ export class TradingPostScene extends Phaser.Scene {
   }
 
   private get pageY(): number {
-    if (this.tab === 'routes') return ROUTE_TOP + ROUTE_ROWS * ROUTE_PAGED_ROW_H + 18
+    if (this.tab === 'routes') return ROUTE_PAGED_TOP + ROUTE_ROWS * ROUTE_PAGED_ROW_H + 10
     return this.listTop + this.rowsPerPage * ROW_H + 18
   }
 
@@ -344,7 +348,8 @@ export class TradingPostScene extends Phaser.Scene {
     this.familyAt = new Map()
     const { world } = this.gameState
     const rows = this.rows()
-    const count = this.tab === 'routes' ? routeRows(this.gameState, this.expedition).length : rows.length
+    this.routeAll = this.tab === 'routes' ? routeRows(this.gameState, this.expedition) : []
+    const count = this.tab === 'routes' ? this.routeAll.length : rows.length
     const pages = Math.max(1, Math.ceil(count / this.rowsPerPage))
     this.page = Math.min(this.page, pages - 1)
     this.frame.add([
@@ -471,7 +476,7 @@ export class TradingPostScene extends Phaser.Scene {
 
   private drawRoutes(): void {
     const { world } = this.gameState
-    const all = routeRows(this.gameState, this.expedition)
+    const all = this.routeAll
     const paged = all.length > ROUTE_ROWS
     const rowH = paged ? ROUTE_PAGED_ROW_H : ROUTE_ROW_H
     const rows = all.slice(this.page * ROUTE_ROWS, (this.page + 1) * ROUTE_ROWS)
@@ -485,7 +490,7 @@ export class TradingPostScene extends Phaser.Scene {
           ? `No partner trades with ${encampmentName(world)} yet: walk to one on the map.`
           : `Routes: ${world.routes.length} of ${limit} open.`
     this.frame.add(this.add.text(LIST_X + 4, 126, heading, { fontFamily: FONT, fontSize: '13px', color: limit === 0 ? REFUSED : GOLD, wordWrap: { width: LIST_W } }))
-    rows.forEach((row, i) => this.drawRouteRow(row, ROUTE_TOP + i * rowH, rowH, row === chosen))
+    rows.forEach((row, i) => this.drawRouteRow(row, (paged ? ROUTE_PAGED_TOP : ROUTE_TOP) + i * rowH, rowH, row === chosen))
     this.drawMinimap(chosen)
   }
 
@@ -642,7 +647,7 @@ export class TradingPostScene extends Phaser.Scene {
   private turnPage(by: number): void {
     this.page += by
     // A turned Routes page selects its first row.
-    if (this.tab === 'routes') this.routeChosen = routeRows(this.gameState, this.expedition)[this.page * ROUTE_ROWS]?.partner ?? null
+    if (this.tab === 'routes') this.routeChosen = this.routeAll[this.page * ROUTE_ROWS]?.partner ?? null
     this.render()
   }
 

@@ -716,6 +716,9 @@ describe('the encampment', () => {
     expect(tab.routes.map((r) => [r.partner, r.status])).toEqual([['millbrook', 'closed'], ['saltmere', 'closed']])
     expect(tab.routes[0].line).toMatch(/^Open a route to Millbrook: \d+ hexes, about \d+ gold every 5 days and 1 timber every 10, costs \d+ gold, 10 timber$/)
     expect(tab.routes[0].open).toMatchObject({ visible: true, enabled: true })
+    // Two partners fit a page: no pager is drawn.
+    expect(tab.buttons.prev.visible).toBe(false)
+    expect(tab.buttons.next.visible).toBe(false)
     // The offer names the partner's good; the notes under the minimap give its condition (and why security is short, if it is).
     expect(tab.routes[0].line).toContain('and 1 timber every 10')
     expect(tab.routeNotes.at(-1)).toMatch(/^1 timber every 10 days while security is 50% or more/)
@@ -774,7 +777,7 @@ describe('the encampment', () => {
     await game.newGame()
     // Five partners before the far ones exist (step 05): three more, planted beside the world's own and contacted.
     const base = PARTNERS.find((p) => p.id === 'millbrook')!.position
-    const extra = ['stonehollow', 'elder_glade', 'emberwatch'].map((id, i) => ({
+    const extra = ['planted_1', 'planted_2', 'planted_3'].map((id, i) => ({
       id,
       kind: 'partner',
       name: id,
@@ -798,7 +801,7 @@ describe('the encampment', () => {
     await game.waitForScenes(['TradingPost'], ['World'])
     await game.click((await game.settled('TradingPost')).buttons.routesTab)
     const first = await game.settled('TradingPost', (p) => p.tab === 'routes' && p.routes.length > 0)
-    expect(first.routes.map((r) => r.partner)).toEqual(['millbrook', 'saltmere', 'stonehollow', 'elder_glade'])
+    expect(first.routes.map((r) => r.partner)).toEqual(['millbrook', 'saltmere', 'planted_1', 'planted_2'])
     expect(first.routes[0].selected).toBe(true)
     expect(first.buttons.prev.enabled).toBe(false)
     expect(first.buttons.next.enabled).toBe(true)
@@ -808,14 +811,14 @@ describe('the encampment', () => {
     expect(first.buttons.next.y).toBeLessThan(first.buttons.close.y)
 
     await game.click(first.buttons.next)
-    const second = await game.settled('TradingPost', (p) => p.routes[0]?.partner === 'emberwatch')
-    expect(second.routes.map((r) => [r.partner, r.selected])).toEqual([['emberwatch', true]])
+    const second = await game.settled('TradingPost', (p) => p.routes[0]?.partner === 'planted_3')
+    expect(second.routes.map((r) => [r.partner, r.selected])).toEqual([['planted_3', true]])
     expect(second.buttons.prev.enabled).toBe(true)
     expect(second.buttons.next.enabled).toBe(false)
 
     await game.click(second.buttons.prev)
     const back = await game.settled('TradingPost', (p) => p.routes.length === 4)
-    expect(back.routes.map((r) => [r.partner, r.selected])).toEqual([['millbrook', true], ['saltmere', false], ['stonehollow', false], ['elder_glade', false]])
+    expect(back.routes.map((r) => [r.partner, r.selected])).toEqual([['millbrook', true], ['saltmere', false], ['planted_1', false], ['planted_2', false]])
   })
 
   it('keeps the Routes tab\'s notes and refusal above the message line at 840 × 560, in the worst case (verification round 3)', async () => {
