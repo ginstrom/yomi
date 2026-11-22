@@ -504,7 +504,7 @@ describe('the roads\' strength (economy A8)', () => {
   function roaded() {
     const world = newWorld(1)
     const road = roadTo(world, 'millbrook')!
-    const route: TradeRoute = { id: 'route_millbrook', partner: 'millbrook', road, opened: world.turn, raidedDays: 0 }
+    const route: TradeRoute = { id: 'route_millbrook', partner: 'millbrook', road, opened: world.turn, raidedDays: 0, raided: false }
     const bare = newWorld(1)
     bare.blight = world.blight.slice()
     bare.shift = world.shift.slice()
@@ -567,7 +567,7 @@ describe('the roads\' strength (economy A8)', () => {
   it('pushes once per route, so two roads sharing a hex push twice there', () => {
     const { world, bare, road } = roaded()
     world.lodge = 3
-    world.routes.push({ id: 'route_other', partner: 'other', road: [road[0]], opened: 0, raidedDays: 0 })
+    world.routes.push({ id: 'route_other', partner: 'other', road: [road[0]], opened: 0, raidedDays: 0, raided: false })
     expect(netInfluence(bare, [], road[0]) - netInfluence(world, [], road[0])).toBeCloseTo(2 * ROAD_STRENGTH)
     expect(netInfluence(bare, [], road[1]) - netInfluence(world, [], road[1])).toBeCloseTo(ROAD_STRENGTH)
   })

@@ -43,6 +43,8 @@ export interface TradeRoute {
   opened: number
   /** Raided yield days in a row. */
   raidedDays: number
+  /** Raided as the last day's trade found it: the day this changes, the raid or its end is told. */
+  raided: boolean
 }
 
 /** The trade partners on the map, in locations order. */
@@ -184,7 +186,7 @@ export function openRoute(game: GameState, _party: Expedition, partnerId: string
   const partner = partnerById(world, partnerId)!
   const road = roadTo(world, partnerId)!
   spend(world.stock, routeCost(road.length))
-  const route: TradeRoute = { id: `route_${partnerId}`, partner: partnerId, road, opened: world.turn, raidedDays: 0 }
+  const route: TradeRoute = { id: `route_${partnerId}`, partner: partnerId, road, opened: world.turn, raidedDays: 0, raided: false }
   world.routes.push(route)
   world.routesOpened += 1
   return { type: 'route_opened', route: route.id, partner: partnerId, name: partner.name, length: road.length }
@@ -236,33 +238,42 @@ export function raidCause(world: WorldState, route: Pick<TradeRoute, 'partner' |
 }
 
 /**
- * The routes' yield day, after the partners' day: each route in order is
- * raided (counting its run, and abandoned at `ABANDON_AFTER`) or pays its
- * gold, and on every second yield day 1 of its partner's good when its
- * security is at least ½; the first clear day after a raid restores it.
- * Nothing on other days, nor once the encampment is lost.
+ * The routes' day, after the partners' day. Every day, each route that
+ * became raided tells it (`route_raided` with `days` 0, notable) and each
+ * that stopped being raided tells that (`route_restored`), once each
+ * (`TradeRoute.raided`). On yield days each route in order is raided
+ * (counting its run in `raidedDays`, `route_raided` with that count, and
+ * abandoned at `ABANDON_AFTER`) or pays its gold, and on every second yield
+ * day 1 of its partner's good when its security is at least ½; a clear yield
+ * day ends the run's count. Nothing once the encampment is lost.
  */
 export function tradeDay(world: WorldState, presences: readonly PartyPresence[]): WorldEvent[] {
-  if (world.status === 'lost' || world.turn % YIELD_DAYS !== 0) return []
+  if (world.status === 'lost') return []
   const events: WorldEvent[] = []
+  const yieldDay = world.turn % YIELD_DAYS === 0
   for (const route of [...world.routes]) {
     const partner = partnerById(world, route.partner)!
     const named = { route: route.id, partner: partner.id, name: partner.name }
-    const raid = raidCause(world, route)
-    if (raid) {
+    const now = raidCause(world, route)
+    if (now && !route.raided) {
+      const raider = now.raider ? { raider: now.raider.id, raiderName: now.raider.name } : {}
+      events.push({ type: 'route_raided', ...named, cause: now.cause, ...raider, days: 0 })
+    } else if (!now && route.raided) {
+      events.push({ type: 'route_restored', ...named })
+    }
+    route.raided = now !== null
+    if (!yieldDay) continue
+    if (now) {
       route.raidedDays += 1
-      const raider = raid.raider ? { raider: raid.raider.id, raiderName: raid.raider.name } : {}
-      events.push({ type: 'route_raided', ...named, cause: raid.cause, ...raider, days: route.raidedDays })
+      const raider = now.raider ? { raider: now.raider.id, raiderName: now.raider.name } : {}
+      events.push({ type: 'route_raided', ...named, cause: now.cause, ...raider, days: route.raidedDays })
       if (route.raidedDays >= ABANDON_AFTER) {
         world.routes = world.routes.filter((r) => r !== route)
         events.push({ type: 'route_abandoned', ...named })
       }
       continue
     }
-    if (route.raidedDays > 0) {
-      route.raidedDays = 0
-      events.push({ type: 'route_restored', ...named })
-    }
+    route.raidedDays = 0
     const pay = (material: PartnerLocation['good'], amount: number) => {
       world.stock[material] = (world.stock[material] ?? 0) + amount
       events.push({ type: 'yield', site: partner.id, name: partner.name, material, amount, source: 'route', route: route.id })

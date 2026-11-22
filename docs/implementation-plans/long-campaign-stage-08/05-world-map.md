@@ -28,10 +28,10 @@ No rule changes. The Routes tab and the debug commands `spawn` and `contact` are
 
 2. **Contact and silence are daily, in a new `partnerDay`.** The design names `contactPartner` "called from the travel step"; the plan instead contacts in the world's day (`updateTerritory` calls `partnerDay`), for every presence standing on an uncontacted partner's hex. Each walked hex ends a day with the party on it, so this is the same for walking and covers garrisons and debug moves too. `contactPartner(world, id)` stays exported for `partnerDay` and the debug console. Contact is not notable (the design's `isNotable` list leaves it out); its line shows in the day's events like a capture.
 3. **Silence is tracked for every partner, told only for contacted ones.** `WorldState.silent` holds the partners silent now (entered at `LOSS_LEVEL`, left at 0). `partner_silent` and `partner_restored` are emitted only for contacted partners. A partner is a clean source of `PARTNER_STRENGTH` (3) whether silent or not: it is never lost, and its strength never changes, so the fields memo is untouched by silence.
-5. **Raid messages and repeats** (for the user's eye). `route_raided` is emitted on every raided yield day, carrying `days` (the run's count, 1 on the first). Only `days === 1` is notable and has a message line ("Raiders on the Millbrook road: the Goblin Brood."); later days describe as `''` (economy R9: told once when raided and once when restored). On the sixth raided day the event is followed by `route_abandoned`, and the route is removed (its slot freed).
-8. **The preview's income counts towers, not parties.** The Routes tab and the road tooltip's "about N gold every 5 days" use `routeIncome(world, road, [])`, so the party standing at home does not inflate it; the map's overlay and the real yields count every presence.
+5. **Raid messages and repeats** (for the user's eye). `route_raided` is emitted on every raided yield day, carrying `days` (the run's count, 1 on the first). Only `days === 1` is notable and has a message line ("Raiders on the Millbrook road: the Goblin Brood."); later days describe as `''` (economy R9: told once when raided and once when restored). On the sixth raided day the event is followed by `route_abandoned`, and the route is removed (its slot freed). *Revised in verification round 2 (the user's decision, 2026-11-22):* the raid is told the day the road turns raided, yield day or not: `tradeDay` checks every day and emits `route_raided` with `days` 0 (notable, the message line, the cue) when a route becomes raided and `route_restored` when it stops, once each (`TradeRoute.raided`, saved: `SAVE_VERSION` 29); the yield days' `route_raided` (`days` 1, 2, …) still count the run and abandon at the sixth, but are not notable and have no line.
+8. **The preview's income counts towers, not parties.** The Routes tab's "about N gold every 5 days" uses `routeIncome(world, road, [])`, so the party standing at home does not inflate it; the map's overlay, the road hover and the real yields count every presence. *(Revised in verification round 2, the user's decision: the road hover counted towers only too; it now counts parties, so it agrees with the overlay and today's pay.)*
 10. **The road overlay** colours each segment by its far hex's security, live: gold (`1`), amber (`½`), red (`0`); a route that `raidCause` says is raided today is red throughout, so the road turns red the day a nest spawns beside it, while the event and the lost income come on the next yield day. Roads are the company's own and are drawn through the fog. The road tooltip is lines in the existing hover info panel (`hexInfo`), not a new tooltip.
-17. **Sounds reuse cues**, no new sound: `route_raided` (days 1), `partner_silent` → `world.threatened`; `route_abandoned` → `world.lost`; `route_restored`, `partner_restored` → `world.captured`; `partner_contacted`, `route_opened` → `world.build`.
+17. **Sounds reuse cues**, no new sound: `route_raided` (days 0 since verification round 2), `partner_silent` → `world.threatened`; `route_abandoned` → `world.lost`; `route_restored`, `partner_restored` → `world.captured`; `partner_contacted`, `route_opened` → `world.build`.
 
 ### Contract (copied unchanged from the index)
 
@@ -58,7 +58,7 @@ export function partnerInfoLines(world: WorldState, partner: PartnerLocation): s
 // src/scenes/worldEvents.ts describeWorldEvent:
 //   partner_contacted "Millbrook will trade with Oakvale."; partner_silent "Millbrook has fallen silent under the blight.";
 //   partner_restored "Millbrook is trading again."; route_opened "A road is opened to Millbrook.";
-//   route_raided (days 1) raiders "Raiders on the Millbrook road: the Goblin Brood." | corrupted "The blight has overrun the Millbrook road." |
+//   route_raided (days 0 since verification round 2; days 1 before) raiders "Raiders on the Millbrook road: the Goblin Brood." | corrupted "The blight has overrun the Millbrook road." |
 //     silent "The Millbrook road is idle: Millbrook is silent."; (days > 1) '';
 //   route_restored "The Millbrook road is safe again."; route_abandoned "The Millbrook road is abandoned.";
 //   a route yield "The Millbrook road brings 2 gold."
@@ -132,7 +132,7 @@ export function raidCause(world: WorldState, route: Pick<TradeRoute, 'partner' |
 //   | { type: 'route_abandoned'; route: string; partner: string; name: string }
 //   'yield' gains route?: string; a route's yields are { site: <partner id>, name: <partner name>, material, amount, source: 'route', route: <route id> }
 // src/game/territory.ts: YieldSource = 'site' | 'market' | 'route'
-// src/game/worldMap.ts: isNotable(route_raided) is days === 1; isNotable(route_abandoned) is true
+// src/game/worldMap.ts: isNotable(route_raided) is days === 0 (the day it turns raided; days === 1 before verification round 2); isNotable(route_abandoned) is true
 ```
 
 **From C3 (step 03):** roads push at Lodge 3 (nothing for this step to draw; the map's blight tints already show it).
@@ -166,7 +166,7 @@ export function raidCause(world: WorldState, route: Pick<TradeRoute, 'partner' |
 
 1. **`src/scenes/roadsView.ts`** (new, Phaser-free) with `RoadShade`, `ROAD_COLORS`, `RoadSegment`, `roadSegments`, `roadInfoLines`, `raidWords` and `partnerInfoLines` exactly as C5:
    - `roadSegments`: for each route in `world.routes`, the segments encampment → `road[0]`, `road[0]` → `road[1]`, …; if `raidCause(world, route)` is not null every segment is `'raided'`, else each by `hexSecurity(world, to, presences)`.
-   - `roadInfoLines`: "The Millbrook road: security 75%, about 2 gold every 5 days." with `Math.round(routeSecurity(world, road, []) * 100)` and `routeIncome(world, road, [])` (decision 8: towers, not parties), `YIELD_DAYS` for the 5; when `raidCause` holds today the first line reads "…security 75%, pays nothing while raided." (no income quoted), followed by "Raided: <raidWords>." One pair of lines per route through the hex.
+   - `roadInfoLines`: "The Millbrook road: security 75%, about 2 gold every 5 days." with `Math.round(routeSecurity(world, road, presences) * 100)` and `routeIncome(world, road, presences)` (towers and parties, as revised in verification round 2; it counted towers only before), `YIELD_DAYS` for the 5; when `raidCause` holds today the first line reads "…security 75%, pays nothing while raided." (no income quoted), followed by "Raided: <raidWords>." One pair of lines per route through the hex.
    - `raidWords` uses `theName` (and the plural "are" for a name ending in s, as `isPluralName`) and `RAID_RADIUS`. Step 06's Routes tab reuses it; keep it exported and pure.
    - `partnerInfoLines`: as C5; the encampment's name from `encampmentName`.
 2. **`WorldScene.ts`:**

@@ -13,7 +13,7 @@ function routed() {
   const world = newGame(readyMadeParty(), null, 1).world
   world.contacted.push('millbrook')
   const road = roadTo(world, 'millbrook')!
-  const route: TradeRoute = { id: 'route_millbrook', partner: 'millbrook', road, opened: 1, raidedDays: 0 }
+  const route: TradeRoute = { id: 'route_millbrook', partner: 'millbrook', road, opened: 1, raidedDays: 0, raided: false }
   world.routes.push(route)
   const partner = world.locations.find((l): l is PartnerLocation => l.id === 'millbrook')!
   return { world, road, route, partner }
@@ -105,7 +105,7 @@ describe('roadSegments draw order (verification round 1)', () => {
     world.contacted.push('saltmere')
     const salt = roadTo(world, 'saltmere')!
     clear(world, salt)
-    world.routes.push({ id: 'route_saltmere', partner: 'saltmere', road: salt, opened: 1, raidedDays: 0 })
+    world.routes.push({ id: 'route_saltmere', partner: 'saltmere', road: salt, opened: 1, raidedDays: 0, raided: false })
     // The second route, Saltmere's, is raided (silent); Millbrook's pays.
     world.silent.push('saltmere')
     const segs = roadSegments(world, [])
@@ -120,15 +120,16 @@ describe('roadSegments draw order (verification round 1)', () => {
 })
 
 describe('roadInfoLines', () => {
-  it('tells security and income from towers only, and nothing off the road', () => {
+  it('tells security and income counting towers and parties, as the overlay and the pay do, and nothing off the road (verification round 2)', () => {
     const { world, road } = routed()
     clear(world, road)
     setBlight(world, road[0], 1)
     const lines = roadInfoLines(world, [], road[1])
     expect(lines).toHaveLength(1)
     expect(lines[0]).toMatch(/^The Millbrook road: security \d+%, about \d+ gold every 5 days\.$/)
+    expect(lines[0]).not.toContain('security 100%')
     const guard = { position: road[0] } as PartyPresence
-    expect(roadInfoLines(world, [guard], road[1])).toEqual(lines)
+    expect(roadInfoLines(world, [guard], road[1])[0]).toContain('security 100%')
     expect(roadInfoLines(world, [], offsetToHex(0, 0))).toEqual([])
   })
 
@@ -194,7 +195,7 @@ describe('partnerInfoLines', () => {
     world.silent.length = 0
     const road = roadTo(world, 'millbrook')!
     clear(world, road)
-    world.routes.push({ id: 'route_millbrook', partner: 'millbrook', road, opened: 1, raidedDays: 0 })
+    world.routes.push({ id: 'route_millbrook', partner: 'millbrook', road, opened: 1, raidedDays: 0, raided: false })
     expect(partnerInfoLines(world, partner).at(-1)).toBe('Route open: security 100%.')
   })
 })

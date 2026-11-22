@@ -350,8 +350,9 @@ describe('isNotable for trade routes', () => {
   const world = newWorld(1)
   const named = { route: 'route_millbrook', partner: 'millbrook', name: 'Millbrook' }
 
-  it('stops a journey on the first raided day of a run and on abandonment, not on later raids, opening or restoring', () => {
-    expect(isNotable(world, { type: 'route_raided', ...named, cause: 'raiders', raider: 'x', raiderName: 'X', days: 1 }, [])).toBe(true)
+  it('stops a journey the day a road turns raided and on abandonment, not on the yield days\' counts, opening or restoring', () => {
+    expect(isNotable(world, { type: 'route_raided', ...named, cause: 'raiders', raider: 'x', raiderName: 'X', days: 0 }, [])).toBe(true)
+    expect(isNotable(world, { type: 'route_raided', ...named, cause: 'raiders', raider: 'x', raiderName: 'X', days: 1 }, [])).toBe(false)
     expect(isNotable(world, { type: 'route_raided', ...named, cause: 'silent', days: 2 }, [])).toBe(false)
     expect(isNotable(world, { type: 'route_abandoned', ...named }, [])).toBe(true)
     expect(isNotable(world, { type: 'route_opened', ...named, length: 14 }, [])).toBe(false)

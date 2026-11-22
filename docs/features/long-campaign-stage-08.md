@@ -17,7 +17,7 @@
 - Tiers (engineer / reviewer): planner opus; 01, 02, 07, 08 opus / opus; 03–06 sonnet / opus; no escalations. Verification: overall review opus, QA sonnet, simulated user sonnet.
 - Verification: overall review at a12cddd: changes needed (this record over its cap; fixed next commit); QA running; simulated user at a12cddd: goals 1–3 met, 4 partly, 5 found but route unprofitable.
 - Carried forward:
-  - Accepted, not fixed: a road's shape (avoiding unsighted nests, decision 6) can hint at nests in the fog; the Routes preview's security, income and corruption cause use the true blight, not `seen` (follows C6 and decision 8).
+  - Accepted, not fixed: a road's shape (avoiding unsighted nests, decision 6) can hint at nests in the fog; the Routes preview's security, income and corruption cause use the true blight, not `seen` (follows C6 and decision 8); the overlay shades fogged road hexes by true blight (user, decision 10).
   - Stage 9: the Routes tab shows at most 4 rows with no paging (a test trips when PARTNERS exceeds it).
   - For the user, outside stage 8: the world header doesn't refresh behind the trading post (stale gold in shots); world-blight.png shows no corrupted land.
   - For the user: in the --trading-post 4 check no route was ever raided or abandoned (500 campaigns), so RAID_RADIUS / ABANDON_AFTER are unjudged by the simulator.
@@ -37,3 +37,4 @@
 | 2026-11-22 | The simulator's contact detour runs only once the trading post allows routes (level 4); decision 13 revised | user | accept the out-of-band move (304/500); detour only near the path | As planned, one party went 239 → 304 (band 215–250) from the detour alone; gated, the 50-check returns to baseline |
 | 2026-11-22 | Step 05 follow-ups: grey a partner only when contacted or in sight; a raided road's hover says it pays nothing | orchestrator | as contracted | Decision 3 (silence told only for contacted); a raided route pays nothing |
 | 2026-11-22 | Step 08: add a measurement-only simulator flag that starts the trading post at level 4 and reports routes opened, raided and their gold share; full-campaign route figures wait for stage 12's spend-order retune | user | defer only; raise the post now | Routes open 0.03 a campaign at ready level 10 under the kept spend order |
+| 2026-11-22 | Verification UX: the road hover counts parties (preview stays towers-only); a raid is told the day the road turns red (counting stays on yield days); the Routes offer names the good, the reason for low security and where corruption is; Open stays allowed; fogged road colours stay live | user | keep decisions 5 and 8 as planned; a confirm click; shade by last seen | Simulated user and QA friction |

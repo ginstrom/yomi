@@ -362,7 +362,7 @@ describe('trade routes in the territory', () => {
     const { world } = solo(1)
     world.tradingPost = 4
     world.contacted.push('millbrook')
-    world.routes.push({ id: 'route_millbrook', partner: 'millbrook', road: roadTo(world, 'millbrook')!, opened: 1, raidedDays: 0 })
+    world.routes.push({ id: 'route_millbrook', partner: 'millbrook', road: roadTo(world, 'millbrook')!, opened: 1, raidedDays: 0, raided: false })
     return world
   }
   const kinds = (events: readonly WorldEvent[]) => events.map((e) => (e.type === 'yield' ? `yield:${e.source ?? 'site'}` : e.type))

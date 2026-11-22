@@ -82,8 +82,8 @@ export function describeWorldEvent(event: WorldEvent, known?: Known): string {
     case 'route_opened':
       return `A road is opened to ${event.name}.`
     case 'route_raided':
-      // Told once, on the first raided day; the repeats are left to the map.
-      if (event.days > 1) return ''
+      // Told once, the day the road turns raided (days 0); the yield days' counts are left to the map.
+      if (event.days !== 0) return ''
       if (event.cause === 'raiders') {
         const named = event.raider !== undefined && event.raiderName !== undefined && known?.sighted.includes(event.raider)
         return named ? `Raiders on the ${event.name} road: ${theName(event.raiderName!)}.` : `Raiders on the ${event.name} road.`

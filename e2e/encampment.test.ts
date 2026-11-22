@@ -713,8 +713,11 @@ describe('the encampment', () => {
     await game.click(post.buttons.routesTab)
     const tab = await game.settled('TradingPost', (p) => p.tab === 'routes')
     expect(tab.routes.map((r) => [r.partner, r.status])).toEqual([['millbrook', 'closed'], ['saltmere', 'closed']])
-    expect(tab.routes[0].line).toMatch(/^Open a route to Millbrook: \d+ hexes, about \d+ gold every 5 days, costs \d+ gold, 10 timber$/)
+    expect(tab.routes[0].line).toMatch(/^Open a route to Millbrook: \d+ hexes, about \d+ gold every 5 days and 1 timber every 10, costs \d+ gold, 10 timber$/)
     expect(tab.routes[0].open).toMatchObject({ visible: true, enabled: true })
+    // The offer names the partner's good; the notes under the minimap give its condition (and why security is short, if it is).
+    expect(tab.routes[0].line).toContain('and 1 timber every 10')
+    expect(tab.routeNotes.at(-1)).toMatch(/^1 timber every 10 days while security is 50% or more/)
     // Every control lies inside the window: the frame is scaled to fit.
     for (const at of [tab.routes[0].open!, tab.buttons.buyTab, tab.buttons.sellTab, tab.buttons.routesTab, tab.buttons.close]) {
       expect(at.x).toBeGreaterThan(0)

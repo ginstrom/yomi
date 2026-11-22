@@ -38,7 +38,7 @@ import { addPanelButton, fitText } from './panelButton.ts'
 import { runeEffectLines, runeSocketLine } from './runecraftView.ts'
 import { createPips } from './socketPips.ts'
 import { overlayScale } from './overlayScale.ts'
-import { ROUTE_ROWS, minimapBoard, minimapPoints, routeOffer, routeRows, routeState, type RouteRow } from './routesTab.ts'
+import { ROUTE_ROWS, minimapBoard, minimapPoints, routeNotes, routeOffer, routeRows, routeState, type RouteRow } from './routesTab.ts'
 import { describeWorldEvent } from './worldEvents.ts'
 import { encampment, encampmentName } from '../game/worldMap.ts'
 import { openRoute, openRouteRefusal, routeLimit } from '../game/trade.ts'
@@ -127,7 +127,7 @@ const ROUTE_TOP = 150
 const ROUTE_ROW_H = 72
 const ROUTE_TEXT_W = LIST_W - 112
 const OPEN_W = 88
-const MINIMAP = { x: DETAILS_X, y: ROUTE_TOP, width: DETAILS_W, height: 190 }
+const MINIMAP = { x: DETAILS_X, y: ROUTE_TOP, width: DETAILS_W, height: 150 }
 const ROAD_COLOR = 0xffd54f
 const RAIDED_COLOR = 0xe53935
 
@@ -159,6 +159,8 @@ export class TradingPostScene extends Phaser.Scene {
   private routeLines: Array<{ row: RouteRow; line: string; open: Point | null; openEnabled: boolean; selected: boolean }> = []
   /** The refusal drawn under the minimap, or null. */
   private routeRefusal: string | null = null
+  /** The notes drawn under the minimap (`routeNotes`). */
+  private routeNotes: string[] = []
 
   constructor() {
     super('TradingPost')
@@ -234,6 +236,7 @@ export class TradingPostScene extends Phaser.Scene {
         selected,
       })),
       routeRefusal: this.routeRefusal,
+      routeNotes: [...this.routeNotes],
     }
   }
 
@@ -320,6 +323,7 @@ export class TradingPostScene extends Phaser.Scene {
     this.controls = {}
     this.routeLines = []
     this.routeRefusal = null
+    this.routeNotes = []
     this.rowAt = new Map()
     this.slotAt = new Map()
     this.runesAt = null
@@ -524,12 +528,22 @@ export class TradingPostScene extends Phaser.Scene {
     const h = at(home)
     g.fillStyle(0xffffff, 1).fillCircle(h.x, h.y, 4)
     this.frame.add(g)
-    const caption = row ? (row.road ? `${row.name} road: ${row.length} hexes` : `No road to ${row.name}`) : 'Nothing to show yet.'
-    this.frame.add(this.add.text(DETAILS_X, MINIMAP.y + MINIMAP.height + 8, caption, { fontFamily: FONT, fontSize: '12px', color: DIM, wordWrap: { width: DETAILS_W } }))
+    // The road's length is in its row; a caption only when there is no road to draw.
+    const caption = row ? (row.road ? null : `No road to ${row.name}`) : 'Nothing to show yet.'
+    // Under the minimap, stacked: the caption, the notes (why security is short, the good's condition), the refusal.
+    let y = MINIMAP.y + MINIMAP.height + 8
+    const stack = (text: string, color: string) => {
+      const shown = this.add.text(DETAILS_X, y, text, { fontFamily: FONT, fontSize: '12px', color, wordWrap: { width: DETAILS_W }, lineSpacing: 2 })
+      this.frame.add(shown)
+      y += shown.height + 6
+    }
+    if (caption) stack(caption, DIM)
+    this.routeNotes = row ? routeNotes(row) : []
+    for (const note of this.routeNotes) stack(note, TEXT)
     // Told once: once Open was clicked, the message line says it.
     if (row?.status === 'closed' && row.refusal && row.refusal !== this.message) {
       this.routeRefusal = row.refusal
-      this.frame.add(this.add.text(DETAILS_X, REFUSAL_Y, row.refusal, { fontFamily: FONT, fontSize: '12px', color: REFUSED, wordWrap: { width: DETAILS_W } }))
+      stack(row.refusal, REFUSED)
     }
   }
 

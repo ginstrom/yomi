@@ -8,7 +8,8 @@ import { encampment, type MonsterLocation, type WorldState } from '../game/world
 import { hexDistance, hexEquals, hexNeighbors, type Hex } from '../grid/hex.ts'
 import { boardHexCenter, WORLD_LAYOUT } from './boardGeometry.ts'
 import { PARTNERS } from '../game/worldMap.ts'
-import { ROUTE_ROWS, minimapBoard, minimapPoints, routeOffer, routeRows, routeState, type RouteRow } from './routesTab.ts'
+import { ROUTE_ROWS, minimapBoard, minimapPoints, routeNotes, routeOffer, routeRows, routeState, type RouteRow } from './routesTab.ts'
+import { UNEXPLORED } from '../game/vision.ts'
 
 /** A new game with Millbrook contacted, the trading post at 4, the stock rich and the party at home. */
 function trading(): { game: GameState; world: WorldState; party: GameState['parties'][number] } {
@@ -79,7 +80,7 @@ describe('routeRows', () => {
     world.tradingPost = 3
     expect(routeRows(game, party)[0].refusal).toBe('Routes need the Market (trading post level 4).')
     world.tradingPost = 4
-    world.routes.push({ id: 'route_saltmere', partner: 'saltmere', road: [{ q: 1, r: 1 }], opened: 1, raidedDays: 0 })
+    world.routes.push({ id: 'route_saltmere', partner: 'saltmere', road: [{ q: 1, r: 1 }], opened: 1, raidedDays: 0, raided: false })
     expect(routeRows(game, party)[0].refusal).toMatch(/keeps 1 route open at most/)
     world.routes.length = 0
     world.stock = { gold: 5 }
@@ -95,7 +96,7 @@ describe('routeRows', () => {
     const { game, world, party } = trading()
     const road = roadTo(world, 'millbrook')!
     clean(world, road)
-    const route: TradeRoute = { id: 'route_millbrook', partner: 'millbrook', road, opened: 1, raidedDays: 0 }
+    const route: TradeRoute = { id: 'route_millbrook', partner: 'millbrook', road, opened: 1, raidedDays: 0, raided: false }
     world.routes.push(route)
     const [open] = routeRows(game, party)
     expect(open).toMatchObject({ status: 'open', cost: null, refusal: null, raid: null, raidedDays: 0 })
@@ -111,7 +112,9 @@ describe('routeRows', () => {
     nest(world, twoFrom(world), true)
     const [row] = routeRows(game, party)
     expect(row.raid).toBe(`the Goblin Brood is within ${RAID_RADIUS} hexes`)
-    expect(routeOffer(row)).toMatch(/\. Raided at once: the Goblin Brood is within 2 hexes$/)
+    // The row says so briefly; the notes under the minimap say why.
+    expect(routeOffer(row)).toMatch(/, costs [^.]*\. Raided at once\.$/)
+    expect(routeNotes(row)[0]).toBe('Raided at once: the Goblin Brood is within 2 hexes.')
   })
 
   it('names no nest the player has not sighted', () => {
@@ -135,6 +138,30 @@ describe('routeRows', () => {
     expect(routeRows(game, party)[0].raid).toBe(`the Kobold Nest is within ${RAID_RADIUS} hexes`)
   })
 
+  it('counts the road\'s unsafe hexes, a watchtower\'s guard making them safe (verification round 2)', () => {
+    const { game, world, party } = trading()
+    const road = roadTo(world, 'millbrook')!
+    clean(world, road)
+    world.blight[boardIndex(world.board, road[6])] = 1
+    world.blight[boardIndex(world.board, road[7])] = 1
+    world.blight[boardIndex(world.board, road[9])] = 2
+    expect(routeRows(game, party)[0].weak).toEqual({ tainted: 2, blighted: 1, corrupted: 0 })
+    world.towers.push({ id: 'tower_1', position: road[8] })
+    expect(routeRows(game, party)[0].weak).toEqual({ tainted: 0, blighted: 0, corrupted: 0 })
+  })
+
+  it('says where the blight has overrun a previewed road, only where the player has explored (verification round 2)', () => {
+    const { game, world, party } = trading()
+    const road = roadTo(world, 'millbrook')!
+    clean(world, road)
+    const at = boardIndex(world.board, road[5])
+    world.blight[at] = 3
+    world.seen[at] = 3
+    expect(routeRows(game, party)[0].raid).toBe('the blight has overrun it 6 hexes out')
+    world.seen[at] = UNEXPLORED
+    expect(routeRows(game, party)[0].raid).toBe('the blight has overrun it')
+  })
+
   it('says a silent partner is silent', () => {
     const { game, world, party } = trading()
     world.silent.push('millbrook')
@@ -147,17 +174,30 @@ describe('routeRows', () => {
 describe('routeOffer and routeState', () => {
   const closed = (over: Partial<RouteRow> = {}): RouteRow => ({
     partner: 'millbrook', name: 'Millbrook', good: 'timber', silent: false, status: 'closed', road: [], length: 14, income: 2, security: 1,
-    cost: { gold: 27, timber: 10 }, raidedDays: 0, refusal: null, raid: null, ...over,
+    cost: { gold: 27, timber: 10 }, raidedDays: 0, refusal: null, raid: null, weak: { tainted: 0, blighted: 0, corrupted: 0 }, ...over,
   })
 
-  it('words the offer with the figures and the cost', () => {
-    expect(routeOffer(closed())).toBe(`Open a route to Millbrook: 14 hexes, about 2 gold every ${YIELD_DAYS} days, costs 27 gold, 10 timber`)
+  it('words the offer with the figures, the partner\'s good and the cost (verification round 2)', () => {
+    expect(routeOffer(closed())).toBe(`Open a route to Millbrook: 14 hexes, about 2 gold every ${YIELD_DAYS} days and 1 timber every ${2 * YIELD_DAYS}, costs 27 gold, 10 timber`)
   })
 
-  it('adds the raid at the end', () => {
-    expect(routeOffer(closed({ raid: 'the Goblin Raiders are within 2 hexes' }))).toBe(
-      `Open a route to Millbrook: 14 hexes, about 2 gold every ${YIELD_DAYS} days, costs 27 gold, 10 timber. Raided at once: the Goblin Raiders are within 2 hexes`,
+  it('ends with "Raided at once." and leaves the cause to the notes, so the row fits at 840 × 560 (verification round 2)', () => {
+    const raided = closed({ raid: 'the Goblin Raiders are within 2 hexes' })
+    expect(routeOffer(raided)).toBe(
+      `Open a route to Millbrook: 14 hexes, about 2 gold every ${YIELD_DAYS} days and 1 timber every ${2 * YIELD_DAYS}, costs 27 gold, 10 timber. Raided at once.`,
     )
+    expect(routeNotes(raided)[0]).toBe('Raided at once: the Goblin Raiders are within 2 hexes.')
+  })
+
+  it('explains security below 100% and the good\'s condition in the notes (verification round 2)', () => {
+    expect(routeNotes(closed())).toEqual([`1 timber every ${2 * YIELD_DAYS} days while security is 50% or more.`])
+    expect(routeNotes(closed({ security: 12 / 14, weak: { tainted: 2, blighted: 0, corrupted: 0 } }))).toEqual([
+      'Security 86%: 2 of 14 hexes tainted.',
+      `1 timber every ${2 * YIELD_DAYS} days while security is 50% or more.`,
+    ])
+    expect(routeNotes(closed({ security: 0.4, weak: { tainted: 3, blighted: 2, corrupted: 1 } }))[0]).toBe('Security 40%: 3 of 14 hexes tainted, 2 blighted, 1 corrupted.')
+    expect(routeNotes(closed({ security: 0.4, weak: { tainted: 3, blighted: 2, corrupted: 1 } }))[1]).toBe(`1 timber every ${2 * YIELD_DAYS} days while security is 50% or more (not now).`)
+    expect(routeNotes(closed({ length: null, road: null, security: null }))).toEqual([])
   })
 
   it('states an open route: security as a whole percentage, income, raided days', () => {

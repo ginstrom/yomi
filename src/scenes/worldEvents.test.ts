@@ -247,17 +247,18 @@ describe('trade partner lines (stage 8)', () => {
     const base = { route: 'route_millbrook', partner: 'millbrook', name: 'Millbrook' }
     expect(describeWorldEvent({ type: 'route_opened', ...base, length: 12 })).toBe('A road is opened to Millbrook.')
     const sightedA = { sighted: ['a'] }
-    expect(describeWorldEvent({ type: 'route_raided', ...base, cause: 'raiders', raider: 'a', raiderName: 'Goblin Brood', days: 1 }, sightedA)).toBe('Raiders on the Millbrook road: the Goblin Brood.')
-    expect(describeWorldEvent({ type: 'route_raided', ...base, cause: 'raiders', raider: 'a', raiderName: 'The Goblin Raiders', days: 1 }, sightedA)).toBe('Raiders on the Millbrook road: the Goblin Raiders.')
-    expect(describeWorldEvent({ type: 'route_raided', ...base, cause: 'corrupted', days: 1 })).toBe('The blight has overrun the Millbrook road.')
-    expect(describeWorldEvent({ type: 'route_raided', ...base, cause: 'silent', days: 1 })).toBe('The Millbrook road is idle: Millbrook is silent.')
+    expect(describeWorldEvent({ type: 'route_raided', ...base, cause: 'raiders', raider: 'a', raiderName: 'Goblin Brood', days: 0 }, sightedA)).toBe('Raiders on the Millbrook road: the Goblin Brood.')
+    expect(describeWorldEvent({ type: 'route_raided', ...base, cause: 'raiders', raider: 'a', raiderName: 'The Goblin Raiders', days: 0 }, sightedA)).toBe('Raiders on the Millbrook road: the Goblin Raiders.')
+    expect(describeWorldEvent({ type: 'route_raided', ...base, cause: 'corrupted', days: 0 })).toBe('The blight has overrun the Millbrook road.')
+    expect(describeWorldEvent({ type: 'route_raided', ...base, cause: 'silent', days: 0 })).toBe('The Millbrook road is idle: Millbrook is silent.')
+    expect(describeWorldEvent({ type: 'route_raided', ...base, cause: 'silent', days: 1 })).toBe('')
     expect(describeWorldEvent({ type: 'route_raided', ...base, cause: 'silent', days: 2 })).toBe('')
     expect(describeWorldEvent({ type: 'route_restored', ...base })).toBe('The Millbrook road is safe again.')
     expect(describeWorldEvent({ type: 'route_abandoned', ...base })).toBe('The Millbrook road is abandoned.')
   })
 
   it('names a raider only once the player has sighted it (verification round 1)', () => {
-    const raided: WorldEvent = { type: 'route_raided', route: 'route_millbrook', partner: 'millbrook', name: 'Millbrook', cause: 'raiders', raider: 'spawn_3', raiderName: 'Goblin Brood', days: 1 }
+    const raided: WorldEvent = { type: 'route_raided', route: 'route_millbrook', partner: 'millbrook', name: 'Millbrook', cause: 'raiders', raider: 'spawn_3', raiderName: 'Goblin Brood', days: 0 }
     expect(describeWorldEvent(raided, { sighted: [] })).toBe('Raiders on the Millbrook road.')
     expect(describeWorldEvent(raided)).toBe('Raiders on the Millbrook road.')
     expect(describeWorldEvent(raided, { sighted: ['spawn_3'] })).toBe('Raiders on the Millbrook road: the Goblin Brood.')

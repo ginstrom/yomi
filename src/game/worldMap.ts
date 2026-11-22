@@ -322,8 +322,8 @@ export function isNotable(_world: WorldState, event: WorldEvent, presences: read
     case 'route_abandoned':
       return true
     case 'route_raided':
-      // Told once, on the first raided yield day of a run (economy R9).
-      return event.days === 1
+      // Told once, the day the road turns raided (`days` 0); the yield days' counts are not (economy R9).
+      return event.days === 0
     default:
       return false
   }

@@ -169,7 +169,7 @@ function trading(): { game: GameState; world: WorldState; party: GameState['part
 }
 
 /** A stand-in route to `partner`, with a road of its own. */
-const fakeRoute = (partner: string, road: Hex[] = [offsetToHex(1, 1)]): TradeRoute => ({ id: `route_${partner}`, partner, road, opened: 1, raidedDays: 0 })
+const fakeRoute = (partner: string, road: Hex[] = [offsetToHex(1, 1)]): TradeRoute => ({ id: `route_${partner}`, partner, road, opened: 1, raidedDays: 0, raided: false })
 
 /** The row of `lane`. */
 const LANE = 36
@@ -294,7 +294,7 @@ describe('opening a route (economy A5)', () => {
     const event = openRoute(game, party, 'millbrook')
     expect(event).toEqual({ type: 'route_opened', route: 'route_millbrook', partner: 'millbrook', name: 'Millbrook', length: 14 })
     expect(world.stock).toEqual({ gold: 73, timber: 10 })
-    expect(world.routes).toEqual([{ id: 'route_millbrook', partner: 'millbrook', road, opened: 9, raidedDays: 0 }])
+    expect(world.routes).toEqual([{ id: 'route_millbrook', partner: 'millbrook', road, opened: 9, raidedDays: 0, raided: false }])
     expect(routeOf(world, 'millbrook')).toBe(world.routes[0])
     expect(routeOf(world, 'saltmere')).toBeNull()
     expect(world.routesOpened).toBe(1)
@@ -463,7 +463,7 @@ describe('the routes\' yield day (economy A6)', () => {
   function open(): { world: WorldState; route: TradeRoute } {
     const world = newWorld(1)
     contactPartner(world, 'millbrook')
-    const route: TradeRoute = { id: 'route_millbrook', partner: 'millbrook', road: lane(world, 14), opened: 1, raidedDays: 0 }
+    const route: TradeRoute = { id: 'route_millbrook', partner: 'millbrook', road: lane(world, 14), opened: 1, raidedDays: 0, raided: false }
     world.routes.push(route)
     world.stock = {}
     return { world, route }
@@ -504,31 +504,69 @@ describe('the routes\' yield day (economy A6)', () => {
     expect(day(world, 2 * YIELD_DAYS, [guard])).toEqual([{ ...goldYield, amount: 1 }, timberYield])
   })
 
-  it('pays nothing raided, counting the run; restores on the first clear day', () => {
+  const named = { route: 'route_millbrook', partner: 'millbrook', name: 'Millbrook' }
+  const raidedBy = { type: 'route_raided', ...named, cause: 'raiders', raider: 'raider', raiderName: 'Nest raider' }
+
+  it('pays nothing raided, counting the run on yield days; the notice comes once, the day it starts', () => {
     const { world, route } = open()
     const raider = nest(world, offsetToHex(5, LANE - 1), 'raider')
-    expect(day(world, 5)).toEqual([
-      { type: 'route_raided', route: 'route_millbrook', partner: 'millbrook', name: 'Millbrook', cause: 'raiders', raider: 'raider', raiderName: 'Nest raider', days: 1 },
-    ])
+    // A raid that starts on a yield day: the notice (days 0), then the yield day's count.
+    const first = day(world, 5)
+    expect(first).toEqual([{ ...raidedBy, days: 0 }, { ...raidedBy, days: 1 }])
+    expect(isNotable(world, first[0], [])).toBe(true)
+    expect(isNotable(world, first[1], [])).toBe(false)
+    for (const turn of [6, 7, 8, 9]) expect(day(world, turn)).toEqual([])
     const second = day(world, 10)
     expect(second).toMatchObject([{ type: 'route_raided', days: 2 }])
     expect(isNotable(world, second[0], [])).toBe(false)
     expect(world.stock).toEqual({})
     expect(route.raidedDays).toBe(2)
     world.locations = world.locations.filter((l) => l !== raider)
-    expect(day(world, 15)).toEqual([{ type: 'route_restored', route: 'route_millbrook', partner: 'millbrook', name: 'Millbrook' }, goldYield])
+    // Restored the day it clears, a yield day here; it pays at once.
+    expect(day(world, 15)).toEqual([{ type: 'route_restored', ...named }, goldYield])
     expect(route.raidedDays).toBe(0)
     expect(day(world, 20)).toEqual([goldYield, timberYield])
+  })
+
+  it('tells a raid the day the road turns red, between yield days, and its end the day it clears (verification round 2)', () => {
+    const { world, route } = open()
+    expect(day(world, 2)).toEqual([])
+    const raider = nest(world, offsetToHex(5, LANE - 1), 'raider')
+    const told = day(world, 3)
+    expect(told).toEqual([{ ...raidedBy, days: 0 }])
+    expect(isNotable(world, told[0], [])).toBe(true)
+    expect(route.raided).toBe(true)
+    expect(route.raidedDays).toBe(0)
+    expect(day(world, 4)).toEqual([])
+    expect(day(world, 5)).toEqual([{ ...raidedBy, days: 1 }])
+    expect(route.raidedDays).toBe(1)
+    world.locations = world.locations.filter((l) => l !== raider)
+    const cleared = day(world, 7)
+    expect(cleared).toEqual([{ type: 'route_restored', ...named }])
+    expect(isNotable(world, cleared[0], [])).toBe(false)
+    expect(route.raided).toBe(false)
+    expect(day(world, 8)).toEqual([])
+    // The count is kept and cleared on yield days only.
+    expect(route.raidedDays).toBe(1)
+    expect(day(world, 10)).toEqual([goldYield, timberYield])
+    expect(route.raidedDays).toBe(0)
+    // A raid that starts and ends between yield days is told and its end told, and never counted.
+    const again = nest(world, offsetToHex(5, LANE - 1), 'raider')
+    expect(day(world, 11)).toEqual([{ ...raidedBy, days: 0 }])
+    world.locations = world.locations.filter((l) => l !== again)
+    expect(day(world, 12)).toEqual([{ type: 'route_restored', ...named }])
+    expect(day(world, 15)).toEqual([goldYield])
   })
 
   it('tells silence and corruption without a raider', () => {
     const { world, route } = open()
     setHex(world, route.road[2], MAX_BLIGHT)
     const corrupted = day(world, 5)
-    expect(corrupted).toMatchObject([{ type: 'route_raided', cause: 'corrupted', days: 1 }])
+    expect(corrupted).toMatchObject([{ type: 'route_raided', cause: 'corrupted', days: 0 }, { type: 'route_raided', cause: 'corrupted', days: 1 }])
     expect('raider' in corrupted[0]).toBe(false)
     world.silent.push('millbrook')
     const silent = day(world, 10)
+    // Still raided, by another cause now: no new notice.
     expect(silent).toMatchObject([{ type: 'route_raided', cause: 'silent', days: 2 }])
     expect('raider' in silent[0] || 'raiderName' in silent[0]).toBe(false)
   })
@@ -545,7 +583,9 @@ describe('the routes\' yield day (economy A6)', () => {
     })()
     world.silent.push('millbrook')
     for (let k = 1; k < ABANDON_AFTER; k++) {
-      expect(day(world, k * YIELD_DAYS)).toMatchObject([{ type: 'route_raided', cause: 'silent', days: k }])
+      const told = day(world, k * YIELD_DAYS)
+      expect(told.at(-1)).toMatchObject({ type: 'route_raided', cause: 'silent', days: k })
+      expect(told).toHaveLength(k === 1 ? 2 : 1)
     }
     expect(world.routes).toEqual([route])
     const last = day(world, ABANDON_AFTER * YIELD_DAYS)

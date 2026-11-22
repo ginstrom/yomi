@@ -2107,7 +2107,7 @@ describe('the simulator’s trade', () => {
   const nest = (id: string, position: { q: number; r: number }, threat = 1): MonsterLocation => ({
     id, kind: 'monsters', name: id, position, encounter: 'goblin_raid', threat, loot: [],
   })
-  const route = (partner: string, road: { q: number; r: number }[]): TradeRoute => ({ id: `route_${partner}`, partner, road, opened: 0, raidedDays: 0 })
+  const route = (partner: string, road: { q: number; r: number }[]): TradeRoute => ({ id: `route_${partner}`, partner, road, opened: 0, raidedDays: 0, raided: false })
   /** Every nest but the Source gone, and these in their place. */
   const onlyNests = (game: Game, nests: MonsterLocation[]) => {
     game.world.locations = [...game.world.locations.filter((l) => l.kind !== 'monsters' || l.source), ...nests]

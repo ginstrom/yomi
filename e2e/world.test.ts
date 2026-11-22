@@ -1177,7 +1177,7 @@ describe('the world map', () => {
     await game.page.evaluate((planted) => {
       const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
       saved.game.world.contacted.push('millbrook')
-      saved.game.world.routes.push({ id: 'route_millbrook', partner: 'millbrook', road: planted, opened: 1, raidedDays: 0 })
+      saved.game.world.routes.push({ id: 'route_millbrook', partner: 'millbrook', road: planted, opened: 1, raidedDays: 0, raided: false })
       localStorage.setItem('yomi.save.1', JSON.stringify(saved))
     }, road)
     await game.click((await game.reload()).buttons.continue)

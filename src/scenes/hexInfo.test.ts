@@ -139,7 +139,7 @@ describe('hexInfo of a partner and its road (stage 8)', () => {
     const it = solo()
     it.world.contacted.push('millbrook')
     const road = roadTo(it.world, 'millbrook')!
-    it.world.routes.push({ id: 'route_millbrook', partner: 'millbrook', road, opened: 1, raidedDays: 0 })
+    it.world.routes.push({ id: 'route_millbrook', partner: 'millbrook', road, opened: 1, raidedDays: 0, raided: false })
     const millbrook = it.world.locations.find((l) => l.id === 'millbrook')!
     return { ...it, road, at: millbrook.position }
   }

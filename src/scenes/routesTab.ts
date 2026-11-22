@@ -3,7 +3,9 @@ import type { GameState } from '../game/gameState.ts'
 import { describeCost } from '../game/buildings.ts'
 import { YIELD_DAYS, type Material } from '../game/territory.ts'
 import type { Stock } from '../game/territory.ts'
-import { isSilent, openRouteRefusal, partnerById, raidCause, raiders, roadTo, routeCost, routeIncome, routeOf, routeSecurity } from '../game/trade.ts'
+import { hexSecurity, isSilent, openRouteRefusal, partnerById, raidCause, raiders, roadTo, routeCost, routeIncome, routeOf, routeSecurity } from '../game/trade.ts'
+import { MAX_BLIGHT, blightAt, boardIndex } from '../game/blight.ts'
+import { UNEXPLORED } from '../game/vision.ts'
 import type { PartnerLocation, WorldState } from '../game/worldMap.ts'
 import type { BoardSize, Hex } from '../grid/hex.ts'
 import { WORLD_LAYOUT, boardHexCenter, boardPixelSize, type Point } from './boardGeometry.ts'
@@ -35,6 +37,21 @@ export interface RouteRow {
   refusal: string | null
   /** For a closed row with a road: what would raid it today that the player knows of, in words. Never a nest not yet sighted. */
   raid: string | null
+  /** The road's hexes below full security with no parties (towers guarding), by level: why security is under 100%. Null with no road. */
+  weak: { tainted: number; blighted: number; corrupted: number } | null
+}
+
+/** The road's hexes that `hexSecurity` (towers only) does not count safe, by blight level. */
+function weakHexes(world: WorldState, road: readonly Hex[]): NonNullable<RouteRow['weak']> {
+  const weak = { tainted: 0, blighted: 0, corrupted: 0 }
+  for (const h of road) {
+    if (hexSecurity(world, h, []) === 1) continue
+    const level = blightAt(world, h)
+    if (level >= MAX_BLIGHT) weak.corrupted += 1
+    else if (level === 2) weak.blighted += 1
+    else weak.tainted += 1
+  }
+  return weak
 }
 
 /**
@@ -45,6 +62,12 @@ export interface RouteRow {
 function previewRaid(world: WorldState, partner: PartnerLocation, road: Hex[]): string | null {
   const cause = raidCause(world, { partner: partner.id, road })
   if (!cause) return null
+  if (cause.cause === 'corrupted') {
+    // Where, by the corrupted hex nearest home, if the player has explored it.
+    const at = road.findIndex((h) => blightAt(world, h) >= MAX_BLIGHT)
+    const known = world.seen[boardIndex(world.board, road[at])] !== UNEXPLORED
+    return known ? `${raidWords(cause, partner)} ${at + 1} ${at === 0 ? 'hex' : 'hexes'} out` : raidWords(cause, partner)
+  }
   if (cause.cause !== 'raiders') return raidWords(cause, partner)
   const known = raiders(world, road).find((nest) => world.sighted.includes(nest.id))
   return known ? raidWords({ cause: 'raiders', raider: known }, partner) : null
@@ -71,6 +94,7 @@ export function routeRows(game: GameState, party: Expedition): RouteRow[] {
           raidedDays: route.raidedDays,
           refusal: null,
           raid: null,
+          weak: weakHexes(world, route.road),
         },
       ]
     }
@@ -87,6 +111,7 @@ export function routeRows(game: GameState, party: Expedition): RouteRow[] {
         raidedDays: 0,
         refusal: openRouteRefusal(game, party, id),
         raid: road ? previewRaid(world, partner, road) : null,
+        weak: road ? weakHexes(world, road) : null,
       },
     ]
   })
@@ -94,11 +119,36 @@ export function routeRows(game: GameState, party: Expedition): RouteRow[] {
 
 const everyDays = (gold: number) => `about ${gold} gold every ${YIELD_DAYS} days`
 
+/** A route pays its partner's good every second yield day (trade.ts `tradeDay`). */
+const GOOD_DAYS = 2 * YIELD_DAYS
+
+/**
+ * The chosen row's notes, shown under the minimap: for an offer raided at
+ * once, by what (as far as the player knows); why its security is below
+ * 100% (its unsafe hexes, towers guarding, parties not), and the condition on
+ * the partner's good. Empty with no road.
+ */
+export function routeNotes(row: RouteRow): string[] {
+  if (row.length === null || row.security === null) return []
+  const notes: string[] = row.status === 'closed' && row.raid ? [`Raided at once: ${row.raid}.`] : []
+  const security = Math.round(row.security * 100)
+  const weak = row.weak ?? { tainted: 0, blighted: 0, corrupted: 0 }
+  const parts = (['tainted', 'blighted', 'corrupted'] as const).filter((k) => weak[k] > 0).map((k) => `${weak[k]} ${k}`)
+  if (security < 100 && parts.length > 0) {
+    const [first, ...rest] = parts
+    const [count, word] = first.split(' ')
+    notes.push(`Security ${security}%: ${[`${count} of ${row.length} hexes ${word}`, ...rest].join(', ')}.`)
+  }
+  notes.push(`1 ${row.good} every ${GOOD_DAYS} days while security is 50% or more${row.security < 0.5 ? ' (not now)' : ''}.`)
+  return notes
+}
+
 /** A closed row's offer, or, with no road, the refusal that stands in. */
 export function routeOffer(row: RouteRow): string {
   if (row.length === null || row.cost === null) return row.refusal ?? `No safe road to ${row.name}.`
-  const offer = `Open a route to ${row.name}: ${row.length} hexes, ${everyDays(row.income ?? 0)}, costs ${describeCost(row.cost)}`
-  return row.raid ? `${offer}. Raided at once: ${row.raid}` : offer
+  const offer = `Open a route to ${row.name}: ${row.length} hexes, ${everyDays(row.income ?? 0)} and 1 ${row.good} every ${GOOD_DAYS}, costs ${describeCost(row.cost)}`
+  // The cause goes in the notes under the minimap (`routeNotes`), so the row fits.
+  return row.raid ? `${offer}. Raided at once.` : offer
 }
 
 /** An open route's line: its security, what it pays, and how long it has been raided. */

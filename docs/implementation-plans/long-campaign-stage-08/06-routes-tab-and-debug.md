@@ -20,7 +20,7 @@ No rule changes. The refactor guard and the 50-campaign check are untouched (thi
 - **Design §4:** "At the Market, the Routes tab offers 'Open a route to Millbrook: 26 hexes, about 3 gold every 5 days, costs 33 gold and 10 timber', with the road drawn on a minimap." Those figures are illustrative (index decision 7): on today's map Millbrook's road is 14 hexes, 27 gold and 10 timber, about 2 gold when clean. Tests use the formulas, never §4's numbers.
 - **Decisions from the index** (unchanged):
   1. **Signatures follow the code's patterns.** `openRouteRefusal(game, party, partnerId)` and `openRoute(game, party, partnerId)` take the party (every encampment action checks `atEncampment`), and `openRoute` is the time-free apply that assumes its refusal said null and returns the `route_opened` event (as `raiseImprovement` does). `routeSecurity` and `routeIncome` take a road (`readonly Hex[]`) and the presences, not a route, so the Routes tab can preview a road not yet opened; `raidCause` takes `{ partner, road }`.
-  8. **The preview's income counts towers, not parties.** The Routes tab and the road tooltip's "about N gold every 5 days" use `routeIncome(world, road, [])`, so the party standing at home does not inflate it; the map's overlay and the real yields count every presence.
+  8. **The preview's income counts towers, not parties.** The Routes tab's "about N gold every 5 days" uses `routeIncome(world, road, [])`, so the party standing at home does not inflate it; the map's overlay, the road hover and the real yields count every presence. *(Revised in verification round 2, the user's decision: the road hover counted towers only too; it now counts parties, so it agrees with the overlay and today's pay.)*
   11. **The Routes tab's open routes** show security, expected income now (decision 8's figure; a raided row says it pays nothing while raided) and the raided count, not "last income" (which would need new saved state). The tab is always present; below trading post 4 it says why routes cannot open. It lists contacted partners only, in contact order.
   18. **Debug commands for the play script and the in-browser tests:** `spawn <goblin_raid|kobold_scouts|bandit_camp> <location id | col row>` (the hex required; refused where a location or a party stands) places a nest by `SPAWN_KINDS` (exported from `blight.ts`) at the hex's `threatAt`, drawing no RNG; `contact <partner id | all>` contacts partners. `facility builders_lodge 3`, `facility trading_post 4`, `stock` and `days` exist; `days`' yield totals gain routes through `yieldSummary`.
 - **Decision 6 (the user's):** `roadTo` keeps more than `RAID_RADIUS` from every nest where it can, falling back to avoiding only nests and their neighbours. A fallback road (or one whose partner has a nest within 2) can be raided the day it opens, so the preview still names any raider before the player pays: `RouteRow.raid` and the offer's "Raided at once: …" tail, shown only then.
@@ -43,11 +43,16 @@ export interface RouteRow {
   raidedDays: number
   refusal: string | null         // openRouteRefusal for a closed one, else null
   raid: string | null            // for a closed row with a road: what would raid it today (raidCause on the preview), in words, else null
+  weak: { tainted: number; blighted: number; corrupted: number } | null   // verification round 2: the road's unsafe hexes (towers guarding), null with no road
 }
 export function routeRows(game: GameState, party: Expedition): RouteRow[]   // one per contacted partner, in contact order
 export function routeOffer(row: RouteRow): string
-//   "Open a route to Millbrook: 14 hexes, about 2 gold every 5 days, costs 27 gold, 10 timber"
-//   (+ ". Raided at once: the Goblin Raiders are within 2 hexes" when row.raid; the cause words as roadInfoLines')
+//   "Open a route to Millbrook: 14 hexes, about 2 gold every 5 days and 1 timber every 10, costs 27 gold, 10 timber"
+//   (+ ". Raided at once." when row.raid). Revised in verification round 2 (the user's decision): the good is named, and the cause moved to the notes
+export function routeNotes(row: RouteRow): string[]   // verification round 2: the chosen row's notes under the minimap, in order:
+//   "Raided at once: <raid>." (a closed row with row.raid; a corrupted road says where: "the blight has overrun it 6 hexes out", only if that hex is explored);
+//   "Security 79%: 4 of 14 hexes tainted, 1 corrupted." (below 100%: RouteRow.weak, the hexes hexSecurity with towers only does not count safe);
+//   "1 timber every 10 days while security is 50% or more" (+ " (not now)" below 50%)
 export function routeState(row: RouteRow): string
 //   "Millbrook road: security 75%, about 2 gold every 5 days"; a raided row says "pays nothing while raided" in place of the gold (+ "; raided 2 yield days" when raidedDays > 0)
 export function minimapPoints(board: BoardSize, road: readonly Hex[], from: Hex, rect: { x: number; y: number; width: number; height: number }): Point[]

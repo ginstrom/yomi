@@ -319,6 +319,8 @@ export interface TradingPostProbe {
   routes: Array<{ partner: string; status: 'open' | 'raided' | 'closed'; line: string; open: ButtonProbe | null; selected: boolean }>
   /** The refusal shown under the Routes tab's minimap for the chosen closed row, or null; never the same words as `message`. */
   routeRefusal: string | null
+  /** The chosen row's notes under the minimap (`routeNotes`: why security is short of 100%, the good's condition). */
+  routeNotes: string[]
 }
 
 export interface CraftingProbe {

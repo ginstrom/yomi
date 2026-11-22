@@ -59,18 +59,19 @@ export function raidWords(raid: { cause: RaidCause; raider?: MonsterLocation }, 
 
 /**
  * The info panel's lines for a hex on an open road, a pair for each route
- * through it: its security and income (counting towers, not parties), and
- * the raid's cause while it is raided today. Empty off the roads.
+ * through it: its security and income today (counting towers and parties,
+ * as the overlay and the yield day do), and the raid's cause while it is
+ * raided today. Empty off the roads.
  */
-export function roadInfoLines(world: WorldState, _presences: readonly PartyPresence[], at: Hex): string[] {
+export function roadInfoLines(world: WorldState, presences: readonly PartyPresence[], at: Hex): string[] {
   return world.routes.flatMap((route) => {
     if (!route.road.some((h) => hexEquals(h, at))) return []
     const partner = world.locations.find((l): l is PartnerLocation => l.kind === 'partner' && l.id === route.partner)
     if (!partner) return []
-    const security = Math.round(routeSecurity(world, route.road, []) * 100)
+    const security = Math.round(routeSecurity(world, route.road, presences) * 100)
     const raid = raidCause(world, route)
     // A raided road pays nothing, so it does not quote the income it would have.
-    const pays = raid ? 'pays nothing while raided' : `about ${routeIncome(world, route.road, [])} gold every ${YIELD_DAYS} days`
+    const pays = raid ? 'pays nothing while raided' : `about ${routeIncome(world, route.road, presences)} gold every ${YIELD_DAYS} days`
     const lines = [`The ${partner.name} road: security ${security}%, ${pays}.`]
     // A nest the player has not sighted is not named.
     const told = raid?.raider && !world.sighted.includes(raid.raider.id) ? { cause: raid.cause } : raid

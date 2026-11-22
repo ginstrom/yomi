@@ -119,8 +119,8 @@ describe('a save', () => {
     expect(parsed.game.parties[0].baggage.length).toBeGreaterThan(0)
   })
 
-  it('is version 28, whose world holds the trade partners, contacts, silence and routes', () => {
-    expect(SAVE_VERSION).toBe(28)
+  it('is version 29, whose world holds the trade partners, contacts, silence and routes with their raided flag', () => {
+    expect(SAVE_VERSION).toBe(29)
   })
 
   it('round-trips a hero\'s perk points', () => {
@@ -150,10 +150,10 @@ describe('a save', () => {
     expect(parseSave(broken((hero) => (hero.perkPicks = 2)))).toBeNull()
   })
 
-  it('reads a save of any version but 28 as unreadable: there is no migration (stage 8 decision 15)', () => {
+  it('reads a save of any version but 29 as unreadable: there is no migration (stage 8 decision 15)', () => {
     const saved = JSON.parse(serializeSave({ game: gameUnderWay(), battle: null, savedAt: 5 }))
     expect(parseSave(JSON.stringify(saved))).not.toBeNull()
-    for (const version of [17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 29]) {
+    for (const version of [17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 30]) {
       expect(parseSave(JSON.stringify({ ...saved, version })), `${version}`).toBeNull()
     }
   })
@@ -483,14 +483,14 @@ describe('the older fixtures (stage 8 decision 15: no migration)', () => {
   })
 })
 
-describe('a version-28 save', () => {
+describe('a version-29 save', () => {
   /** A game with Millbrook contacted, Saltmere silent and a hand-made route to Millbrook. */
   function trading(): GameState {
     const game = gameUnderWay()
     const { world } = game
     world.contacted = ['millbrook', 'saltmere']
     world.silent = ['saltmere']
-    world.routes = [{ id: 'route_millbrook', partner: 'millbrook', road: [{ q: 10, r: 15 }, { ...PARTNERS[0].position }], opened: 12, raidedDays: 2 }]
+    world.routes = [{ id: 'route_millbrook', partner: 'millbrook', road: [{ q: 10, r: 15 }, { ...PARTNERS[0].position }], opened: 12, raidedDays: 2, raided: true }]
     world.routesOpened = 1
     return game
   }
@@ -526,6 +526,7 @@ describe('a version-28 save', () => {
     expect(parseSave(edited((w) => delete w.routes[0].road))).toBeNull()
     expect(parseSave(edited((w) => (w.routes[0].opened = 1.5)))).toBeNull()
     expect(parseSave(edited((w) => (w.routes[0].raidedDays = -1)))).toBeNull()
+    expect(parseSave(edited((w) => delete w.routes[0].raided))).toBeNull()
     expect(parseSave(edited((w) => (w.routes = [null])))).toBeNull()
     expect(parseSave(edited((w) => (w.routesOpened = -1)))).toBeNull()
     expect(parseSave(edited((w) => delete w.routesOpened))).toBeNull()

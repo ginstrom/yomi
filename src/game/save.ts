@@ -26,12 +26,13 @@ import { CUTSCENE_IDS } from '../story/cutscenes.ts'
  * locations and the world's `contacted`, `silent`, `routes` and
  * `routesOpened`, with no migration (the user's decision): every older save,
  * and with it the chain that read versions 18 to 26 as 27, reads as
- * unreadable.
+ * unreadable. Version 29 (stage 8's verification) adds a route's `raided`
+ * flag, so a raid is told the day it starts; no migration.
  * Rules and item numbers may change
  * freely, as a character stores no derived number and an item is saved by
  * its id.
  */
-export const SAVE_VERSION = 28
+export const SAVE_VERSION = 29
 
 /** One slot's contents. */
 export interface SaveFile {
@@ -138,7 +139,7 @@ function isRoute(route: unknown, contacted: ReadonlySet<string>): boolean {
   const r = route as Record<string, unknown>
   return (
     typeof r.partner === 'string' && contacted.has(r.partner) && r.id === `route_${r.partner}` &&
-    Array.isArray(r.road) && r.road.every(isHex) && Number.isInteger(r.opened) && isIndex(r.raidedDays)
+    Array.isArray(r.road) && r.road.every(isHex) && Number.isInteger(r.opened) && isIndex(r.raidedDays) && typeof r.raided === 'boolean'
   )
 }
 
