@@ -290,13 +290,18 @@ describe('debug commands', () => {
       expect(refused.changed).toBe(false)
       expect(refused.lines[0]).toMatch(/bandit_company is fought at threats \d+ to \d+ and spawns from 7; \d+,\d+ is threat \d+\./)
       expect(JSON.stringify(world)).toBe(before)
-      // A kind whose band holds the hex but whose fromThreat is above it.
-      expect(runCommand(`spawn spider_nest ${col} ${row}`, context).changed).toBe(false)
+      // A kind whose band holds the hex (threat 4 is in spider_nest's 4 to 9) but whose fromThreat (7) is above it.
+      const four = offsetToHex(47, 36)
+      expect(threatAt(four)).toBe(4)
+      const early = runCommand('spawn spider_nest 47 36', context)
+      expect(early.changed).toBe(false)
+      expect(early.lines[0]).toContain('spawns from 7')
       const at = offsetToHex(80, 36)
       const ok = runCommand('spawn bandit_company 80 36', context)
       expect(ok.changed).toBe(true)
       expect(world.locations.at(-1)).toMatchObject({ encounter: 'bandit_company', threat: threatAt(at) })
       // A home kind is still accepted at threat 1.
+      expect(threatAt(offsetToHex(10, 38))).toBe(1)
       const home = runCommand('spawn goblin_raid 10 38', context)
       expect(home.changed).toBe(true)
     })
