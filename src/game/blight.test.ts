@@ -292,22 +292,18 @@ describe('spawning', () => {
     // the same draws, over eight items rather than nine.
     // Re-captured in stage 9 step 04 on the 140 × 72 board (the corrupted hexes, from which a spawn is drawn,
     // are listed by the board's index, so every place moved); the draws are the same code's.
+    // Re-captured in stage 9 step 05: the outer rings' nests corrupt the far land, so the list a spawn is drawn
+    // from is longer and more of the draws land in the far rings (threat 18 here); the draws are the same code's.
     const before: Record<number, [number, number, number, string, string[]][]> = {
       1: [
-        [18, 56, 2, 'Kobold Nest', ['Ring of Fortune']],
-        [10, 44, 1, 'Goblin Brood', []],
+        [3, 42, 1, 'Goblin Brood', []],
+        [9, 57, 2, 'Kobold Nest', ['Ring of Fortune']],
+        [13, 45, 1, 'Goblin Brood', []],
       ],
-      2: [
-        [0, 45, 2, 'Goblin Brood', ['Ring of Fortune']],
-        [5, 51, 2, 'Kobold Nest', ['Hawkeye Bow']],
-        [11, 46, 1, 'Goblin Brood', []],
-      ],
-      // Spawns at threat 18, on the Source's corruption, come among these: the draws after them are unchanged all the same.
-      3: [[14, 46, 1, 'Goblin Brood', ['Emberblade']]],
-      4: [
-        [14, 53, 2, 'Goblin Brood', ['Wand of Storms']],
-        [0, 27, 2, 'Kobold Nest', ['Cloak of Shadows']],
-      ],
+      // Spawns at threat 18, on the far rings' corruption, come among these: the draws after them are unchanged all the same.
+      2: [[8, 51, 2, 'Kobold Nest', ['Hawkeye Bow']]],
+      3: [[19, 45, 2, 'Goblin Brood', ['Wand of Storms']]],
+      4: [[15, 53, 2, 'Goblin Brood', ['Wand of Storms']]],
     }
     for (const [seed, expected] of Object.entries(before)) {
       const { game } = solo(Number(seed))
@@ -413,23 +409,29 @@ describe('the numbers of one party, pinned', () => {
     // Re-pinned in stage 9 step 04: on the 140 × 72 board the land past stage 8's edges changes level too
     // (663 events before, 962 now), spawn pressure grows by a 840th of the corrupted hexes (a 200th before), and
     // the land beyond 54 hexes of home is the threat 7 ring. The net influence and the cells below are unchanged.
-    expect(events.length).toBe(962)
-    expect(sha(events)).toBe('0b1099fcdac91f66ceb732901eb9ca28d990c6929f1f56f326f00b4aad3d9d18')
+    // Re-pinned in stage 9 step 05: the outer rings' nests push the far land (4970 events), and its corruption
+    // grows the spawn pressure, so five spawns, not two, the first of them a threat-4 brood that pushes on
+    // the party's neighbours (the cells below). The net influence is unchanged.
+    expect(events.length).toBe(4970)
+    expect(sha(events)).toBe('bc53f07ea68c155b04e5084c9866a6956252b009f1023e0935fc1443b6da6911')
     expect(events.filter((e) => e.type === 'spawned')).toEqual([
-      { type: 'spawned', location: 'spawn_1', name: 'Bandit Gang', at: moved(58, 22), threat: 7 },
-      { type: 'spawned', location: 'spawn_2', name: 'Salamander Spring', at: moved(42, 36), threat: 7 },
+      { type: 'spawned', location: 'spawn_1', name: 'Goblin Brood', at: moved(36, 24), threat: 4 },
+      { type: 'spawned', location: 'spawn_2', name: 'Bandit Troop', at: moved(48, 53), threat: 12 },
+      { type: 'spawned', location: 'spawn_3', name: 'Salamander Spring', at: moved(62, 33), threat: 9 },
+      { type: 'spawned', location: 'spawn_4', name: 'Salamander Spring', at: moved(76, 15), threat: 9 },
+      { type: 'spawned', location: 'spawn_5', name: 'Freebooter Band', at: moved(122, 0), threat: 18 },
     ])
-    expect(world.spawnPressure).toBe(4.82)
-    expect(world.spawns).toBe(2)
-    expect(world.rng).toBe(-63941196)
+    expect(world.spawnPressure).toBe(0)
+    expect(world.spawns).toBe(5)
+    expect(world.rng).toBe(-1391553733)
     const cell = (q: number, r: number) => [world.blight[boardIndex(world.board, moved(q, r))], world.shift[boardIndex(world.board, moved(q, r))]]
     expect([cell(34, 19), cell(34, 18), cell(33, 19), cell(34, 20)]).toEqual([
       [0, 0],
-      [2, -9.900000000000004],
+      [2, -5.399999999999999],
       [1, -11],
-      [2, 52.80000000000003],
+      [3, 0],
     ])
-    expect(sha([world.blight, world.shift, world.seen])).toBe('e007d4a160d4aac9fee698200d1ea7c387fc7fe5d89732a0982c7b96486a423d')
+    expect(sha([world.blight, world.shift, world.seen])).toBe('ac07a1b85c685de7ed6335ab05e2e96371efd551e128371c2f6a7be820390f60')
   })
 
   it('gives the same blight days alone', () => {
@@ -440,30 +442,32 @@ describe('the numbers of one party, pinned', () => {
       world.turn++
       events.push(...advanceDay(world, pinned()))
     }
-    // Re-pinned in stage 9 step 04, as above (645 events before).
-    expect(events.length).toBe(944)
-    expect(sha(events)).toBe('7dc90977164b51b9f3437c71bc62f1c02110841a0f221192733ab6d5882b2332')
-    expect(world.spawnPressure).toBe(4.82)
-    expect(world.rng).toBe(-63941196)
-    expect(sha([world.blight, world.shift])).toBe('d5b899e19093c8a427f7ad8cd1118311ceb6f9d2751746f0238c493d380485d3')
+    // Re-pinned in stage 9 step 04, as above (645 events before); and in step 05, as above (944 before).
+    expect(events.length).toBe(4952)
+    expect(sha(events)).toBe('3a91bf54b486c2ecce88c8f998e61a2584c12ad05e59d7e826acc7bb94e92ec0')
+    expect(world.spawnPressure).toBe(0)
+    expect(world.rng).toBe(-1391553733)
+    expect(sha([world.blight, world.shift])).toBe('5881e1d4ad46f156d049e79d5fc709be7538f52121269739fb76d142e590df53')
   })
 })
 
 describe('the rules over several parties', () => {
+  /** Stage 8's axial hex (q, r), moved with the home country (`EARLY_SHIFT`, stage 9). */
+  const moved = (q: number, r: number): Hex => ({ q: q + EARLY_SHIFT.q, r: r + EARLY_SHIFT.r })
   /** Two parties east of home: one of strength 8, one of strength 4, three hexes apart. */
-  const a: PartyPresence = { position: { q: 30, r: 19 }, levels: [3, 4, 5] }
-  const b: PartyPresence = { position: { q: 33, r: 19 }, levels: [2, 2] }
+  const a: PartyPresence = { position: moved(30, 19), levels: [3, 4, 5] }
+  const b: PartyPresence = { position: moved(33, 19), levels: [2, 2] }
   const reach = (p: PartyPresence, h: Hex) => Math.max(0, partyStrength(p.levels) - hexDistance(p.position, h))
 
   it('adds every party’s reach to the clean side', () => {
     const world = newWorld(1)
-    for (const h of [{ q: 31, r: 20 }, { q: 36, r: 19 }, { q: 28, r: 17 }, { q: 45, r: 19 }]) {
+    for (const h of [moved(31, 20), moved(36, 19), moved(28, 17), moved(45, 19)]) {
       const alone = netInfluence(world, [], h)
       expect(netInfluence(world, [a, b], h)).toBeCloseTo(alone - reach(a, h) - reach(b, h))
       expect(netInfluence(world, [a], h)).toBeCloseTo(alone - reach(a, h))
     }
-    expect(reach(a, { q: 31, r: 20 })).toBeGreaterThan(0)
-    expect(reach(b, { q: 31, r: 20 })).toBeGreaterThan(0)
+    expect(reach(a, moved(31, 20))).toBeGreaterThan(0)
+    expect(reach(b, moved(31, 20))).toBeGreaterThan(0)
   })
 
   it('makes every party’s hex neutral, and lets no corruption creep from either', () => {

@@ -500,9 +500,9 @@ describe('a version-30 save', () => {
     return JSON.stringify(saved)
   }
 
-  it('starts a new game with both partners, as copies, and round-trips contacts, silence and routes', () => {
+  it('starts a new game with the five partners, as copies, and round-trips contacts, silence and routes', () => {
     const game = trading()
-    expect(partnersOf(game).map((p) => p.id)).toEqual(['millbrook', 'saltmere'])
+    expect(partnersOf(game).map((p) => p.id)).toEqual(['millbrook', 'saltmere', 'stonehollow', 'elder_glade', 'emberwatch'])
     const parsed = parseSave(serializeSave({ game, battle: null, savedAt: 5 }))!
     expect(parsed).toEqual({ game, battle: null, savedAt: 5 })
   })
@@ -510,7 +510,9 @@ describe('a version-30 save', () => {
   it('reads a bad partner, contact, silence, route or count as unreadable', () => {
     expect(parseSave(edited(() => {}))).not.toBeNull()
     const millbrook = (w: any) => w.locations.find((l: any) => l.id === 'millbrook')
-    expect(parseSave(edited((w) => (millbrook(w).good = 'mithril')))).toBeNull()
+    // A good of the outer rings' (stage 9) is a material; one that is none is refused.
+    expect(parseSave(edited((w) => (millbrook(w).good = 'mithril')))).not.toBeNull()
+    expect(parseSave(edited((w) => (millbrook(w).good = 'unobtainium')))).toBeNull()
     expect(parseSave(edited((w) => delete millbrook(w).good))).toBeNull()
     expect(parseSave(edited((w) => (millbrook(w).good = ['timber'])))).toBeNull()
     expect(parseSave(edited((w) => (w.contacted = ['iron_vein'])))).toBeNull()

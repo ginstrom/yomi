@@ -78,7 +78,7 @@ describe('debug commands', () => {
     const context = onWorldMap()
     expect(runCommand('stock gold 50', context)).toEqual({ lines: ['Stock: gold 50'], changed: true })
     expect(runCommand('stock gold -80', context).lines).toEqual(['Stock: gold 0'])
-    expect(runCommand('stock mithril 5', context).lines[0]).toMatch(/No material "mithril"/)
+    expect(runCommand('stock unobtainium 5', context).lines[0]).toMatch(/No material "unobtainium"/)
   })
 
   it('adds several material pairs at once, checking every pair before applying any', () => {
@@ -86,10 +86,10 @@ describe('debug commands', () => {
     const { world } = context.source!.game
     world.stock = {}
     expect(runCommand('stock gold 300 stone 50 iron 50', context)).toEqual({ lines: ['Stock: gold 300, stone 50, iron 50'], changed: true })
-    for (const bad of ['stock gold 5 mithril 5', 'stock gold 5 iron', 'stock gold 5 iron x', 'stock gold 5 stone 1.5']) {
+    for (const bad of ['stock gold 5 unobtainium 5', 'stock gold 5 iron', 'stock gold 5 iron x', 'stock gold 5 stone 1.5']) {
       const before = { ...world.stock }
       const result = runCommand(bad, context)
-      expect(result.lines[0], bad).toMatch(/No material "mithril"|whole number/)
+      expect(result.lines[0], bad).toMatch(/No material "unobtainium"|whole number/)
       expect(result.changed).toBe(false)
       expect(world.stock).toEqual(before)
     }
@@ -315,7 +315,7 @@ describe('debug commands', () => {
       const context = onWorldMap()
       const { world } = context.source!.game
       runCommand('contact all', context)
-      expect(world.contacted).toEqual(['millbrook', 'saltmere'])
+      expect(world.contacted).toEqual(['millbrook', 'saltmere', 'stonehollow', 'elder_glade', 'emberwatch'])
     })
 
     it('refuses an unknown id, naming the partners, and no argument', () => {

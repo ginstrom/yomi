@@ -82,6 +82,14 @@ describe('the trading post', () => {
     expect(sellMaterial(game, game.parties[0], 'gold', 2)).toMatch(/Gold/)
   })
 
+  it('buys the outer rings\' materials (stage 9) as any other, in pairs', () => {
+    const game = home()
+    game.world.stock.mithril = 5
+    expect(sellMaterial(game, game.parties[0], 'mithril', 3)).toMatch(/lots of 2/)
+    expect(sellMaterial(game, game.parties[0], 'mithril', 4)).toBeNull()
+    expect(game.world.stock).toMatchObject({ gold: 102, mithril: 1 })
+  })
+
   it('is refused away from home', () => {
     const game = home()
     game.parties[0].position = { q: game.parties[0].position.q + 1, r: game.parties[0].position.r }

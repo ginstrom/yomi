@@ -696,7 +696,9 @@ describe('the encampment', () => {
       await game.press('Enter')
     }
     await game.press('Shift+Backquote')
-    await typed('contact all')
+    // Millbrook and Saltmere only: two rows, one page (the far partners would page the tab).
+    await typed('contact millbrook')
+    await typed('contact saltmere')
     await typed('facility trading_post 4')
     await typed('stock gold 100 timber 20')
     await game.waitFor('World', (w) => w.world.contacted.length === 2 && w.world.tradingPost === 4 && w.world.stock.gold === 100)

@@ -2,7 +2,10 @@ import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import { HexBoard, hexDistance, hexEquals, hexKey, hexToOffset, offsetToHex, type Hex } from '../grid/hex.ts'
 import { campUntilHealed } from './camp.ts'
-import { ENCOUNTERS, ENCOUNTER_BANDS } from './encounters.ts'
+import { ENCOUNTERS, ENCOUNTER_BANDS, type EncounterId } from './encounters.ts'
+import { SPAWN_CLEARANCE } from './blight.ts'
+import type { Material } from './territory.ts'
+import { RAID_RADIUS } from './trade.ts'
 import { presences, type PartyPresence } from './expedition.ts'
 import { newGame, type GameState } from './gameState.ts'
 import { readyMadeParty } from './party.ts'
@@ -64,7 +67,7 @@ describe('newWorld', () => {
     const cols = world.locations.map((l) => hexToOffset(l.position).col)
     const rows = world.locations.map((l) => hexToOffset(l.position).row)
     expect(Math.max(...cols) - Math.min(...cols)).toBeGreaterThan(world.board.cols / 2)
-    // Stage 8's locations, moved by EARLY_SHIFT, span 34 rows; the outer rings' are placed from stage 9 step 05.
+    // Stage 8's locations, moved by EARLY_SHIFT, span 34 rows; the outer rings' reach nearer both edges.
     expect(Math.max(...rows) - Math.min(...rows)).toBeGreaterThan(30)
   })
 
@@ -111,11 +114,13 @@ describe('newWorld', () => {
     }
   })
 
-  it('has bandits at the Bandit Camp, threat 3, and the Bandit Hideout, threat 4', () => {
+  it('has bandits at the Bandit Camp, threat 3, and the Bandit Hideout, threat 4, and two camps in the threat 7 ring', () => {
     const camps = monsters(world).filter((l) => l.encounter === 'bandit_camp')
     expect(camps.map((l) => [l.id, l.name, l.threat])).toEqual([
       ['bandit_camp', 'Bandit Camp', 3],
       ['bandit_hideout', 'Bandit Hideout', 4],
+      ['wildland_bandits', 'Wildland Bandits', 7],
+      ['moorland_bandits', 'Moorland Bandits', 7],
     ])
   })
 
@@ -147,6 +152,30 @@ describe('newWorld', () => {
       'Bandit Hideout': ['Wand of Storms'],
       'Salamander Pool': ["Sage's Circlet"],
       'Spider Nest': ['Emberblade'],
+      'Wildland Bandits': ['Ring of Fortune'],
+      'Webwood Nest': ['Cloak of Shadows'],
+      'Ashen Pool': ['Wand of Sparks'],
+      'Moorland Bandits': ['Amulet of Focus'],
+      'Hollow Spiders': ['Hawkeye Bow'],
+      'Ironhold Company': ['Ring of Protection'],
+      'Cinder Springs': ['Emberblade'],
+      'Deepweb Hollow': ["Sage's Circlet"],
+      'Grey Company': ['Wand of Storms'],
+      'Smoking Mere': ['Ring of Fortune'],
+      'Ravenhill Company': ['Cloak of Shadows'],
+      'Stonegate Company': ['Hawkeye Bow'],
+      'Thornwall Company': ['Amulet of Focus'],
+      'Marsh Company': ['Emberblade'],
+      'Dustroad Company': ['Wand of Sparks'],
+      'The Red Freebooters': ['Wand of Storms'],
+      'The Grey Freebooters': ['Ring of Protection'],
+      'Wolfhead Host': ["Sage's Circlet"],
+      'Saltwind Host': ['Hawkeye Bow'],
+      'Black Banner Host': ['Cloak of Shadows'],
+      'The Iron Freebooters': ['Emberblade'],
+      'The Ashen Host': ['Wand of Storms'],
+      'The Last Host': ['Ring of Fortune'],
+      'Blightmarch Freebooters': ['Amulet of Focus'],
       'The Blight Source': ['Wand of Storms'],
     })
     expect(monsters(newWorld(1))[0].loot).not.toBe(lairs[0].loot)
@@ -157,8 +186,8 @@ describe('newWorld', () => {
     const threats = byDistance.map((l) => l.threat)
     expect(threats).toEqual([...threats].sort((a, b) => a - b))
     expect(threats[0]).toBe(1)
-    // The home rings' top until stage 9 step 05 places the outer rings' nests.
-    expect(threats.at(-1)).toBe(5)
+    // The outermost ring's, where stage 9 step 05 places the last nests.
+    expect(threats.at(-1)).toBe(18)
     for (const l of lairs(world)) expect(l.threat).toBe(threatAt(l.position))
   })
 
@@ -433,8 +462,10 @@ describe('the early shift (stage 9: today\'s locations moved by EARLY_SHIFT)', (
   /** Stage 8's rule: 1 + a step every 11 hexes from home, up to 5. */
   const stage8Threat = (h: Hex) => Math.min(5, 1 + Math.floor(hexDistance(old('encampment'), h) / 11))
 
-  it('places every location of stage 8\'s map, and no other but the Source', () => {
-    expect(world.locations.map((l) => l.id).sort()).toEqual([...Object.keys(STAGE_8), SOURCE_ID].sort())
+  it('places every location of stage 8\'s map, and none of its own in the home rings (the outer rings\' lie beyond them)', () => {
+    const ids = world.locations.map((l) => l.id)
+    for (const id of Object.keys(STAGE_8)) expect(ids, id).toContain(id)
+    for (const l of world.locations) if (!(l.id in STAGE_8) && l.id !== SOURCE_ID) expect(hexDistance(placed('encampment'), l.position), l.id).toBeGreaterThan(54)
   })
 
   it('is a translation: an odd stage-8 row keeps its column, an even one moves a column west, every row gains 17', () => {
@@ -652,6 +683,96 @@ describe('travel, as it is (characterization)', () => {
   })
 })
 
+describe('the outer rings (stage 9 step 05: their nests, sites and far partners)', () => {
+  const world = newWorld(1)
+  const home = encampment(world).position
+  const source = world.locations.find((l) => l.id === SOURCE_ID)!
+  /** The outer rings' threats, and the encounters each ring's fixed nests must include. */
+  const RINGS: Record<number, EncounterId[]> = {
+    7: ['bandit_camp', 'spider_nest', 'salamander_pool'],
+    9: ['spider_nest', 'salamander_pool', 'bandit_company'],
+    12: ['bandit_company'],
+    15: ['freebooter_host'],
+    18: ['freebooter_host'],
+  }
+  const SITES: Record<string, [string, Material, number]> = {
+    ironwood_grove: ['Ironwood Grove', 'ironwood', 7],
+    mithril_lode: ['Mithril Lode', 'mithril', 9],
+    elder_grove: ['Elder Grove', 'elderwood', 9],
+    adamant_deep: ['Adamant Deep', 'adamant', 12],
+    wyrmwood_thicket: ['Wyrmwood Thicket', 'wyrmwood', 15],
+    fallen_star: ['Fallen Star', 'starmetal', 18],
+    heartwood: ['The Heartwood', 'heartwood', 18],
+  }
+  const FAR_PARTNERS: Record<string, [string, Material, number]> = {
+    stonehollow: ['Stonehollow', 'mithril', 7],
+    elder_glade: ['Elder Glade', 'elderwood', 12],
+    emberwatch: ['Emberwatch', 'adamant', 15],
+  }
+  const nests = lairs(world)
+  const at = (id: string) => world.locations.find((l) => l.id === id)!
+
+  it('hold every fixed nest at its ring\'s threat, inside its encounter\'s band', () => {
+    for (const l of nests) {
+      if (l.kind !== 'monsters') continue
+      expect(l.threat, l.id).toBe(threatAt(l.position))
+      expect(l.threat, l.id).toBeGreaterThanOrEqual(ENCOUNTER_BANDS[l.encounter].min)
+      expect(l.threat, l.id).toBeLessThanOrEqual(ENCOUNTER_BANDS[l.encounter].max)
+    }
+  })
+
+  it('put 4 to 6 fixed nests in each outer ring, fighting the ring\'s encounters', () => {
+    for (const [threat, required] of Object.entries(RINGS)) {
+      const ring = nests.filter((l) => l.threat === Number(threat))
+      expect(ring.length, `ring ${threat}`).toBeGreaterThanOrEqual(4)
+      expect(ring.length, `ring ${threat}`).toBeLessThanOrEqual(6)
+      const encounters = new Set(ring.map((l) => l.kind === 'monsters' && l.encounter))
+      expect([...encounters].sort(), `ring ${threat}`).toEqual([...required].sort())
+    }
+    // Spread north, east and south: no ring's nests all on one side of home's row.
+    for (const threat of Object.keys(RINGS)) {
+      const rows = nests.filter((l) => l.threat === Number(threat)).map((l) => hexToOffset(l.position).row)
+      expect(Math.min(...rows), `ring ${threat}`).toBeLessThan(hexToOffset(home).row - 10)
+      expect(Math.max(...rows), `ring ${threat}`).toBeGreaterThan(hexToOffset(home).row + 10)
+    }
+  })
+
+  it('place the seven resource sites and the three far partners, each in its ring', () => {
+    for (const [id, [name, , threat]] of Object.entries(SITES)) {
+      expect(at(id), id).toMatchObject({ kind: 'resource', name })
+      expect(threatAt(at(id).position), id).toBe(threat)
+    }
+    for (const [id, [name, good, threat]] of Object.entries(FAR_PARTNERS)) {
+      expect(at(id), id).toMatchObject({ kind: 'partner', name, good })
+      expect(threatAt(at(id).position), id).toBe(threat)
+    }
+    expect(PARTNERS.map((p) => p.id)).toEqual(['millbrook', 'saltmere', 'stonehollow', 'elder_glade', 'emberwatch'])
+  })
+
+  it('keep the clearances: outer nests 4 from every nest, partners 4 and sites 5 from every nest, nothing but the Source within 4 of it', () => {
+    const outerNests = nests.filter((l) => l.threat > 5)
+    for (const a of outerNests) for (const b of nests) if (a !== b) expect(hexDistance(a.position, b.position), `${a.id} to ${b.id}`).toBeGreaterThanOrEqual(SPAWN_CLEARANCE)
+    for (const p of world.locations.filter((l) => l.kind === 'partner')) {
+      for (const n of nests) expect(hexDistance(p.position, n.position), `${p.id} to ${n.id}`).toBeGreaterThanOrEqual(RAID_RADIUS + 2)
+    }
+    for (const id of Object.keys(SITES)) for (const n of nests) expect(hexDistance(at(id).position, n.position), `${id} to ${n.id}`).toBeGreaterThanOrEqual(5)
+    for (const l of world.locations) if (l !== source) expect(hexDistance(l.position, source.position), l.id).toBeGreaterThan(4)
+  })
+
+  it('stand in order: home, today\'s resources, the new ones, the partners, today\'s nests, the outer ones, the Source', () => {
+    const ids = world.locations.map((l) => l.id)
+    const index = (id: string) => ids.indexOf(id)
+    expect(ids.filter((id) => id in SITES)).toEqual(Object.keys(SITES))
+    expect(index('ironwood_grove')).toBe(index('crystal_cave') + 1)
+    expect(ids.slice(index('heartwood') + 1, index('heartwood') + 6)).toEqual(PARTNERS.map((p) => p.id))
+    expect(index('goblin_reavers')).toBe(index('emberwatch') + 1)
+    const outer = nests.filter((l) => l.threat > 5)
+    expect(index(outer[0].id)).toBe(index('spider_nest') + 1)
+    expect(outer.map((l) => l.threat)).toEqual([...outer.map((l) => l.threat)].sort((a, b) => a - b))
+    expect(ids.at(-1)).toBe(SOURCE_ID)
+  })
+})
+
 describe('a seeded session of walks and camps (characterization)', () => {
   it('gives the same journeys, camps, world and party as before the day loop', () => {
     const { game, party } = fresh()
@@ -684,12 +805,14 @@ describe('a seeded session of walks and camps (characterization)', () => {
 
 // Re-recorded in stage 9 step 04 (153 turns before): the 140 × 72 board, the locations and targets moved by EARLY_SHIFT,
 // the Source 122 hexes out and the blight's spawn constants for the larger board.
-const SESSION_TURN = 150
+// Re-recorded in stage 9 step 05 (150 turns before): the outer rings' nests blight the far land, which changes the spawns.
+const SESSION_TURN = 146
 // Re-recorded in skill trees step 03: the party's characters hold the trees' nodes (and no spell picks), and Aldric's Toughness changed his hit points.
 // Re-recorded in skill trees step 04: every hero has mana (camping fills it), and the mage 2 more for each Mage and Cleric node.
 // Re-recorded in skill trees step 28: the characters' `perkPicks` renamed `perkPoints`, nothing else (the old hash held with the name put back).
 // Re-recorded in stage 9 step 04, as SESSION_TURN.
-const SESSION_SHA256 = '3144fd630fe0e2b8cdf2e58c09b5854752f8d0779c8e628982c7c31c995a0fa5'
+// Re-recorded in stage 9 step 05, as SESSION_TURN.
+const SESSION_SHA256 = '67df0b7738eb831193910eb2acea8c336042e033d8af618bed195cd4e1b5cc6e'
 
 describe('the trade partners on a new world', () => {
   const kinds = (world: WorldState) => world.locations.map((l) => l.kind)
@@ -708,9 +831,9 @@ describe('the trade partners on a new world', () => {
   it('stand after the resources and before the monsters', () => {
     const order = kinds(newWorld(1))
     const first = order.indexOf('partner')
-    expect(order.slice(first, first + 2)).toEqual(['partner', 'partner'])
+    expect(order.slice(first, first + PARTNERS.length)).toEqual(PARTNERS.map(() => 'partner'))
     expect(order.lastIndexOf('resource')).toBeLessThan(first)
-    expect(order.indexOf('monsters', order.lastIndexOf('resource'))).toBe(first + 2)
+    expect(order.indexOf('monsters', order.lastIndexOf('resource'))).toBe(first + PARTNERS.length)
   })
 
   it('are copies: changing one world\'s partner leaves PARTNERS and other worlds alone', () => {
@@ -727,8 +850,9 @@ describe('the trade partners on a new world', () => {
     const world = newWorld(1, undefined, [])
     expect(kinds(world)).not.toContain('partner')
     // Hashed from newWorld(1) as the code before stage 8 built it; hashed again in stage 9 step 04, whose board,
-    // shift and Source changed the land (with partners and without: they push only when present).
+    // shift and Source changed the land (with partners and without: they push only when present); and in step 05,
+    // whose outer rings' nests blight the far land.
     const digest = createHash('sha256').update(JSON.stringify([world.blight, world.shift, world.held, world.seen])).digest('hex')
-    expect(digest).toBe('eca22e8a3cd49806066a2fa9b8d55ba6ccb7c3e0bd8ab547c371abe64ca1a475')
+    expect(digest).toBe('2b57fc0ce190b86ba6ec33088634f2a15fc28000a1ccf07da963476b866ea428')
   })
 })

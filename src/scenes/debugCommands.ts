@@ -66,6 +66,7 @@ interface Command {
 /** Every material a stock may hold, for `stock`'s help and checks. */
 const MATERIALS = Object.keys({
   gold: 0, iron: 0, timber: 0, silver: 0, stone: 0, salt: 0, copper: 0, crystal: 0, peat: 0,
+  ironwood: 0, mithril: 0, elderwood: 0, adamant: 0, wyrmwood: 0, starmetal: 0, heartwood: 0,
 } satisfies Record<Material, number>) as Material[]
 
 class DebugError extends Error {}

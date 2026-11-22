@@ -39,7 +39,9 @@ const setLevel = (world: WorldState, id: string, level: number) => (world.blight
 describe('the trade partners', () => {
   it('are read in locations order, by id', () => {
     const world = newWorld(1)
-    expect(partners(world).map((p) => [p.id, p.good])).toEqual([['millbrook', 'timber'], ['saltmere', 'salt']])
+    expect(partners(world).map((p) => [p.id, p.good])).toEqual([
+      ['millbrook', 'timber'], ['saltmere', 'salt'], ['stonehollow', 'mithril'], ['elder_glade', 'elderwood'], ['emberwatch', 'adamant'],
+    ])
     expect(partnerById(world, 'saltmere')?.name).toBe('Saltmere')
     expect(partnerById(world, 'iron_vein')).toBeNull()
     expect(partnerById(world, 'nowhere')).toBeNull()
@@ -182,6 +184,20 @@ function lane(world: WorldState, length: number): Hex[] {
 }
 
 describe('the road (economy A5, decision 6)', () => {
+  it('reaches each of the five partners on a fresh world under the strict rule, with no raiders', () => {
+    const world = newWorld(1)
+    const lengths: Record<string, number> = {}
+    for (const p of partners(world)) {
+      contactPartner(world, p.id)
+      const road = roadTo(world, p.id)
+      expect(road, p.id).not.toBeNull()
+      expect(raiders(world, road!), p.id).toEqual([])
+      lengths[p.id] = road!.length
+    }
+    // The lengths on world 1, recorded in stage 9's plan log (step 05).
+    expect(lengths).toEqual({ millbrook: 14, saltmere: 30, stonehollow: 61, elder_glade: 88, emberwatch: 100 })
+  })
+
   it('is the same for the same world: twice, and for two worlds of one seed', () => {
     const a = newWorld(7)
     const b = newWorld(7)
