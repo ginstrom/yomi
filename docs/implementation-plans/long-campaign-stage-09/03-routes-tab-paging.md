@@ -86,3 +86,14 @@ The trading post's Routes tab shows its partner rows page by page once there are
 - [ ] One commit, "Stage 9 step 03: the Routes tab pages", files staged by path, no attribution lines; the index's row 03 updated with status and commit.
 
 ## 7. Execution record
+
+Engineer (sonnet), worktree branch `worktree-agent-a5482eb04e40c66ed`.
+
+- `TradingPostScene.ts`: `rowsPerPage`, `pageY` and the `pages` count in `render` learned the Routes tab (`ROUTE_ROWS` a page, count from `routeRows`), so the one shared pager is drawn and the probe's `prev` / `next` are the Routes tab's; `drawRoutes` slices by `this.page`; `turnPage` sets `routeChosen` to the new page's first row; `show` resets to page 1. Layout: with more than four rows they are 64 px tall (`ROUTE_PAGED_ROW_H`; 72 otherwise, so the two-partner tab looks as before) and the pager sits at y 424, clear of the message line (462) and Close. `routesTab.ts` doc comment updated; the `PARTNERS.length <= ROUTE_ROWS` test removed with its two imports. No Phaser-free helper extracted: the in-browser test carries the paging check.
+- In-browser test (`e2e/encampment.test.ts`, "pages the Routes tab ..."): plants a save with three extra contacted partners (stonehollow, elder_glade, emberwatch) at 840x560; checks four rows, the pager under them, Next selects the page's first row (emberwatch alone), Prev returns to page 1 with millbrook selected.
+- Docs: `docs/reference/scenes.md` Routes paragraph and the manual's Routes bullet; screenshot left to step 10.
+- Results: `npm run test:browser -- -t "Routes tab"` 3 passed. `npm test`: 2544 passed, 1 failed: `scripts/records.test.ts` "keeps each new plan index under 32000 bytes" (stage 9 index.md is 34741 bytes; not from this step, and this run may not edit the index). Refactor guard green, fixture untouched; the 50-campaign check was not needed (no rule change). Index row 03 not edited, per the run brief.
+
+Review round 1 (found 4, fixed 4): (1) paged rows are now 69 px (round 2) starting at y 142 with the pager at y 431; checked by eye at 840x560 with partners planted beside a sighted nest: a four-line "Raided at once." row sits inside its box with margin, pager clear of Close and the message line. (2) planted ids are planted_1..3. (3) the two-partner Routes test asserts `buttons.prev` and `next` are not visible. (4) `routeRows` is computed once a render (`routeAll`), used by `drawRoutes` and `turnPage`. `npm test` still fails only on the plan-index size test; browser "Routes tab" 3 passed.
+
+Review round 2 (found 1, fixed 1): the pager overlapped the fourth paged row by about 1 px; paged rows are now 69 px (top y 142) and the pager is centred at y 431. Seen at 840x560 with a four-line offer: the pager sits just under the last row; the two-line message fit is by the numbers (pager bottom 444, message top about 448.6), the screenshot showed a one-line message. Browser "Routes tab" 3 passed; `npm test` fails only on the plan-index size test.
