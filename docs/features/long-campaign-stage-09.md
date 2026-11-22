@@ -4,16 +4,17 @@
 
 - Request (user's words):
   > The next thing is stage 9 of the long campaign: the outer rings. Its design is docs/designs/long-campaign/stage-09-outer-rings.md and it is marked "ready for planning". [...] As with stages 2–8, the approved stage design goes straight to the planner. Start with the bookkeeping commit, then cut a long-campaign-stage-09 branch off main and run the orchestrator. Balance bands are mine to change: bring any out-of-band figures to me.
-- Slug `long-campaign-stage-09` · Phase 3, planning · Next action: check the planner's index, assign tiers · Branch: `long-campaign-stage-09`, off main at 67e5f0d (PR #10 merged by the orchestrator at the user's word, f1bb2dd; bookkeeping 67e5f0d on main, not pushed).
+- Slug `long-campaign-stage-09` · Phase 4, implementation · Next action: step 01 running; 03 and 06 in worktrees · Branch: `long-campaign-stage-09`, off main at 67e5f0d (PR #10 merged by the orchestrator at the user's word, f1bb2dd; bookkeeping 67e5f0d on main, not pushed).
 - Path: Large, but the stage design is the approved design. Straight to planning, as stages 2–8 did.
 - Links:
   - Stages overview: `docs/designs/long-campaign/index.md`
   - Design: `docs/designs/long-campaign/stage-09-outer-rings.md` (status "ready for planning")
   - Previous stage: `docs/features/long-campaign-stage-08.md`
-  - Plan: `docs/implementation-plans/long-campaign-stage-09/index.md` (pending)
+  - Plan: `docs/implementation-plans/long-campaign-stage-09/index.md` (10 steps, 5664289)
   - Plan log (history): `docs/implementation-plans/long-campaign-stage-09/log.md`
-- Open questions: none yet.
-- Tiers (engineer / reviewer): planner opus.
+- Open questions: none (plan question 1 answered: `--near-source`). The index still shows it open: step 02's engineer marks it answered.
+- Tiers (engineer / reviewer): planner opus; 01, 02, 04, 05, 08, 09 opus / opus; 03, 06, 07, 10 sonnet / opus (07 to opus if frame time is poor for an unknown cause). No escalations.
+- Worktrees: 03 and 06 run in their own worktrees and leave index.md and log.md alone; the orchestrator merges them and the next engineer records their status and log lines.
 - Verification: none yet.
 - Carried forward (from stage 8 and earlier, for this plan):
   - The Routes tab shows at most 4 rows, no paging; a test fails once PARTNERS exceeds 4 (stage 9 adds 3).
@@ -31,3 +32,6 @@
 | 2026-11-22 | Skip architecture and design; the stage design is the approved design | user | new design | Marked ready for planning; precedent stages 2–8 |
 | 2026-11-22 | Merge PR #10 before branching (it was still open) | user | branch off stage 8 | Stage 9 builds on stage 8 |
 | 2026-11-22 | Own branch `long-campaign-stage-09` off main | user | — | One branch and PR per stage |
+| 2026-11-22 | Early figures, refactor guard and 50-check run with a simulator-only `--near-source` (Source at its stage-8 spot, threat 5); band values unchanged | user | redefine the early bands; drop early figures to stage 12 | Plan question 1; keeps the bands' meaning |
+| 2026-11-22 | Accept the plan's readings: axial shift (q −9, r +17); new spawn kinds only from threat 7; Masterwork steel from threat 8; the rune loot rows; three partner sprites (step 06) | user | literal +17 rows; drop step 06 | Recommended; the literal shift changes early distances |
+| 2026-11-22 | Accept the planner's other departures (index decisions) and tiers | orchestrator | — | Routine engineering choices |
