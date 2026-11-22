@@ -130,3 +130,4 @@ Round 2 is `0c45352`. Tests first; each new test was seen to fail first.
 4. **Stale docs.** `src/game/CLAUDE.md` and `territory.ts`'s header: `tradeDay` runs daily. `scripts/simulate.ts`: `routesRaided` counts `route_raided` with `days` 1, the first raided yield day of a run.
 
 Checks: `npm test` 2,546 passed; `e2e/world.test.ts` and `e2e/encampment.test.ts` 88 passed; the 50-campaign hash `b50f7b50626d6e2832deb18c44a808b9be0521002698dc97c1fa8216db904e52`, identical.
+- Road amber changed to 0xfb8c00 in step 08's review (the old 0xffa726 read as gold at 1x): orchestrator's call, reported to the user.

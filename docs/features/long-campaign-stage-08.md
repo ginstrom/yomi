@@ -4,7 +4,7 @@
 
 - Request (user's words):
   > The next thing is stage 8 of the long campaign: trade partners and routes. Its design is docs/designs/long-campaign/stage-08-trade-routes.md and it is marked "ready for planning". [...] I'd start with the bookkeeping commit, then cut a long-campaign-stage-08 branch off main and run the orchestrator.
-- Slug `long-campaign-stage-08` · Phase 5, verification (all 8 steps done, head a7b90d5; overall review, QA, simulated user running) · Next action: triage verification findings · Branch: `long-campaign-stage-08`, off main (after the bookkeeping commit for #8/#9).
+- Slug `long-campaign-stage-08` · Phase 6, done on branch (42cde46..b1bb013); not pushed · Next action: user's go-ahead for pr-reviewer, then pr-creator · Branch: `long-campaign-stage-08`, off main (after the bookkeeping commit for #8/#9).
 - Path: Large, but the stage design is the approved design. Straight to planning, as stages 2–7 did.
 - Links:
   - Stages overview: `docs/designs/long-campaign/index.md`
@@ -15,13 +15,13 @@
   - Plan log (history): `docs/implementation-plans/long-campaign-stage-08/log.md`
 - Open questions: none (the road's raid range settled by the user, 2026-11-21).
 - Tiers (engineer / reviewer): planner opus; 01, 02, 07, 08 opus / opus; 03–06 sonnet / opus; no escalations. Verification: overall review opus, QA sonnet, simulated user sonnet.
-- Verification: overall review at 0c45352: ready for a PR; QA at 0c45352: 7/8 pass (stack overlap, fixing in round 3); simulated user at a12cddd: goals 1–3 met, 4 partly, 5 found but route unprofitable (friction fixed in rounds 1–2).
+- Verification: overall review at b1bb013: ready for a PR (npm test 2546, build, 50-check b50f7b50…, e2e world/encampment/saves); QA at 0c45352: 7/8, the overlap fixed in b1bb013; simulated user at a12cddd: goals 1–3 met, 4 partly, 5 found (friction fixed in rounds 1–2). Evidence: `.git/pr-review/long-campaign-stage-08/evidence/`.
 - Carried forward:
   - Accepted, not fixed: a road's shape (avoiding unsighted nests, decision 6) can hint at nests in the fog; the Routes preview's security, income and corruption cause use the true blight, not `seen` (follows C6 and decision 8); the overlay shades fogged road hexes by true blight (user, decision 10).
   - Stage 9: the Routes tab shows at most 4 rows with no paging (a test trips when PARTNERS exceeds it).
   - For the user, outside stage 8: the world header doesn't refresh behind the trading post (stale gold in shots); world-blight.png shows no corrupted land.
+  - Stage 9: a route whose raid cause comes and goes between yield days is never abandoned (by the reset rule); unmeasured.
   - For the user: in the --trading-post 4 check no route was ever raided or abandoned (500 campaigns), so RAID_RADIUS / ABANDON_AFTER are unjudged by the simulator.
-  - Road amber changed to 0xfb8c00 (step 08 review: the old amber read as gold) — orchestrator's call, tell the user.
   - From stage 7, not this stage: market income and the simulator's spend order (works, forts, market levels) wait for stage 12's retune.
 
 ## Decision log
