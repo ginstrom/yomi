@@ -25,7 +25,7 @@ import { worldHealing } from '../src/character/worldCasting.ts'
 import { lootRng, rollRunes } from '../src/game/loot.ts'
 import { MATERIALS_PER_GOLD, MAX_TRADING_POST_LEVEL, runePrice, salePrice } from '../src/game/tradingPost.ts'
 import { pouchKeys } from '../src/inventory/runes.ts'
-import { boardIndex, monsterStrength, type WorldEvent } from '../src/game/blight.ts'
+import { boardIndex, monsterStrength, seedBlight, type WorldEvent } from '../src/game/blight.ts'
 import { LOSS_LEVEL, daysToFall, type Stock } from '../src/game/territory.ts'
 import { extractRefusal } from '../src/game/runecraft.ts'
 import type { EncounterId } from '../src/game/encounters.ts'
@@ -335,21 +335,38 @@ describe('--near-source', () => {
     expect(source.threat).toBe(5)
   })
 
-  it('differs from the default world only in the Source\'s place and threat, and the land they push', () => {
+  it('differs from the default world only in the Source\'s place and threat, the fixed nests above it, and the land they push', () => {
     const near = campaignGame(1, parseArgs(['--campaign', '--near-source'])).world
     const far = campaignGame(1, parseArgs(['--campaign'])).world
     expect(far).toEqual(newWorld(1))
     const source = (world: typeof near) => world.locations.find((l) => l.id === SOURCE_ID) as MonsterLocation
     expect(source(far)).toMatchObject({ position: SOURCE_PLACE.position, threat: SOURCE_PLACE.threat })
     expect(source(near)).not.toEqual(source(far))
-    // The Source's push seeds the blight, so the land (and what is seen of it) differs; nothing else does.
+    // The Source's push and the outer nests' seed the blight, so the land (and what is seen of it) differs; nothing else does.
+    const above = (l: (typeof near.locations)[number]) => l.kind === 'monsters' && !l.source && l.threat > NEAR_SOURCE.threat
     const rest = (world: typeof near) => {
       const { locations, blight: _blight, shift: _shift, seen: _seen, ...others } = world
-      return { ...others, locations: locations.filter((l) => l.id !== SOURCE_ID) }
+      return { ...others, locations: locations.filter((l) => l.id !== SOURCE_ID && !above(l)) }
     }
     expect(rest(near)).toEqual(rest(far))
     expect({ ...source(near), position: SOURCE_PLACE.position, threat: SOURCE_PLACE.threat }).toEqual(source(far))
     expect(near.blight).not.toEqual(far.blight)
+  })
+
+  it('leaves out the fixed nests above the near Source\'s threat (5), keeping the far sites and partners; the default world holds them', () => {
+    const near = campaignGame(1, parseArgs(['--campaign', '--near-source'])).world
+    const far = campaignGame(1, parseArgs(['--campaign'])).world
+    const nestsAbove = (world: typeof near) => world.locations.filter((l) => l.kind === 'monsters' && !l.source && l.threat > NEAR_SOURCE.threat)
+    expect(nestsAbove(near)).toEqual([])
+    expect(nestsAbove(far).length).toBeGreaterThanOrEqual(20)
+    const quiet = (world: typeof near) => world.locations.filter((l) => l.kind !== 'monsters').map((l) => l.id)
+    expect(quiet(near)).toEqual(quiet(far))
+    expect(quiet(near)).toEqual(expect.arrayContaining(['mithril_lode', 'heartwood', 'stonehollow', 'emberwatch']))
+    // The land is seeded from the locations the world holds: seeding it again changes nothing.
+    const again = structuredClone(near)
+    seedBlight(again)
+    expect(again.blight).toEqual(near.blight)
+    expect(again.shift).toEqual(near.shift)
   })
 
   it('gives the waiting twin the same world', () => {
@@ -1471,24 +1488,25 @@ describe('runes in a campaign', () => {
  * became `31f97ff2...d70f9f`.
  *
  * Re-recorded in stage 9 step 05 (the outer rings' content): 24 fixed nests in the rings of threat 7 to 18, seven
- * resource sites and three far partners. The nests corrupt the outer rings (each pushing as threat 5's), so far more
- * of the board is corrupted, which grows the spawn pressure and moves where spawns land; and since these nests are
- * never all cleared, the careful party no longer marches on the Source because "nothing else is left": with no nest
- * at its level it walks to the nearest one above (threat 7), as `nextTarget` says. The home country's locations are
- * where step 04 put them. Outcomes Source, Source, Source, fallen, fallen became fallen, Source, fallen, Source,
- * fallen. Days 433, 416, 328, 359, 29 became 498, 467, 363, 377, 29; battles 26, 24, 18, 22, 4 became 19, 20, 17,
- * 21, 4; spawns 46, 43, 31, 35, 0 became 41, 42, 39, 43, 3; sites captured 6, 4, 3, 5, 0 became 2, 4, 3, 2, 0, lost
- * 0 in all; land blighted at the end 0.299, 0.285, 0.272, 0.280, 0.118 became 0.707, 0.639, 0.680, 0.656, 0.493;
- * partners contacted 1, 1, 1, 0, 0 unchanged. Events hash `31f97ff2...d70f9f` became `5bd8d01f...baf96e`.
+ * resource sites and three far partners. `--near-source`'s world leaves out the fixed nests above its Source's
+ * threat (5; the user's decision after the step's review: left in, they corrupted the outer rings and drew the
+ * spawns away from the home country), keeping the far sites and partners, so the move is the far sites' and
+ * partners' land (a partner is a clean source) and the spawns it reshuffles. Outcomes unchanged (three Source, two
+ * fallen). Days 433, 416, 328, 359, 29 became 417, 414, 351, 362, 29; battles 26, 24, 18, 22, 4 became 19, 24, 19,
+ * 22, 4; spawns 46, 43, 31, 35, 0 became 52, 50, 34, 36, 0; sites captured 6, 4, 3, 5, 0 became 3, 4, 3, 5, 0, lost
+ * 0 in all; land blighted at the end 0.299, 0.285, 0.272, 0.280, 0.118 became 0.374, 0.355, 0.274, 0.299, 0.118;
+ * partners contacted 1, 1, 1, 0, 0 unchanged. Events hash `31f97ff2...d70f9f` became `e4dd3391...fb6394`. (The
+ * step's first version, with the outer nests in the near-Source world, had moved them to fallen, Source, fallen,
+ * Source, fallen, with 0.49 to 0.71 of the land blighted.)
  */
 const GUARD_RECORDS: CampaignRecord[] = [
-  { outcome: "fallen", days: 498, battles: 19, spawns: 41, captured: 2, lost: 0, blighted: 0.7069444444444445, healedHp: 105, campDays: 26, towersBuilt: 3, towersLost: 0, deaths: 3, recruits: 5, hallLevel: 3, shrineLevel: 3, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 185, tierTwoBought: 0, crafted: 9, fieldCraftDays: 3, runesFound: 16, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 20, finalLevels: [8, 7, 7, 7, 7], callings: { ranger: 2, evoker: 1, heavy_knight: 2 }, capstones: {  }, deathsAtLevel: [6, 6, 4], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 19, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkDays: 465, vanguardWalkHomeDays: 126, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [4, 0, 0, 0], lodgeLevel: 1, goldBySource: { sites: 396, market: 0, routes: 0, sales: 185 }, partnersContacted: 1, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 1.2951807228915662, waitingIncomePerDay: 0 },
-  { outcome: "source", days: 467, battles: 20, spawns: 42, captured: 4, lost: 0, blighted: 0.6390873015873015, healedHp: 218, campDays: 24, towersBuilt: 3, towersLost: 0, deaths: 0, recruits: 2, hallLevel: 3, shrineLevel: 0, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 3, tierTwoBought: 0, crafted: 7, fieldCraftDays: 3, runesFound: 16, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [9, 9, 9, 8, 7], callings: { heavy_knight: 3, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 20, wipes: 0, finalLevels: [[9, 9, 9, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkDays: 436, vanguardWalkHomeDays: 88, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [6, 0, 0, 0], lodgeLevel: 1, goldBySource: { sites: 372, market: 0, routes: 0, sales: 3 }, partnersContacted: 1, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 1.4132762312633833, waitingIncomePerDay: 0 },
-  { outcome: "fallen", days: 363, battles: 17, spawns: 39, captured: 3, lost: 0, blighted: 0.6804563492063492, healedHp: 154, campDays: 19, towersBuilt: 3, towersLost: 0, deaths: 1, recruits: 3, hallLevel: 3, shrineLevel: 1, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 51, tierTwoBought: 0, crafted: 4, fieldCraftDays: 3, runesFound: 11, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 8, 7, 7], callings: { heavy_knight: 3, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [2], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 17, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkDays: 337, vanguardWalkHomeDays: 77, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [5, 0, 0, 0], lodgeLevel: 1, goldBySource: { sites: 288, market: 0, routes: 0, sales: 51 }, partnersContacted: 1, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 1.2920110192837466, waitingIncomePerDay: 0 },
-  { outcome: "source", days: 377, battles: 21, spawns: 43, captured: 2, lost: 0, blighted: 0.6557539682539683, healedHp: 234, campDays: 40, towersBuilt: 1, towersLost: 0, deaths: 1, recruits: 3, hallLevel: 3, shrineLevel: 1, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 66, tierTwoBought: 0, crafted: 7, fieldCraftDays: 3, runesFound: 17, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [9, 9, 9, 9, 7], callings: { heavy_knight: 3, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [3], battlesToLevel: { 5: 9 }, roles: { vanguard: { battles: 21, wipes: 0, finalLevels: [[9, 9, 9, 9, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkDays: 332, vanguardWalkHomeDays: 82, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [4, 0, 0, 0], lodgeLevel: 1, goldBySource: { sites: 300, market: 0, routes: 0, sales: 66 }, partnersContacted: 0, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 1.2679045092838197, waitingIncomePerDay: 0 },
-  { outcome: "fallen", days: 29, battles: 4, spawns: 3, captured: 0, lost: 0, blighted: 0.49315476190476193, healedHp: 1, campDays: 1, towersBuilt: 0, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 1, fieldCraftDays: 1, runesFound: 2, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [3, 3, 3], callings: { swordmaster: 1, heavy_knight: 1, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [], battlesToLevel: {  }, roles: { vanguard: { battles: 4, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkDays: 26, vanguardWalkHomeDays: 0, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [2, 0, 0, 0], lodgeLevel: 0, goldBySource: { sites: 20, market: 0, routes: 0, sales: 0 }, partnersContacted: 0, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 0.8620689655172413, waitingIncomePerDay: 0 },
+  { outcome: "source", days: 417, battles: 19, spawns: 52, captured: 3, lost: 0, blighted: 0.37430555555555556, healedHp: 108, campDays: 28, towersBuilt: 3, towersLost: 0, deaths: 2, recruits: 3, hallLevel: 3, shrineLevel: 1, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 56, tierTwoBought: 0, crafted: 7, fieldCraftDays: 2, runesFound: 17, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 20, finalLevels: [8, 8, 8, 7], callings: { heavy_knight: 2, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [2, 7], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 19, wipes: 0, finalLevels: [[8, 8, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkDays: 383, vanguardWalkHomeDays: 106, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [5, 0, 0, 0], lodgeLevel: 1, goldBySource: { sites: 332, market: 0, routes: 0, sales: 56 }, partnersContacted: 1, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 1.2973621103117505, waitingIncomePerDay: 0 },
+  { outcome: "source", days: 414, battles: 24, spawns: 50, captured: 4, lost: 0, blighted: 0.3554563492063492, healedHp: 288, campDays: 43, towersBuilt: 3, towersLost: 0, deaths: 0, recruits: 2, hallLevel: 3, shrineLevel: 0, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 6, fieldCraftDays: 3, runesFound: 19, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [9, 9, 9, 8, 7], callings: { heavy_knight: 3, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 24, wipes: 0, finalLevels: [[9, 9, 9, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkDays: 364, vanguardWalkHomeDays: 77, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [6, 0, 0, 0], lodgeLevel: 1, goldBySource: { sites: 328, market: 0, routes: 0, sales: 0 }, partnersContacted: 1, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 1.3792270531400965, waitingIncomePerDay: 0 },
+  { outcome: "source", days: 351, battles: 19, spawns: 34, captured: 3, lost: 0, blighted: 0.27420634920634923, healedHp: 243, campDays: 23, towersBuilt: 3, towersLost: 0, deaths: 3, recruits: 3, hallLevel: 3, shrineLevel: 2, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 51, tierTwoBought: 0, crafted: 4, fieldCraftDays: 4, runesFound: 13, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 7], callings: { ranger: 1, evoker: 1, heavy_knight: 1 }, capstones: {  }, deathsAtLevel: [2, 8, 7], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 19, wipes: 0, finalLevels: [[8, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkDays: 319, vanguardWalkHomeDays: 69, guardBattles: 0, improvementsBuilt: [1, 0, 0], improvementLevels: [4, 1, 0, 0], lodgeLevel: 0, goldBySource: { sites: 280, market: 0, routes: 0, sales: 51 }, partnersContacted: 1, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 1.2905982905982907, waitingIncomePerDay: 0 },
+  { outcome: "fallen", days: 362, battles: 22, spawns: 36, captured: 5, lost: 0, blighted: 0.29851190476190476, healedHp: 254, campDays: 48, towersBuilt: 1, towersLost: 0, deaths: 1, recruits: 3, hallLevel: 3, shrineLevel: 1, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 66, tierTwoBought: 0, crafted: 6, fieldCraftDays: 4, runesFound: 17, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 20, finalLevels: [8, 8, 8, 8, 7], callings: { heavy_knight: 3, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [3], battlesToLevel: { 5: 9 }, roles: { vanguard: { battles: 22, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkDays: 308, vanguardWalkHomeDays: 85, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [7, 0, 0, 0], lodgeLevel: 1, goldBySource: { sites: 288, market: 0, routes: 0, sales: 66 }, partnersContacted: 0, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 1.4116022099447514, waitingIncomePerDay: 0 },
+  { outcome: "fallen", days: 29, battles: 4, spawns: 0, captured: 0, lost: 0, blighted: 0.1177579365079365, healedHp: 1, campDays: 1, towersBuilt: 0, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 1, fieldCraftDays: 1, runesFound: 2, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [3, 3, 3], callings: { swordmaster: 1, heavy_knight: 1, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [], battlesToLevel: {  }, roles: { vanguard: { battles: 4, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkDays: 26, vanguardWalkHomeDays: 0, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [2, 0, 0, 0], lodgeLevel: 0, goldBySource: { sites: 20, market: 0, routes: 0, sales: 0 }, partnersContacted: 0, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 0.8620689655172413, waitingIncomePerDay: 0 },
 ]
-const GUARD_EVENTS_SHA256 = '5bd8d01fa73f1dc43ba354e5c8f966718eec072735a2d69e0d40a22d5bbaf96e'
+const GUARD_EVENTS_SHA256 = 'e4dd3391cd473d66b35d9070815f49e7c84fb913268c20894506e03e0cfb6394'
 
 describe('the campaign’s policy on the day loop', () => {
   const args = parseArgs(['--campaign', '--parties', '1'])

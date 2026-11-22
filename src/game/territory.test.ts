@@ -118,7 +118,6 @@ describe('yields', () => {
   })
 })
 
-/** Today's days to fall, pinned before the world's rules took a list of parties (stage 5 step 02). Only `pinned` may change. */
 describe('the outer rings\' sites (stage 9)', () => {
   const OUTER: Record<string, Material> = {
     ironwood_grove: 'ironwood', mithril_lode: 'mithril', elder_grove: 'elderwood', adamant_deep: 'adamant',
@@ -144,6 +143,7 @@ describe('the outer rings\' sites (stage 9)', () => {
   })
 })
 
+/** Today's days to fall, pinned before the world's rules took a list of parties (stage 5 step 02). Only `pinned` may change. */
 describe('the days to fall with one party, pinned', () => {
   const members = [{ level: 3 }, { level: 4 }, { level: 5 }]
   const pinned = (at: PartyPresence['position']): PartyPresence[] => [{ position: at, levels: members.map((m) => m.level) }]

@@ -32,7 +32,8 @@ import { SKILL_IDS, type SkillId } from '../src/character/skills.ts'
 import { ABILITY_IDS, type AbilityId } from '../src/combat/abilities.ts'
 import { ENCOUNTERS, heroId, xpReward, type EncounterId } from '../src/game/encounters.ts'
 import { PREROLLS, autoHeal, readyMadeParty, partyFighters, rewardVictory, type Party } from '../src/game/party.ts'
-import { blightAt, blightedShare, boardIndex, monsterStrength, type WorldEvent } from '../src/game/blight.ts'
+import { blightAt, blightedShare, boardIndex, monsterStrength, seedBlight, type WorldEvent } from '../src/game/blight.ts'
+import { seedSight } from '../src/game/vision.ts'
 import {
   IMPROVEMENT_COSTS,
   IMPROVEMENT_LODGE,
@@ -87,7 +88,7 @@ import {
 } from '../src/game/company.ts'
 import { INFIRMARY_COSTS, raiseInfirmary } from '../src/game/infirmary.ts'
 import { MATERIALS_PER_GOLD, MAX_TRADING_POST_LEVEL, TRADING_POST_COSTS, buy, buyPrice, raiseTradingPost, salePrice, sell, sellMaterial, wares } from '../src/game/tradingPost.ts'
-import { YIELD_DAYS, daysToFall, siteImprovement, sites, type Material, type Stock } from '../src/game/territory.ts'
+import { YIELD_DAYS, daysToFall, initialHeld, siteImprovement, sites, type Material, type Stock } from '../src/game/territory.ts'
 import {
   ENCAMPMENT_ID,
   PARTNERS,
@@ -1977,13 +1978,30 @@ export function finishCampaign(run: CampaignRun, outcome: CampaignOutcome): Camp
 }
 
 /**
- * A campaign's new game, seeded `seed`: the ready-made party; with `--near-source` the world rebuilt with the Source
- * at `NEAR_SOURCE` (the encampment, where the party stands, is the same); and the trading post at `--trading-post`'s
+ * `--near-source`'s world, seeded `seed`: the Source at `NEAR_SOURCE`, and none of the fixed nests above its
+ * threat (the outer rings', which a party marching on a threat-5 Source never meets; left in, their corruption
+ * draws the spawns away from the home country). The far sites and partners stay. The land, the held sites and
+ * the sight are seeded again from what is left, as `newWorld` seeds them. Draws nothing.
+ */
+export function nearSourceWorld(seed: number): WorldState {
+  const world = newWorld(seed, undefined, PARTNERS, NEAR_SOURCE)
+  world.locations = world.locations.filter((l) => l.kind !== 'monsters' || l.source || l.threat <= NEAR_SOURCE.threat)
+  world.held = [ENCAMPMENT_ID]
+  seedBlight(world)
+  world.held = initialHeld(world)
+  seedBlight(world)
+  seedSight(world, [{ position: encampment(world).position, levels: [] }])
+  return world
+}
+
+/**
+ * A campaign's new game, seeded `seed`: the ready-made party; with `--near-source` the world rebuilt as
+ * `nearSourceWorld` (the encampment, where the party stands, is the same); and the trading post at `--trading-post`'s
  * level if given. Draws nothing more than `newGame`.
  */
 export function campaignGame(seed: number, args: CliArgs): GameState {
   const game = newGame(startingParty(args), null, seed)
-  if (args.nearSource) game.world = newWorld(seed, undefined, PARTNERS, NEAR_SOURCE)
+  if (args.nearSource) game.world = nearSourceWorld(seed)
   if (args.tradingPost !== null) game.world.tradingPost = args.tradingPost
   return game
 }

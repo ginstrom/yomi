@@ -71,7 +71,7 @@ Each runs from the seed and count the brief gives (default seed 1, 500). The ban
 | `parity-L14` | `--encounter bandit_camp --threat 7 --party-level 14 --plans <role>=<plan>`, one run per plan (reported, not gated) |
 | `standard` | every row of the bands table: `one`, `company`, `rl10`, then the cells `gr3`, `bc3`, `bc4`, `bc5`, `sn5`, `sp5`, `sg7`, `sg10` (`tl5` is report-only, not a band row) |
 
-The early measures (`one`, `company`, `rl10`, `rl10-one`, `rl12`) run with `--near-source`, the Source where it stood before stage 9 at threat 5, so they keep their meaning as the map grows (stage 9's plan, decision 2). `--waiting` or `--plans` may be added by the brief. Heroes dead and days a campaign come from the `one` run.
+The early measures (`one`, `company`, `rl10`, `rl10-one`, `rl12`) run with `--near-source`, the Source where it stood before stage 9 at threat 5 and no fixed nest above threat 5, so they keep their meaning as the map grows (stage 9's plan, decision 2). `--waiting` or `--plans` may be added by the brief. Heroes dead and days a campaign come from the `one` run.
 
 ## History
 

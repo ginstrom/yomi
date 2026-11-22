@@ -27,7 +27,7 @@ Decide whether the simulator is fast enough on the 140 × 72 map to measure the 
 
 ### Decisions from the index this step applies (unchanged)
 
-2. **A stand-in Source for the early figures (open question 1, recommended answer).** The design keeps `--ready-level 7` as the early-game guard, but its Source is 122 hexes out at threat 20, which a level-7 party walks to through five rings and cannot beat: the guard, the bands `one`, `company` and `rl10` and the refactor guard would all collapse. The plan adds `--near-source` to the simulator (C2): the campaign's world puts the Source where it stood before this stage (stage 8's (58, 19), shifted to (58, 36)), fought at threat 5 as today; everything else is the stage-9 world. The early figures, the refactor guard and the 50-campaign check run with `--ready-level 7 --near-source` (`rl10` with `--ready-level 10 --near-source`), so they keep their meaning and the bands their values; `bands.md`'s measure names gain the flags (step 02). The long campaign runs without it.
+2. **A stand-in Source for the early figures (open question 1, recommended answer).** The design keeps `--ready-level 7` as the early-game guard, but its Source is 122 hexes out at threat 20, which a level-7 party walks to through five rings and cannot beat: the guard, the bands `one`, `company` and `rl10` and the refactor guard would all collapse. The plan adds `--near-source` to the simulator (C2): the campaign's world puts the Source where it stood before this stage (stage 8's (58, 19), shifted to (58, 36)), fought at threat 5 as today; everything else is the stage-9 world. The early figures, the refactor guard and the 50-campaign check run with `--ready-level 7 --near-source` (`rl10` with `--ready-level 10 --near-source`), so they keep their meaning and the bands their values; `bands.md`'s measure names gain the flags (step 02). The long campaign runs without it. **Amended in step 05 (the user's decision, 2026-11-22):** the near-Source world also leaves out the fixed nests above threat 5 (the outer rings'), keeping the far sites and partners, and its land is seeded without them; left in, their corruption drew the spawns away from the home country.
 
 ### Shared constraints (from the index)
 
@@ -76,6 +76,8 @@ export const NEAR_SOURCE: SourcePlace = { position: offsetToHex(58, 19), threat:
 //   log: 'jsonl' | 'none'   (--log jsonl|none, default 'jsonl'; 'none' opens and writes no file; every printed figure is the same)
 //   nearSource: boolean     (--near-source; refused without --campaign)
 // With nearSource, a campaign's world and its waiting twin's are newWorld(seed, undefined, PARTNERS, NEAR_SOURCE).
+// Amended in step 05 (the user's decision): the near-Source world (`nearSourceWorld(seed)`) also leaves out the fixed nests
+//   above NEAR_SOURCE.threat (5), keeping the far sites and partners, and seeds its land, held sites and sight without them.
 // CampaignRecord gains:
 vanguardWalkDays: number     // days the vanguard (a lone party is the vanguard) walked, on any errand; vanguardWalkHomeDays counts those walking home
 routeRaidsTold: number       // route_raided events with days 0 (a road turned raided)
