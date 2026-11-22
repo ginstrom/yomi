@@ -127,6 +127,37 @@ export class HexBoard {
 }
 
 /**
+ * A shortest path from `start` to `goal` through passable hexes (start
+ * excluded, goal included), or null when there is none or `goal` is `start`.
+ * The same path `reachableHexes(start, unlimited, passable)` gives for `goal`
+ * with no provokers (a hex keeps the parent that found it first, searched in
+ * HEX_DIRECTIONS order), found without keeping a path per hex and stopping
+ * once `goal` is found. `passable` must refuse hexes off a finite board.
+ */
+export function shortestPath(start: Hex, goal: Hex, passable: (h: Hex) => boolean): Hex[] | null {
+  if (hexEquals(start, goal)) return null
+  const goalKey = hexKey(goal)
+  const parents = new Map<string, Hex | null>([[hexKey(start), null]])
+  const queue: Hex[] = [start]
+  for (let head = 0; head < queue.length; head++) {
+    const from = queue[head]
+    for (const d of HEX_DIRECTIONS) {
+      const n = hex(from.q + d.q, from.r + d.r)
+      const key = hexKey(n)
+      if (parents.has(key) || !passable(n)) continue
+      parents.set(key, from)
+      if (key === goalKey) {
+        const path: Hex[] = []
+        for (let at: Hex | null = n; at !== null && !hexEquals(at, start); at = parents.get(hexKey(at))!) path.push(at)
+        return path.reverse()
+      }
+      queue.push(n)
+    }
+  }
+  return null
+}
+
+/**
  * Hexes reachable from `start` in at most `maxSteps` steps through passable
  * hexes, each with a shortest path (start excluded, destination included).
  * Among equally short paths, the one that provokes the fewest distinct ids

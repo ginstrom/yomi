@@ -105,6 +105,27 @@ describe('a new world', () => {
 })
 
 describe('the contest', () => {
+  it('works the sources\u2019 fields out afresh whenever a source changes, as a world never memoised does', () => {
+    const { game, world } = solo(1)
+    const home = world.locations.find((l) => l.id === ENCAMPMENT_ID)!.position
+    const probes = [home, { q: home.q + 4, r: home.r }, { q: home.q + 9, r: home.r - 3 }, ...lairs(world).slice(0, 3).map((l) => ({ q: l.position.q + 1, r: l.position.r }))]
+    const net = (w: WorldState) => probes.map((h) => netInfluence(w, presences(game.parties), h))
+    const fresh = () => net(structuredClone(world))
+    const changes: Array<() => void> = [
+      () => world.towers.push({ id: 'tower_probe', position: { q: home.q + 4, r: home.r } }),
+      () => (lairs(world)[0].threat += 1),
+      () => (world.shrine += 1),
+      () => world.held.push(world.locations.find((l) => l.kind === 'resource' && !world.held.includes(l.id))!.id),
+      () => (world.improvements[world.held.at(-1)!] = 1),
+      () => clearLocation(game, lairs(world)[1].id),
+    ]
+    for (const change of changes) {
+      expect(net(world)).toEqual(fresh())
+      change()
+      expect(net(world)).toEqual(fresh())
+    }
+  })
+
   it('raises a hex the blight is winning by a level once its counter reaches SHIFT_COST', () => {
     const { game, world } = solo(1)
     const source = lairs(world).find((l) => l.id === SOURCE_ID)!

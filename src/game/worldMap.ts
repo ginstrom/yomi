@@ -1,5 +1,5 @@
 import { randomSeed } from '../combat/rng.ts'
-import { HexBoard, hexAdd, hexDistance, hexEquals, hexKey, offsetToHex, reachableHexes, type BoardSize, type Hex } from '../grid/hex.ts'
+import { HexBoard, hexAdd, hexDistance, hexEquals, hexKey, offsetToHex, shortestPath, type BoardSize, type Hex } from '../grid/hex.ts'
 import {
   AMULET_FOCUS,
   EMBERBLADE,
@@ -461,7 +461,7 @@ export function routeTo(world: WorldState, party: Expedition, to: Hex): Hex[] | 
       .map((l) => hexKey(l.position)),
   )
   const passable = (h: Hex) => board.contains(h) && (hexEquals(h, to) || !known.has(hexKey(h)))
-  return reachableHexes(party.position, board.hexes.length, passable).get(hexKey(to)) ?? null
+  return shortestPath(party.position, to, passable)
 }
 
 /** What came of a journey: the hexes walked, what happened on the way, and the event that cut it short if one did. */

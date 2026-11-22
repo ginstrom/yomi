@@ -114,3 +114,25 @@ All at `22407a9` (step 05's review round), the only dirty file the plan index (r
 Top self time: `reachableHexes` 19.0%, `advanceDay` 12.0%, `netAt` 8.5%, `geometry` 6.3%, GC 5.2%, `hexDistance` 4.2%, `passTurn` 3.1%, `routeTo` 2.4%, `partyDay` 2.0%, `perkBonus` 1.7%, `fields` 1.5%, `passable` 1.5%, `addSource` 1.5%.
 
 So the time goes to the world's day (about 47%, two thirds of it `advanceDay`), the walking orders' route search (about 17%) and the battles (about 19%).
+
+### Step 08: the approved optimisations (2026-11-23)
+
+The user chose option 1: the optimisations that leave every result byte-identical, then go on with 100-campaign long runs in step 09.
+
+- **Made:** `routeTo` uses a new `shortestPath` (`hex.ts`): a breadth-first search with a parent per hex, in `HEX_DIRECTIONS` order, stopping at the target (the path `reachableHexes` gave; a test compares the two on 300 boards with random walls). `advanceDay` works the day's geometry, fields, party strengths, neutral hexes and growth out once (`dayOf`) and passes them to `netAt`; pinned and neutral hexes are `Uint8Array`s. The fields memo compares the sources list element by element instead of a `JSON.stringify` key.
+- **Changed from the brief:** not a version counter. A counter would have to be bumped at every place that changes a source (locations, their threat, held sites, improvements, the shrine, towers, the lodge, roads; tests change some directly), and one missed bump would leave stale fields silently, so it cannot be byte-identical by construction. The element-wise comparison is identical by construction (two finite numbers stringify alike exactly when they are equal). A test checks that the fields follow each kind of source change, against a world never memoised.
+- **Identity:** `npm test` passes the refactor guard and the policy snapshot with `scripts/simulate.test.ts` and `src/engine/policies.test.ts` untouched (the only failure is `scripts/records.test.ts` on the feature record's State section, from commit `60d1a5f`, not this step). 50-campaign check `57fdea1553a35b1af0e33b74a11ea9fe0a0e2f62ef9e5c80972af59276e53e75`, **identical** (0:44 wall, load 7.4 to 9.5). The 20-long-campaign summary, the 100-campaign long summary and the 500 `one` summary are each byte-identical (`diff`) to the runs before.
+- **After** (at `60d1a5f` plus the change; load averages sampled each minute):
+
+  | Measure | Before | After | Load (1 min) after |
+  | --- | --- | --- | --- |
+  | `passTurn`, ms a day (median of three) | 2.099 | **0.833** (0.836, 0.833, 0.720) | 9.8 to 10.3 |
+  | `advanceDay`, ms a day | 1.854 | **0.712** (0.746, 0.712, 0.616) | 9.8 to 10.3 |
+  | 50-campaign check | 1:50 | 0:44 | 7.4 to 9.5 |
+  | 20 long campaigns, profiled | 4:04 | 1:51 | 7.1 to 10.8 |
+  | 100 long campaigns (`logs/s9-08-long-after.txt`) | 20:15, 352 MB | **10:21, 360 MB** | 6.8 to 15.1, mostly 7 to 10 |
+  | 500 `one` (`logs/s9-08-one-after.txt`) | 21:08, 316 MB | **7:44, 225 MB** | 5.9 to 8.2 |
+
+  Against step 01's stage-8 0.666 and 0.628 ms a day: 1.25 × and 1.13 ×. The long run × 5 still projects 500 long campaigns to about 52 minutes; step 09 runs 100, as the user chose.
+- **The profile after** (`logs/s9-08-prof-after/CPU.20261123.001530.37798.0.001.cpuprofile`, 110.9 s sampled): the world's day 37.4% (`advanceDay` 20.9%: `netAt` 11.0%, `fields` 9.3% of which `addSource` rebuilds 8.0%, `spawn` 3.5%; `updateTerritory` 6.6%; `partyDay` 8.0%; `updateSight` 1.3%); `routeTo` 2.4%; battles (`playOut`) 37.7%, where most of `reachableHexes`' remaining 13.1% self time now is (the battle's move search); garbage collection 1.5% (5.2% before).
+- `running.md`'s run-time line and the root `CLAUDE.md`'s command table corrected (about 8 minutes for 500 early campaigns, about 10 for 100 long ones).

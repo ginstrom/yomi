@@ -167,7 +167,7 @@ Each run may pass 9 minutes: start it detached and wait on it in the foreground,
 
 ## 7. Execution record
 
-**Status: stopped at the checkpoint (over the gate), awaiting the orchestrator's decision.** Figures, loads and the profile in [`log.md`](log.md), "Step 08: the runtime gate" and "Step 08: the profile".
+**Status: done.** Over the gate at first; stopped; the user chose option 1 (identical-result optimisations, then 100-campaign long runs in step 09); made, proven identical and re-timed. Figures, loads and the profile in [`log.md`](log.md), "Step 08: the runtime gate" and "Step 08: the profile".
 
 - **Start:** at `22407a9`; `npm test` 102 files, 2611 tests passed; the 50-campaign check's hash `57fdea15…76e53e75`, equal to step 05's (26 of 50).
 - **Timed alone** (no other simulation of this repository; other projects' jobs loaded the machine, load averages sampled each minute and recorded):
@@ -178,4 +178,13 @@ Each run may pass 9 minutes: start it detached and wait on it in the foreground,
 - **The gate: over.** The long run × 5 is about 101 minutes; the `one` run is at the gate (21 minutes under load). `advanceDay` profiled: the world's day is about 47% of a long run (`advanceDay` 33%, of which `netAt` 17%, its per-hex `geometry` lookup 6%, the fields memo and rebuilds 6%, `spawn` 2%; `updateTerritory` 4.5%; `updateSight` 1%); the simulator's walking orders' full-board route search (`routeTo`) 17%; battles 19%.
 - **No optimisation made.** `running.md`'s run-time line is not yet corrected: it waits for the decision (an approved optimisation changes the figures).
 - **Departures:** the runs used `node scripts/simulate.ts` directly (what `npm run simulate` runs) so `/usr/bin/time -l` measures the simulator itself; the 20-campaign profile run doubles as the long run's first projection; this progress commit is separate from the step's final one, so the record of the stop is in git.
-- **Orchestrator's decision:** (pending)
+- **Orchestrator's decision** (2026-11-23, quoted): "The user chose your option 1 (2026-11-23): make the optimisations that leave every result byte-identical, then go on, with step 09 using 100-campaign long runs. [...] routeTo stops at its target and keeps a parent link per hex (same neighbour order, so the same paths); geometry looked up once a day and passed to netAt; typed arrays for the pinned and neutral hexes and each party's strength worked out once a day; a version counter instead of the JSON.stringify fields-memo key. Do each only if its output stays byte-identical. Drop any that can't, and say so."
+- **After the decision** (details and figures in [`log.md`](log.md), "Step 08: the approved optimisations"):
+  - made: `shortestPath` in `hex.ts` for `routeTo` (stops at its target, a parent per hex); `dayOf` in `blight.ts` (geometry, fields, party strengths, neutral hexes and growth once a day, passed to `netAt`); `Uint8Array` pinned and neutral hexes; the fields memo compares the sources element by element;
+  - **departure: no version counter** for the fields memo. A counter needs a bump at every place that changes a source, across modules and tests that change the world directly, and one missed bump would leave stale fields: not identical by construction. The element-wise comparison is, and saves the `JSON.stringify` the same way;
+  - tests, written first: `hex.test.ts` (`shortestPath` against `reachableHexes` on 300 random boards, red before `shortestPath` existed; null at the start and when walled off); `blight.test.ts` (the fields follow each kind of source change, against a never-memoised clone; passes before and after, a guard for the memo change);
+  - identity: refactor guard and policy snapshot pass with their files untouched; 50-campaign hash `57fdea15…76e53e75` identical; the 20-long, 100-long and 500-`one` summaries byte-identical to the runs before;
+  - after: `passTurn` 0.833, `advanceDay` 0.712 ms a day (median of three, load about 10); 100 long campaigns 10:21, peak RSS 360 MB (`logs/s9-08-long-after.txt`); 500 `one` 7:44 (`logs/s9-08-one-after.txt`); 500 long campaigns still project to about 52 minutes, so step 09 runs 100;
+  - `running.md`'s run-time line corrected, and the same figure in the root `CLAUDE.md`'s command table (it said about 5 minutes);
+  - for step 09: `logs/s9-08-one-after.txt` and `logs/s9-08-long-after.txt` (equal to `s9-08-one.txt` and `s9-08-long.txt`) are its `one` and `long` figures if no code changes before it;
+  - `npm test`: everything passes except `scripts/records.test.ts`, which fails on `docs/features/long-campaign-stage-09.md`'s State section (3,123 bytes, cap 3,000) since the orchestrator's commit `60d1a5f`; not this step's file, left to the orchestrator.
