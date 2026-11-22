@@ -4,7 +4,7 @@
 
 - Request (user's words):
   > The next thing is stage 9 of the long campaign: the outer rings. Its design is docs/designs/long-campaign/stage-09-outer-rings.md and it is marked "ready for planning". [...] As with stages 2–8, the approved stage design goes straight to the planner. Start with the bookkeeping commit, then cut a long-campaign-stage-09 branch off main and run the orchestrator. Balance bands are mine to change: bring any out-of-band figures to me.
-- Slug `long-campaign-stage-09` · Phase 4, implementation · Next action: step 08 making the identical-output speed-ups; then 07 (worktree) alongside 09. 01–06 done and reviewed clean · Branch: `long-campaign-stage-09`, off main at 67e5f0d (PR #10 merged by the orchestrator at the user's word, f1bb2dd; bookkeeping 67e5f0d on main, not pushed).
+- Slug `long-campaign-stage-09` · Phase 4, implementation · Next action: review step 08; then 07 (worktree) alongside 09. 01–06 done and reviewed clean · Branch: `long-campaign-stage-09`, off main at 67e5f0d (67e5f0d on main, not pushed).
 - Path: Large, but the stage design is the approved design. Straight to planning, as stages 2–8 did.
 - Links:
   - Stages overview: `docs/designs/long-campaign/index.md`
@@ -23,7 +23,6 @@
   - From stage 6: at ready level 10 the company wins no more often than one party on today's map; stage 9 to look again.
   - `src/game/CLAUDE.md` is at its 8 KB cap: make room before adding a rule.
   - Waiting for stage 12, not this stage: market income, the simulator's spend order (works, forts, market levels), full-campaign route figures.
-  - For the user, outside the stages: the world header doesn't refresh behind the trading post; world-blight.png shows no corrupted land.
 
 ## Decision log
 
