@@ -40,6 +40,7 @@ import { createPips } from './socketPips.ts'
 import { overlayScale } from './overlayScale.ts'
 import { ROUTE_ROWS, minimapBoard, minimapPoints, routeNotes, routeOffer, routeRows, routeState, type RouteRow } from './routesTab.ts'
 import { describeWorldEvent } from './worldEvents.ts'
+import { ROAD_COLORS } from './roadsView.ts'
 import { encampment, encampmentName } from '../game/worldMap.ts'
 import { openRoute, openRouteRefusal, routeLimit } from '../game/trade.ts'
 
@@ -131,8 +132,6 @@ const ROUTE_ROW_H = 72
 const ROUTE_TEXT_W = LIST_W - 112
 const OPEN_W = 88
 const MINIMAP = { x: DETAILS_X, y: ROUTE_TOP, width: DETAILS_W, height: 150 }
-const ROAD_COLOR = 0xffd54f
-const RAIDED_COLOR = 0xe53935
 
 /**
  * The trading post, entered from the encampment (EncampmentScene) over the
@@ -530,7 +529,7 @@ export class TradingPostScene extends Phaser.Scene {
     }
     if (row?.road) {
       const points = minimapPoints(world.board, row.road, home, MINIMAP)
-      g.lineStyle(2, row.status === 'raided' || row.raid ? RAIDED_COLOR : ROAD_COLOR, 1).beginPath().moveTo(points[0].x, points[0].y)
+      g.lineStyle(2, row.status === 'raided' || row.raid ? ROAD_COLORS.raided : ROAD_COLORS.secure, 1).beginPath().moveTo(points[0].x, points[0].y)
       for (const p of points.slice(1)) g.lineTo(p.x, p.y)
       g.strokePath()
     }

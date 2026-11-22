@@ -147,7 +147,7 @@ export function raiseShrine(world: WorldState, party: Expedition): string | null
 /** The held resource the party stands on (never the encampment), where an improvement could go. */
 export function improvementSite(world: WorldState, party: Expedition): QuietLocation | null {
   const here = locationAt(world, party.position)
-  if (!here || here.kind !== 'resource' || here.id === ENCAMPMENT_ID || !world.held.includes(here.id)) return null
+  if (!here || here.kind !== 'resource' || !world.held.includes(here.id)) return null
   return here
 }
 
