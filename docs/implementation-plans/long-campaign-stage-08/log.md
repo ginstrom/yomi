@@ -89,3 +89,8 @@ Measured by the `yomi-measure` agent at `8256690` (the `--trading-post` flag com
 ## Step 08 outcome
 
 - Step 08 (measure, document, play): engineer opus, reviewer opus; verdict clean after 1 review round. Commits `8256690`, `7ac5a98` and the round 1 follow-ups (the scaling sentence with both moves, the amber road colour deepened to `0xfb8c00` and `world-road.png` retaken, blight design and manual wording).
+
+## Verification notes (moved from the feature record, 2026-11-22)
+
+- Full in-browser suite: Node 26.13 V8 crash ('Lazy deopt after a fast API call', in Buffer.byteLength under Vite) hung it at 100% CPU once in step 08; the overall review's full run had no crash (177/179, 2 load timeouts that pass alone). Not stage 8 code.
+- Done: step 08 screenshots show amber and blight tints; index decision 13 and C5 wording updated; the Lodge level 3 sprite redrawn in step 04.
