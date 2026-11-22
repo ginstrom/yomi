@@ -19,7 +19,7 @@ import { hexEquals, type Hex } from '../grid/hex.ts'
 export type RoadShade = 'secure' | 'tainted' | 'raided'
 
 /** The road overlay's colours: gold, amber and red. */
-export const ROAD_COLORS: Record<RoadShade, number> = { secure: 0xffd54f, tainted: 0xffa726, raided: 0xe53935 }
+export const ROAD_COLORS: Record<RoadShade, number> = { secure: 0xffd54f, tainted: 0xfb8c00, raided: 0xe53935 }
 
 /** One stretch of an open route: between two neighbouring hexes, from the encampment's on out. */
 export interface RoadSegment {

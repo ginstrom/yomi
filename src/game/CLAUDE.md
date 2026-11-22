@@ -45,7 +45,7 @@ Loaded when working in `src/game/`: encounters and bandits, the company and its 
 
 ## The rules
 
-World map, blight and territory, scaling, encounters, bandits and saving each have a section in `docs/reference/game.md`; read it before changing one. Two easy to get wrong: the encampment's name is the player's (read through `encampmentName`, never assumed), and a site lost razes its improvement. Scaling: the partners, clean sources from day one, reshuffled spawns: the early game 239 → 233 of 500 (stage 8).
+World map, blight and territory, scaling, encounters, bandits and saving each have a section in `docs/reference/game.md`; read it before changing one. Two easy to get wrong: the encampment's name is the player's (read through `encampmentName`, never assumed), and a site lost razes its improvement. Scaling (stage 8): partners, clean from day one, reshuffle spawns: 239 → 233 (company 239 → 232).
 
 ## Adding content
 

@@ -85,3 +85,7 @@ Measured by the `yomi-measure` agent at `8256690` (the `--trading-post` flag com
 
 - The same as step 07's figures for `one`, `company` and `rl10`: nothing after step 07 moved play.
 - The route check (the user's decision of 2026-11-22): with the post started at 4, routes open 0.47 a campaign; route gold 39 a campaign is 4.0% of all gold (983) and 4.9% of the yields' (793); no route raided or abandoned. Campaigns with a route opened: not countable from the outputs (the log holds battle events only).
+
+## Step 08 outcome
+
+- Step 08 (measure, document, play): engineer opus, reviewer opus; verdict clean after 1 review round. Commits `8256690`, `7ac5a98` and the round 1 follow-ups (the scaling sentence with both moves, the amber road colour deepened to `0xfb8c00` and `world-road.png` retaken, blight design and manual wording).
