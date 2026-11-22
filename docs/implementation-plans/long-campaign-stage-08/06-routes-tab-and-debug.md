@@ -22,7 +22,7 @@ No rule changes. The refactor guard and the 50-campaign check are untouched (thi
   1. **Signatures follow the code's patterns.** `openRouteRefusal(game, party, partnerId)` and `openRoute(game, party, partnerId)` take the party (every encampment action checks `atEncampment`), and `openRoute` is the time-free apply that assumes its refusal said null and returns the `route_opened` event (as `raiseImprovement` does). `routeSecurity` and `routeIncome` take a road (`readonly Hex[]`) and the presences, not a route, so the Routes tab can preview a road not yet opened; `raidCause` takes `{ partner, road }`.
   8. **The preview's income counts towers, not parties.** The Routes tab and the road tooltip's "about N gold every 5 days" use `routeIncome(world, road, [])`, so the party standing at home does not inflate it; the map's overlay and the real yields count every presence.
   11. **The Routes tab's open routes** show security, expected income now (decision 8's figure; a raided row says it pays nothing while raided) and the raided count, not "last income" (which would need new saved state). The tab is always present; below trading post 4 it says why routes cannot open. It lists contacted partners only, in contact order.
-  18. **Debug commands for the play script and the in-browser tests:** `spawn <goblin_raid|kobold_scouts|bandit_camp> [here | <location id> | <col> <row>]` places a nest by `SPAWN_KINDS` (exported from `blight.ts`) at the hex's `threatAt`, drawing no RNG; `contact <partner id | all>` contacts partners. `facility builders_lodge 3`, `facility trading_post 4`, `stock` and `days` exist; `days`' yield totals gain routes through `yieldSummary`.
+  18. **Debug commands for the play script and the in-browser tests:** `spawn <goblin_raid|kobold_scouts|bandit_camp> <location id | col row>` (the hex required; refused where a location or a party stands) places a nest by `SPAWN_KINDS` (exported from `blight.ts`) at the hex's `threatAt`, drawing no RNG; `contact <partner id | all>` contacts partners. `facility builders_lodge 3`, `facility trading_post 4`, `stock` and `days` exist; `days`' yield totals gain routes through `yieldSummary`.
 - **Decision 6 (the user's):** `roadTo` keeps more than `RAID_RADIUS` from every nest where it can, falling back to avoiding only nests and their neighbours. A fallback road (or one whose partner has a nest within 2) can be raided the day it opens, so the preview still names any raider before the player pays: `RouteRow.raid` and the offer's "Raided at once: …" tail, shown only then.
 
 ### Contract (copied unchanged from the index)
@@ -55,7 +55,7 @@ export function minimapPoints(board: BoardSize, road: readonly Hex[], from: Hex,
 //   (a refused one faint but clickable, sounding the refusal), and the selected row's road on a minimap of the board
 // src/testHook.ts TradingPostProbe gains: buttons.routesTab: ButtonProbe; routes: { partner: string; status: RouteStatus; line: string; open: ButtonProbe | null }[]
 // src/game/blight.ts: SPAWN_KINDS exported (unchanged)
-// src/scenes/debugCommands.ts: spawn <encounter> [here | <location id> | <col> <row>]; contact <partner id | all>   (decision 18)
+// src/scenes/debugCommands.ts: spawn <encounter> <location id | col row>; contact <partner id | all>   (decision 18)
 ```
 
 ### What this step consumes (copied unchanged from the index)
@@ -171,7 +171,7 @@ export function raidWords(raid: { cause: RaidCause; raider?: MonsterLocation }, 
    - `probe()`: `tab` may be `'routes'`; `buttons.routesTab`; `routes` per C6 (`open` null for an open or raided row). Update `TradingPostProbe` in `src/testHook.ts`.
 3. **`src/game/blight.ts`:** export `SPAWN_KINDS` (no other change).
 4. **`src/scenes/debugCommands.ts`:**
-   - `spawn <encounter> [here | <location id> | <col> <row>] [@party]`: `<encounter>` one of `SPAWN_KINDS`' encounters; the hex as `blight` parses it (default `here`, the party's hex). Refused (`DebugError`) off the map or on a hex any location already stands on. Pushes a `MonsterLocation` `{ id: spawn_<world.spawns + 1>, kind: 'monsters', name: <the kind's name>, position, encounter, threat: threatAt(position), loot: [] }`, increments `world.spawns`, sets the hex to `MAX_BLIGHT` (as a real spawn does), and adds it to `sighted` so it shows. No RNG drawn; `spawnPressure` untouched. Changes the game, so world map only.
+   - `spawn <encounter> <location id | col row>`: `<encounter>` one of `SPAWN_KINDS`' encounters; the hex required (as revised in step 06's round 2: no `here`, no `@party`). Refused (`DebugError`) with no hex, off the map, or on a hex a location or a party stands on. Pushes a `MonsterLocation` `{ id: spawn_<world.spawns + 1>, kind: 'monsters', name: <the kind's name>, position, encounter, threat: threatAt(position), loot: [] }`, increments `world.spawns`, sets the hex to `MAX_BLIGHT` (as a real spawn does), and adds it to `sighted` so it shows. No RNG drawn; `spawnPressure` untouched. Changes the game, so world map only.
    - `contact <partner id | all>`: `contactPartner` for the partner or every partner; lists what was contacted (or that it was already). Unknown id: `DebugError` naming the partners.
    - Both reply with a line the tests can read.
 5. **Tests:**

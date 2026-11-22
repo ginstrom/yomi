@@ -416,6 +416,8 @@ const COMMANDS: Record<string, Command> = {
       world.locations.push(nest)
       world.blight[boardIndex(world.board, at)] = MAX_BLIGHT
       world.sighted.push(nest.id)
+      // Every change to the land ends with updateSight, so a nest placed in sight shows its corrupted hex.
+      updateSight(world, presences(parties))
       return [`${nest.name} (${nest.id}) now stands at ${offset({ position: at })}, threat ${nest.threat}.`]
     },
   },
@@ -453,7 +455,7 @@ const COMMANDS: Record<string, Command> = {
         yields.push(...report.events.filter((event) => event.type === 'yield'))
         for (const event of report.events) {
           if (isNotable(game.world, event, present) || event.type === 'spawned') {
-            told.push(`  day ${game.world.turn}: ${describeWorldEvent(event) || `${event.type} ${'name' in event ? event.name : ''}`}`)
+            told.push(`  day ${game.world.turn}: ${describeWorldEvent(event, game.world) || `${event.type} ${'name' in event ? event.name : ''}`}`)
           }
         }
       }

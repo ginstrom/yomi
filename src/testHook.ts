@@ -317,6 +317,8 @@ export interface TradingPostProbe {
    * the partner id whose road the minimap draws, or null.
    */
   routes: Array<{ partner: string; status: 'open' | 'raided' | 'closed'; line: string; open: ButtonProbe | null; selected: boolean }>
+  /** The refusal shown under the Routes tab's minimap for the chosen closed row, or null; never the same words as `message`. */
+  routeRefusal: string | null
 }
 
 export interface CraftingProbe {

@@ -126,7 +126,7 @@ const ROUTE_COLOR = 0xffffff
 const ROUTE_EDGE = 0x000000
 const MONSTERS_OUTLINE = 0xe53935
 /** The standing route: what is left of the selected party's travel order, drawn while no hover route is. */
-const ORDER_ROUTE_COLOR = 0xffd54f
+const ORDER_ROUTE_COLOR = 0x81d4fa
 const PARTY_OUTLINE = 0xffffff
 const WALK_STEP_MS = 140
 
@@ -1641,7 +1641,7 @@ export class WorldScene extends Phaser.Scene {
     if (!report) return
     // The first event is the building's own; the rest are the day's.
     const [built, ...day] = report.events
-    this.ownDays(describeWorldEvent(built), [report], describeOthers(this.gameState, this.expedition(), [{ ...report, events: day }]))
+    this.ownDays(describeWorldEvent(built, this.world), [report], describeOthers(this.gameState, this.expedition(), [{ ...report, events: day }]))
   }
 
   /**
@@ -1782,7 +1782,7 @@ export class WorldScene extends Phaser.Scene {
     playCue(this, kind === 'embed' ? 'world.rune.embed' : 'world.craft')
     playCues(this, worldSounds(events).map((sound) => ({ ...sound, delayMs: sound.delayMs + WORLD_SOUND_GAP_MS })))
     this.noteYield(events)
-    const told = describeWorldEvents(events, events.find((event) => isNotable(this.world, event, this.presences())) ?? null)
+    const told = describeWorldEvents(events, events.find((event) => isNotable(this.world, event, this.presences())) ?? null, this.world)
     this.messageText.setText(`A day's work makes the ${item}.${told ? ` ${told}` : ''}`)
     this.checkOutcome()
     // After the redraw and save the resume does.

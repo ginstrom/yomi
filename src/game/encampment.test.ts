@@ -176,14 +176,14 @@ describe('the Builders\' Lodge', () => {
     game.world.stock = { gold: 500, timber: 50, stone: 50, iron: 50 }
     const lodge = () => view(game, 'builders_lodge')
     expect(facilities(game, game.parties[0])[5].id).toBe('builders_lodge')
-    expect(lodge()).toMatchObject({ name: "Builders' Lodge", level: 0, maxLevel: 3, action: 'Build', cost: LODGE_COSTS[0], refusal: null, barred: null })
+    expect(lodge()).toMatchObject({ name: "Builders' Lodge", level: 0, maxLevel: 3, action: 'Build', cost: LODGE_COSTS[0], refusal: null })
     expect(improveFacility(game, game.parties[0], 'builders_lodge')).toBeNull()
     expect(game.world.lodge).toBe(1)
     expect(game.world.stock).toMatchObject({ gold: 470, timber: 30 })
     expect(lodge().cost).toEqual(LODGE_COSTS[1])
     expect(improveFacility(game, game.parties[0], 'builders_lodge')).toBeNull()
     expect(game.world.lodge).toBe(2)
-    expect(lodge()).toMatchObject({ level: 2, cost: LODGE_COSTS[2], refusal: null, barred: null })
+    expect(lodge()).toMatchObject({ level: 2, cost: LODGE_COSTS[2], refusal: null })
     expect(improveFacility(game, game.parties[0], 'builders_lodge')).toBeNull()
     expect(game.world.lodge).toBe(3)
     expect(lodge()).toMatchObject({ level: 3, cost: null, effect: 'Roads: open trade routes push back the blight.' })
@@ -193,7 +193,6 @@ describe('the Builders\' Lodge', () => {
     const game = newGame(undefined, null, 1, 'Hearthold')
     game.world.stock = { gold: 5 }
     expect(view(game, 'builders_lodge').refusal).toMatch(/costs 30 gold, 20 timber, more than the stock holds/)
-    expect(view(game, 'builders_lodge').barred).toBeNull()
     expect(improveFacility(game, game.parties[0], 'builders_lodge')).toMatch(/more than the stock holds/)
   })
 

@@ -94,3 +94,17 @@ Measured by the `yomi-measure` agent at `8256690` (the `--trading-post` flag com
 
 - Full in-browser suite: Node 26.13 V8 crash ('Lazy deopt after a fast API call', in Buffer.byteLength under Vite) hung it at 100% CPU once in step 08; the overall review's full run had no crash (177/179, 2 load timeouts that pass alone). Not stage 8 code.
 - Done: step 08 screenshots show amber and blight tints; index decision 13 and C5 wording updated; the Lodge level 3 sprite redrawn in step 04.
+
+## Verification round 1 (2026-11-22)
+
+Fixes for the verification findings, on `d546dfe`; tests first where there was logic.
+
+1. **A raid named an unsighted nest** (QA). `describeWorldEvent` and `describeWorldEvents` take `known` (the world's `sighted`); `route_raided` names its nest only when sighted, else "Raiders on the Millbrook road." (none named without `known`). Every scene caller passes the world (`describeDays`, `describeWalk`, `describeOthers`, the interrupt, `WorldScene`, debug `days`). `roadInfoLines` tells an unsighted raider as "Raided: raiders are within 2 hexes." `raiderName` stays in the event. Tests: `worldEvents.test.ts`, `roadsView.test.ts` (red first).
+2. **A refusal shown twice on the Routes tab** (QA). The refusal under the minimap is drawn only while the message line does not already say it. New probe field `TradingPostProbe.routeRefusal`; `e2e/encampment.test.ts` checks it shows for a chosen row and is gone once Open's click puts it in the message.
+3. **A shared stretch drawn red over a paying road** (simulated player). `roadSegments` lists raided routes first, the rest in route order, so the paying road is drawn on top. Test: `roadsView.test.ts` (red first).
+4. **The plan's `spawn` text** (review): decision 18 in `index.md`, and C6's copy in `06-routes-tab-and-debug.md` (decision 18, the contract line, the command's spec) and step 08's copy, now give the required-hex form.
+5. **The dead facility hook** (review): `Facility.refusal`, `FacilityView.barred`, their use in `facilityRefusal` and `EncampmentScene.improve`, and the "(the Lodge's roads)" comment removed; `encampment.test.ts`'s `barred` expectations and the `scenes.md` sentence go with them (`game.md` did not mention it).
+6. **The standing route's colour** (review): `ORDER_ROUTE_COLOR` is pale blue `0x81d4fa`, apart from the white hover route and the roads' gold; `scenes.md` and the manual said "amber", now "pale blue". `world-travelling.png` retaken and looked at (the only shot with a standing route): a pale blue line, plainly not a road. The other images that shot run re-rendered were left as they were.
+7. **`spawn` and sight** (review): `spawn` ends with `updateSight`. Test: `debugCommands.test.ts`, a nest placed in sight shows its hex seen at 3 (red first).
+
+Docs: `scenes.md`'s helper lines (raider naming, draw order, the refusal shown once).

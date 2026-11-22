@@ -733,8 +733,14 @@ describe('the encampment', () => {
 
     // The Market keeps one route: Saltmere's Open is faint but clickable, and says why, spending nothing.
     expect(opened.routes[1].open).toMatchObject({ visible: true, enabled: false })
+    await game.click({ x: opened.routes[1].open!.x - 200, y: opened.routes[1].open!.y })
+    const chosen = await game.settled('TradingPost', (p) => p.routes[1]?.selected === true)
+    // Chosen but not yet clicked: the refusal shows under the minimap.
+    expect(chosen.routeRefusal).toBe('The Market keeps 1 route open at most.')
     await game.click(opened.routes[1].open!)
     const refused = await game.settled('TradingPost', (p) => p.message === 'The Market keeps 1 route open at most.')
+    // The refusal is told once: in the message, not again under the minimap.
+    expect(refused.routeRefusal).toBeNull()
     expect(refused.gold).toBe(100 - cost)
     expect(refused.routes.map((r) => r.status)).toEqual(['open', 'closed'])
 

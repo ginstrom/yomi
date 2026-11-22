@@ -5,6 +5,7 @@ import { newExpedition } from '../game/expedition.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
 import { readyMadeParty } from '../game/party.ts'
 import { UNEXPLORED } from '../game/vision.ts'
+import { boardIndex } from '../game/blight.ts'
 import { SOURCE_ID, threatAt } from '../game/worldMap.ts'
 import { hexToOffset, offsetToHex } from '../grid/hex.ts'
 import { completions, runCommand, COMMAND_NAMES, type DebugContext } from './debugCommands.ts'
@@ -234,6 +235,17 @@ describe('debug commands', () => {
       expect(world.spawnPressure).toBe(before.pressure)
       expect(world.blight[20 * world.board.cols + 20]).toBe(3)
       expect(world.sighted).toContain(placed.id)
+    })
+
+    it('updates sight: a nest placed in sight shows its corrupted hex as seen (verification round 1)', () => {
+      const context = onWorldMap()
+      const { world } = context.source!.game
+      const at = offsetToHex(10, 21)
+      const index = boardIndex(world.board, at)
+      expect(world.seen[index]).toBeGreaterThanOrEqual(0)
+      expect(world.seen[index]).toBeLessThan(3)
+      runCommand('spawn goblin_raid 10 21', context)
+      expect(world.seen[index]).toBe(3)
     })
 
     it('takes a location’s hex, and the other kinds; the next spawn has the next id', () => {

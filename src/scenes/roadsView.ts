@@ -33,12 +33,14 @@ export interface RoadSegment {
  * Every open route's segments, from the encampment's hex along its road. A
  * route raided today (`raidCause`) is 'raided' throughout; otherwise each
  * segment is shaded by its far hex's security: 1 'secure', ½ 'tainted', 0
- * 'raided'.
+ * 'raided'. Raided routes come first, the rest in route order, so that drawn
+ * in this order a stretch two roads share shows the one that pays.
  */
 export function roadSegments(world: WorldState, presences: readonly PartyPresence[]): RoadSegment[] {
   const home = encampment(world).position
-  return world.routes.flatMap((route) => {
-    const raided = raidCause(world, route) !== null
+  const routes = world.routes.map((route) => ({ route, raided: raidCause(world, route) !== null }))
+  const ordered = [...routes.filter((r) => r.raided), ...routes.filter((r) => !r.raided)]
+  return ordered.flatMap(({ route, raided }) => {
     return route.road.map((to, i): RoadSegment => {
       const security = hexSecurity(world, to, presences)
       const shade: RoadShade = raided || security === 0 ? 'raided' : security === 0.5 ? 'tainted' : 'secure'
@@ -51,7 +53,7 @@ export function roadSegments(world: WorldState, presences: readonly PartyPresenc
 export function raidWords(raid: { cause: RaidCause; raider?: MonsterLocation }, partner: PartnerLocation): string {
   if (raid.cause === 'silent') return `${partner.name} is silent`
   if (raid.cause === 'corrupted') return 'the blight has overrun it'
-  const who = raid.raider ? theName(raid.raider.name) : 'a nest'
+  const who = raid.raider ? theName(raid.raider.name) : 'raiders'
   return `${who} ${isPluralName(who) ? 'are' : 'is'} within ${RAID_RADIUS} hexes`
 }
 
@@ -70,7 +72,9 @@ export function roadInfoLines(world: WorldState, _presences: readonly PartyPrese
     // A raided road pays nothing, so it does not quote the income it would have.
     const pays = raid ? 'pays nothing while raided' : `about ${routeIncome(world, route.road, [])} gold every ${YIELD_DAYS} days`
     const lines = [`The ${partner.name} road: security ${security}%, ${pays}.`]
-    if (raid) lines.push(`Raided: ${raidWords(raid, partner)}.`)
+    // A nest the player has not sighted is not named.
+    const told = raid?.raider && !world.sighted.includes(raid.raider.id) ? { cause: raid.cause } : raid
+    if (told) lines.push(`Raided: ${raidWords(told, partner)}.`)
     return lines
   })
 }

@@ -47,7 +47,7 @@ Close the stage:
   15. No save migration: `SAVE_VERSION` 28; older saves read as unreadable (the old migrations removed).
   16. Routes pay nothing once the encampment is lost.
   17. Sounds reuse cues (`world.threatened`, `world.lost`, `world.captured`, `world.build`).
-  18. Debug `spawn <encounter> [here | <location id> | <col> <row>]` and `contact <partner id | all>`; `days`' totals include routes.
+  18. Debug `spawn <encounter> <location id | col row>` (the hex required) and `contact <partner id | all>`; `days`' totals include routes.
   19. Out of scope: far partners (stage 9), goods for sale (stage 10), market income and the simulator's spend order (stage 12), caravan battles.
 - **Contracts this step documents** (C1–C7 of the index, as built by steps 01–07, copied unchanged in short):
 

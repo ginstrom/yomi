@@ -4,7 +4,7 @@ import type { WorldEvent } from '../game/blight.ts'
 import { isPartyEvent, worldInterrupt, type DayReport, type Interrupt, type PartyEvent } from '../game/company.ts'
 import type { Expedition } from '../game/expedition.ts'
 import { partyById, type GameState } from '../game/gameState.ts'
-import { midSentence, monstersHere, theName, type MonsterLocation } from '../game/worldMap.ts'
+import { midSentence, monstersHere, theName, type MonsterLocation, type WorldState } from '../game/worldMap.ts'
 import { capitalised, isPluralName, withArticle } from '../game/territory.ts'
 import { knownLocationAt } from './partyList.ts'
 
@@ -38,8 +38,15 @@ export function yieldSummary(events: readonly WorldEvent[], heading = 'Last yiel
   return parts.length > 0 ? `${heading}: ${parts.join('; ')}` : null
 }
 
-/** The world map's line for an event, or '' for one too small to tell (a hex's level changing). */
-export function describeWorldEvent(event: WorldEvent): string {
+/** What the player has seen, for naming: a raider is named only once sighted. */
+export type Known = Pick<WorldState, 'sighted'>
+
+/**
+ * The world map's line for an event, or '' for one too small to tell (a hex's
+ * level changing). `known` is what the player has seen: a raid names its nest
+ * only when it is sighted (none named without it).
+ */
+export function describeWorldEvent(event: WorldEvent, known?: Known): string {
   switch (event.type) {
     case 'sighted':
       return event.source
@@ -77,7 +84,10 @@ export function describeWorldEvent(event: WorldEvent): string {
     case 'route_raided':
       // Told once, on the first raided day; the repeats are left to the map.
       if (event.days > 1) return ''
-      if (event.cause === 'raiders') return `Raiders on the ${event.name} road: ${theName(event.raiderName ?? 'raiders')}.`
+      if (event.cause === 'raiders') {
+        const named = event.raider !== undefined && event.raiderName !== undefined && known?.sighted.includes(event.raider)
+        return named ? `Raiders on the ${event.name} road: ${theName(event.raiderName!)}.` : `Raiders on the ${event.name} road.`
+      }
       if (event.cause === 'corrupted') return `The blight has overrun the ${event.name} road.`
       return `The ${event.name} road is idle: ${event.name} is silent.`
     case 'route_restored':
@@ -97,13 +107,13 @@ export function describeWorldEvent(event: WorldEvent): string {
  * and the land's levels are left to the map and the header), with a count of
  * the rest.
  */
-export function describeWorldEvents(events: readonly WorldEvent[], interruptedBy: WorldEvent | null = null): string {
-  if (interruptedBy) return describeWorldEvent(interruptedBy)
-  const told = events.filter((event) => describeWorldEvent(event) !== '' && event.type !== 'yield')
+export function describeWorldEvents(events: readonly WorldEvent[], interruptedBy: WorldEvent | null = null, known?: Known): string {
+  if (interruptedBy) return describeWorldEvent(interruptedBy, known)
+  const told = events.filter((event) => describeWorldEvent(event, known) !== '' && event.type !== 'yield')
   const last = told.at(-1)
   if (!last) return ''
   const more = told.length - 1
-  return more > 0 ? `${describeWorldEvent(last)} (${more} more ${more === 1 ? 'event' : 'events'} on the map.)` : describeWorldEvent(last)
+  return more > 0 ? `${describeWorldEvent(last, known)} (${more} more ${more === 1 ? 'event' : 'events'} on the map.)` : describeWorldEvent(last, known)
 }
 
 /** The name a message leads with for party `id`: its own while the company has two parties or more, else null (nor for no party, or one gone). */
@@ -152,7 +162,7 @@ export function describePartyEvent(event: PartyEvent, game: GameState): string {
 /** What stopped the days, in words, without the party's name; a party that arrived among monsters is told only of coming upon them. */
 function describeInterrupt(interrupt: Interrupt, partyEvents: readonly PartyEvent[], game: GameState): string {
   const { event } = interrupt
-  if (!isPartyEvent(event)) return describeWorldEvent(event)
+  if (!isPartyEvent(event)) return describeWorldEvent(event, game.world)
   const confronting = partyEvents.find((e) => e.type === 'confronting' && e.party === event.party)
   // The party's words, without the name they lead with: `spoken` puts it back with the days.
   const told = describePartyEvent(confronting ?? event, game)
@@ -174,7 +184,7 @@ export function describeDays(reports: readonly DayReport[], game: GameState, lim
     return `${spoken(game, last.interrupt.party, describeInterrupt(last.interrupt, last.partyEvents, game), reports.length)}${rest}`
   }
   if (reports.length >= limit && limit > 1) return `${limit} days passed quietly.${rest}`
-  const told = describeWorldEvents(reports.flatMap((report) => report.events))
+  const told = describeWorldEvents(reports.flatMap((report) => report.events), null, game.world)
   return told ? `${told}${rest}` : `A quiet day.${rest}`
 }
 
@@ -190,11 +200,11 @@ export function describeWalk(game: GameState, party: Expedition, reports: readon
   const interrupt = last?.interrupt ?? null
   if (interrupt && interrupt.party !== null && interrupt.party !== party.id) return describeDays(reports, game, Infinity)
   const stoppedBy = last ? worldInterrupt(last) : null
-  if (stoppedBy) return spoken(game, interrupt?.party ?? null, `Your journey stops. ${describeWorldEvent(stoppedBy)}`)
+  if (stoppedBy) return spoken(game, interrupt?.party ?? null, `Your journey stops. ${describeWorldEvent(stoppedBy, game.world)}`)
   const here = monstersHere(game.world, party)
   if (here) return describePartyEvent({ type: 'confronting', party: party.id, location: here.id }, game)
   if (interrupt && isPartyEvent(interrupt.event) && interrupt.event.type !== 'arrived') return describePartyEvent(interrupt.event, game)
-  return describeWorldEvents(reports.flatMap((report) => report.events))
+  return describeWorldEvents(reports.flatMap((report) => report.events), null, game.world)
 }
 
 /**
@@ -216,7 +226,7 @@ export function describeOthers(game: GameState, party: Expedition, reports: read
   if (last && theirs) {
     return { text: spoken(game, theirs.party, describeInterrupt({ party: theirs.party, event: theirs }, last.partyEvents, game)), party: theirs.party }
   }
-  return { text: describeWorldEvents(reports.flatMap((report) => report.events)), party: null }
+  return { text: describeWorldEvents(reports.flatMap((report) => report.events), null, game.world), party: null }
 }
 
 /** The map's opening words for a party standing before monsters: "You stand before …" with one party, else led by the party's name. */

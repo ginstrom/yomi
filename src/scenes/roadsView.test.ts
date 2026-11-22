@@ -98,6 +98,27 @@ function offsetToHexNear(h: Hex): Hex {
   return { q: h.q + 1, r: h.r }
 }
 
+describe('roadSegments draw order (verification round 1)', () => {
+  it('lists a raided route first, so a paying road is drawn over a shared stretch', () => {
+    const { world, road } = routed()
+    clear(world, road)
+    world.contacted.push('saltmere')
+    const salt = roadTo(world, 'saltmere')!
+    clear(world, salt)
+    world.routes.push({ id: 'route_saltmere', partner: 'saltmere', road: salt, opened: 1, raidedDays: 0 })
+    // The second route, Saltmere's, is raided (silent); Millbrook's pays.
+    world.silent.push('saltmere')
+    const segs = roadSegments(world, [])
+    const lastRaided = segs.map((s) => s.route).lastIndexOf('route_saltmere')
+    const firstPaying = segs.map((s) => s.route).indexOf('route_millbrook')
+    expect(lastRaided).toBeLessThan(firstPaying)
+    expect(segs.filter((s) => s.route === 'route_saltmere').every((s) => s.shade === 'raided')).toBe(true)
+    // With nothing raided, the routes keep their order.
+    world.silent.length = 0
+    expect(roadSegments(world, [])[0].route).toBe('route_millbrook')
+  })
+})
+
 describe('roadInfoLines', () => {
   it('tells security and income from towers only, and nothing off the road', () => {
     const { world, road } = routed()
@@ -121,12 +142,24 @@ describe('roadInfoLines', () => {
     const { world, road } = routed()
     clear(world, road)
     world.locations.push(nest(offsetToHexNear(road[5])))
+    world.sighted.push('nest')
     expect(roadInfoLines(world, [], road[0])).toEqual([
       expect.stringMatching(/^The Millbrook road: security \d+%, pays nothing while raided\.$/),
       'Raided: the Goblin Brood is within 2 hexes.',
     ])
     world.silent.push('millbrook')
     expect(roadInfoLines(world, [], road[0]).at(-1)).toBe('Raided: Millbrook is silent.')
+  })
+})
+
+describe('roadInfoLines and an unsighted raider (verification round 1)', () => {
+  it('tells the raid without naming a nest the player has not sighted', () => {
+    const { world, road } = routed()
+    clear(world, road)
+    world.locations.push(nest(offsetToHexNear(road[5])))
+    const lines = roadInfoLines(world, [], road[0])
+    expect(lines.at(-1)).toBe('Raided: raiders are within 2 hexes.')
+    expect(lines.join(' ')).not.toContain('Goblin Brood')
   })
 })
 

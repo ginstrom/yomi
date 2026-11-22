@@ -157,6 +157,8 @@ export class TradingPostScene extends Phaser.Scene {
   /** The Routes tab's chosen partner; the first row when none is (or it is gone). */
   private routeChosen: string | null = null
   private routeLines: Array<{ row: RouteRow; line: string; open: Point | null; openEnabled: boolean; selected: boolean }> = []
+  /** The refusal drawn under the minimap, or null. */
+  private routeRefusal: string | null = null
 
   constructor() {
     super('TradingPost')
@@ -231,6 +233,7 @@ export class TradingPostScene extends Phaser.Scene {
         open: open ? { ...onScreen(open), visible: true, enabled: openEnabled, width: OPEN_W * this.frame.scale } : null,
         selected,
       })),
+      routeRefusal: this.routeRefusal,
     }
   }
 
@@ -316,6 +319,7 @@ export class TradingPostScene extends Phaser.Scene {
     this.frame.removeAll(true)
     this.controls = {}
     this.routeLines = []
+    this.routeRefusal = null
     this.rowAt = new Map()
     this.slotAt = new Map()
     this.runesAt = null
@@ -522,7 +526,9 @@ export class TradingPostScene extends Phaser.Scene {
     this.frame.add(g)
     const caption = row ? (row.road ? `${row.name} road: ${row.length} hexes` : `No road to ${row.name}`) : 'Nothing to show yet.'
     this.frame.add(this.add.text(DETAILS_X, MINIMAP.y + MINIMAP.height + 8, caption, { fontFamily: FONT, fontSize: '12px', color: DIM, wordWrap: { width: DETAILS_W } }))
-    if (row?.status === 'closed' && row.refusal) {
+    // Told once: once Open was clicked, the message line says it.
+    if (row?.status === 'closed' && row.refusal && row.refusal !== this.message) {
+      this.routeRefusal = row.refusal
       this.frame.add(this.add.text(DETAILS_X, REFUSAL_Y, row.refusal, { fontFamily: FONT, fontSize: '12px', color: REFUSED, wordWrap: { width: DETAILS_W } }))
     }
   }
