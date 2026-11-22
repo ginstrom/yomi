@@ -4,7 +4,7 @@
 
 - Request (user's words):
   > The next thing is stage 8 of the long campaign: trade partners and routes. Its design is docs/designs/long-campaign/stage-08-trade-routes.md and it is marked "ready for planning". [...] I'd start with the bookkeeping commit, then cut a long-campaign-stage-08 branch off main and run the orchestrator.
-- Slug `long-campaign-stage-08` · Phase 4, implementation (01–07 done, head fd4444f; step 08 running) · Next action: review step 08, then verification · Branch: `long-campaign-stage-08`, off main (after the bookkeeping commit for #8/#9).
+- Slug `long-campaign-stage-08` · Phase 5, verification (all 8 steps done, head a7b90d5; overall review, QA, simulated user running) · Next action: triage verification findings · Branch: `long-campaign-stage-08`, off main (after the bookkeeping commit for #8/#9).
 - Path: Large, but the stage design is the approved design. Straight to planning, as stages 2–7 did.
 - Links:
   - Stages overview: `docs/designs/long-campaign/index.md`
@@ -14,13 +14,16 @@
   - Plan: [`docs/implementation-plans/long-campaign-stage-08/index.md`](../implementation-plans/long-campaign-stage-08/index.md) (8 steps)
   - Plan log (history): `docs/implementation-plans/long-campaign-stage-08/log.md`
 - Open questions: none (the road's raid range settled by the user, 2026-11-21).
-- Tiers (engineer / reviewer): planner opus; steps as in the plan's task table (01, 02, 07, 08 opus / opus; 03–06 sonnet / opus).
+- Tiers (engineer / reviewer): planner opus; 01, 02, 07, 08 opus / opus; 03–06 sonnet / opus; no escalations. Verification: overall review opus, QA sonnet, simulated user sonnet.
 - Verification: none yet.
 - Carried forward:
   - Step 08: screenshots must show an amber road stretch and a road over blight tints (step 05 review). Index decision 13 and C5 raided-road wording to update from steps 07/05 reports.
   - Accepted, not fixed: a road's shape (avoiding unsighted nests, decision 6) can hint at nests in the fog; the Routes preview's security, income and corruption cause use the true blight, not `seen` (follows C6 and decision 8).
   - Stage 9: the Routes tab shows at most 4 rows with no paging (a test trips when PARTNERS exceeds it).
-  - Full in-browser suite stalled for the step 01 reviewer (~34 min, killed); run it in verification.
+  - Full in-browser suite: Node 26.13 V8 crash ('Lazy deopt after a fast API call', in Buffer.byteLength under Vite) hangs it at 100% CPU; otherwise 176/179 with load timeouts that pass alone. Not stage 8 code.
+  - For the user, outside stage 8: the world header doesn't refresh behind the trading post (stale gold in shots); world-blight.png shows no corrupted land.
+  - For the user: in the --trading-post 4 check no route was ever raided or abandoned (500 campaigns), so RAID_RADIUS / ABANDON_AFTER are unjudged by the simulator.
+  - Road amber changed to 0xfb8c00 (step 08 review: the old amber read as gold) — orchestrator's call, tell the user.
   - From stage 7: the Lodge level 3 sprite (milestone reads as a bottle, paving faint, 2→3 jump weak at 1x) is to be redrawn now that level 3 becomes reachable.
   - From stage 7, not this stage: market income and the simulator's spend order (works, forts, market levels) wait for stage 12's retune.
 
