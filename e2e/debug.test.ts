@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { koboldScouts } from '../src/game/encounters.ts'
 import { partyFighters, readyMadeParty } from '../src/game/party.ts'
+import { blightTiles } from '../src/scenes/blightTiles.ts'
+import { WORLD_LAYOUT } from '../src/scenes/boardGeometry.ts'
 import { battleHexOnScreen, useGames, type Game } from './driver.ts'
 
 /** Types a line at the open console and presses Enter. */
@@ -47,6 +49,30 @@ describe('the debug console', () => {
     await expect.poll(() => output.textContent()).toContain('Round 1')
     await command(game, 'heal')
     await expect.poll(() => output.textContent()).toContain('only on the world map')
+  })
+
+  it('reveals the 140 × 72 map in blight tiles, gives the far partners their own sprites and spawns a nest only inside its band', async () => {
+    const game = await games.open()
+    const start = await game.newGame()
+    expect(start.blightTiles.size).toBeLessThanOrEqual(2048)
+    expect(start.blightTiles.count).toBe(blightTiles(start.world.board, WORLD_LAYOUT).length)
+    await game.press('Shift+Backquote')
+    const output = game.page.locator('#yomi-debug .debug-output')
+    await command(game, 'reveal')
+    await command(game, 'locations all')
+    await expect.poll(() => output.textContent()).toContain('stonehollow')
+    const revealed = await game.waitFor('World', (w) => w.world.seen.every((level) => level !== -1))
+    expect(revealed.blightTiles.size).toBeLessThanOrEqual(2048)
+    expect(revealed.blightTiles.growths).toBeGreaterThan(0)
+    const sprites = Object.fromEntries(revealed.partners.map((p) => [p.id, p.sprite]))
+    expect(sprites).toMatchObject({ stonehollow: 'map_partner_hold', elder_glade: 'map_partner_glade', emberwatch: 'map_partner_pass' })
+
+    await command(game, 'spawn bandit_company 12 36')
+    await expect.poll(() => output.textContent()).toContain('bandit_company is fought at threats')
+    expect((await game.waitFor('World')).world.locations.some((l) => l.id.startsWith('spawn_'))).toBe(false)
+    await command(game, 'spawn bandit_company 80 36')
+    const placed = await game.waitFor('World', (w) => w.world.locations.some((l) => l.id.startsWith('spawn_')))
+    expect(placed.world.locations.find((l) => l.id.startsWith('spawn_'))).toMatchObject({ encounter: 'bandit_company', threat: 9 })
   })
 
   it('fights any encounter at any threat from the world map, clearing nothing and taking no loot', async () => {

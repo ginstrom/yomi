@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { earlyHex, type WorldState, type WorldStatus } from '../src/game/worldMap.ts'
 import { roadTo } from '../src/game/trade.ts'
-import { hexDistance, type Hex } from '../src/grid/hex.ts'
+import { hexDistance, offsetToHex, type Hex } from '../src/grid/hex.ts'
 import { WORLD_LAYOUT, boardHexCenter, boardPixelSize, type Point } from '../src/scenes/boardGeometry.ts'
 import { clampOrigin, mapOrigin, pannedOrigin } from '../src/scenes/mapScroll.ts'
 import type { WorldProbe } from '../src/testHook.ts'
@@ -90,6 +90,27 @@ describe('the world map', () => {
     expect(start.origin.x).toBe(start.view.x)
     const back = await pan(game, left, 400, 0)
     expect(back.origin.x).toBe(start.view.x)
+  })
+
+  it('drags to the far east edge of the 140 × 72 map and no further', async () => {
+    const game = await games.open()
+    let probe = await game.newGame()
+    const map = boardPixelSize(probe.world.board, WORLD_LAYOUT)
+    const farEast = clampOrigin({ x: -map.width, y: probe.origin.y }, map, probe.view)
+    // Each drag moves the map by most of the view's width, so a score or so of them cross it.
+    for (let drags = 0; probe.origin.x > farEast.x && drags < 40; drags++) {
+      probe = await pan(game, probe, -Math.round(probe.view.width / 2 - 20), 0)
+    }
+    expect(probe.origin.x).toBe(farEast.x)
+    // One more drag leftward moves nothing: the map's east edge is the view's.
+    const press = midView(probe)
+    await game.holdDown(press)
+    await game.hover(plus(press, -150, 0))
+    await game.letGo()
+    expect((await game.waitFor('World')).origin.x).toBe(farEast.x)
+    const at = worldHexOnScreen(probe, offsetToHex(139, 36))
+    expect(at.x).toBeGreaterThan(probe.view.x)
+    expect(at.x).toBeLessThan(probe.view.x + probe.view.width)
   })
 
   it('still travels on a press that moves less than the drag threshold', async () => {

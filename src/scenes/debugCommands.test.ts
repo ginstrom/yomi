@@ -5,7 +5,7 @@ import { newExpedition } from '../game/expedition.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
 import { readyMadeParty } from '../game/party.ts'
 import { UNEXPLORED } from '../game/vision.ts'
-import { boardIndex } from '../game/blight.ts'
+import { SPAWN_KINDS, boardIndex } from '../game/blight.ts'
 import { SOURCE_ID, earlyHex, threatAt } from '../game/worldMap.ts'
 import { hexToOffset, offsetToHex } from '../grid/hex.ts'
 import { completions, runCommand, COMMAND_NAMES, type DebugContext } from './debugCommands.ts'
@@ -259,7 +259,7 @@ describe('debug commands', () => {
       runCommand(`spawn kobold_scouts 10 29`, context)
       expect(world.locations.at(-1)).toMatchObject({ name: 'Kobold Nest', encounter: 'kobold_scouts', position: offsetToHex(10, 29) })
       expect(runCommand(`spawn kobold_scouts ${site.id}`, context).changed).toBe(false)
-      runCommand('spawn bandit_camp 4 22', context)
+      runCommand('spawn bandit_camp 34 36', context)
       expect(world.locations.at(-1)).toMatchObject({ name: 'Bandit Gang', id: `spawn_${world.spawns}` })
       const first = world.locations.at(-2)!.id
       expect(first).not.toBe(world.locations.at(-1)!.id)
@@ -275,6 +275,35 @@ describe('debug commands', () => {
       expect(runCommand('spawn goblin_raid 999 999', context).lines[0]).toMatch(/off the map/)
       expect(runCommand('spawn', context).changed).toBe(false)
       expect(JSON.stringify(world)).toBe(before)
+    })
+
+    it('takes every SPAWN_KINDS kind where its band and fromThreat hold, and refuses it elsewhere, changing nothing', () => {
+      const context = onWorldMap()
+      const { world } = context.source!.game
+      const far = offsetToHex(80, 36)
+      const near = offsetToHex(19, 37)
+      expect(threatAt(far)).toBe(9)
+      for (const kind of SPAWN_KINDS) expect(runCommand('help spawn', context).lines.join(' ')).toContain(kind.encounter)
+      const before = JSON.stringify(world)
+      const { col, row } = hexToOffset(near)
+      const refused = runCommand(`spawn bandit_company ${col} ${row}`, context)
+      expect(refused.changed).toBe(false)
+      expect(refused.lines[0]).toMatch(/bandit_company is fought at threats \d+ to \d+ and spawns from 7; \d+,\d+ is threat \d+\./)
+      expect(JSON.stringify(world)).toBe(before)
+      // A kind whose band holds the hex (threat 4 is in spider_nest's 4 to 9) but whose fromThreat (7) is above it.
+      const four = offsetToHex(47, 36)
+      expect(threatAt(four)).toBe(4)
+      const early = runCommand('spawn spider_nest 47 36', context)
+      expect(early.changed).toBe(false)
+      expect(early.lines[0]).toContain('spawns from 7')
+      const at = offsetToHex(80, 36)
+      const ok = runCommand('spawn bandit_company 80 36', context)
+      expect(ok.changed).toBe(true)
+      expect(world.locations.at(-1)).toMatchObject({ encounter: 'bandit_company', threat: threatAt(at) })
+      // A home kind is still accepted at threat 1.
+      expect(threatAt(offsetToHex(10, 38))).toBe(1)
+      const home = runCommand('spawn goblin_raid 10 38', context)
+      expect(home.changed).toBe(true)
     })
 
     it('needs a hex, and refuses the one a party stands on, here included, so no party stands on a nest unconfronted', () => {

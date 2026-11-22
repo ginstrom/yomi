@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { WORLD_SIZE } from '../game/worldMap.ts'
+import { WORLD_LAYOUT, boardPixelSize } from './boardGeometry.ts'
 import { clampOrigin, DRAG_THRESHOLD_PX, mapOrigin, pannedOrigin, pressMoved, rectContains } from './mapScroll.ts'
 
 const view = { x: 0, y: 60, width: 800, height: 400 }
@@ -107,5 +109,20 @@ describe('clampOrigin', () => {
     const panned = pannedOrigin(mapOrigin(party, map, view), { x: 400, y: 300 }, { x: 600, y: 100 }, map, view)
     expect(panned).not.toEqual(mapOrigin(party, map, view))
     expect(mapOrigin(party, map, view)).toEqual({ x: 400 - 1500, y: 260 - 1000 })
+  })
+})
+
+describe('the 140 × 72 world map', () => {
+  const world = boardPixelSize(WORLD_SIZE, WORLD_LAYOUT)
+  const screen = { x: 300, y: 60, width: 840, height: 440 }
+
+  it('scrolls to the far east, north and south edges and no further', () => {
+    expect(mapOrigin({ x: world.width, y: world.height / 2 }, world, screen).x).toBe(Math.round(screen.x + screen.width - world.width))
+    expect(mapOrigin({ x: 0, y: 0 }, world, screen)).toEqual({ x: screen.x, y: screen.y })
+    expect(mapOrigin({ x: 0, y: world.height }, world, screen).y).toBe(Math.round(screen.y + screen.height - world.height))
+    expect(clampOrigin({ x: -1e6, y: -1e6 }, world, screen)).toEqual({
+      x: Math.round(screen.x + screen.width - world.width),
+      y: Math.round(screen.y + screen.height - world.height),
+    })
   })
 })
