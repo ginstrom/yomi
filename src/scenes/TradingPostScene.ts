@@ -130,7 +130,7 @@ const RAIDED = '#ef5350'
 const ROUTE_TOP = 150
 const ROUTE_ROW_H = 72
 /** A route row's height once the tab pages, leaving room for the pager under four rows. */
-const ROUTE_PAGED_ROW_H = 70
+const ROUTE_PAGED_ROW_H = 69
 /** Where paged rows start: a few px above `ROUTE_TOP`, under the one-line heading, so a four-line offer fits its row. */
 const ROUTE_PAGED_TOP = 142
 const ROUTE_TEXT_W = LIST_W - 112
@@ -265,7 +265,7 @@ export class TradingPostScene extends Phaser.Scene {
   }
 
   private get pageY(): number {
-    if (this.tab === 'routes') return ROUTE_PAGED_TOP + ROUTE_ROWS * ROUTE_PAGED_ROW_H + 10
+    if (this.tab === 'routes') return ROUTE_PAGED_TOP + ROUTE_ROWS * ROUTE_PAGED_ROW_H + 13
     return this.listTop + this.rowsPerPage * ROW_H + 18
   }
 
