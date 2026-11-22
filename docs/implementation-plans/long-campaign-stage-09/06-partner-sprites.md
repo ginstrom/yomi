@@ -78,3 +78,15 @@ No game code changes: only sprite sources and the exported atlas.
 - [ ] One commit, "Stage 9 step 06: partner sprites", no attribution lines, files staged by path (on the step's worktree branch if run there); the index's row 06 updated with status and commit.
 
 ## 7. Execution record
+
+### Engineer record
+
+- Drew `art/map/map_partner_hold`, `map_partner_glade`, `map_partner_pass` (`.sprite.toml`, runs, `outline = "auto"`). `sprite check` ok; `npm run sprites` then `npm run sprites:check` up to date (131 sprites, 265 frames). README row added in `public/assets/sprites/README.md`. `yomi-asset-check`: sprites:check and sounds:check pass, no pin drift.
+- Looked at: `sprite preview <8 ids> --scale 8 --tint none,#9e9e9e --tint-mode multiply` (village, port, encampment, resource, monsters, then the three: all greyed beside the existing ones) and `--anim idle` for the three; at the 1x/2x size via the tint sheet's small copies. Previews: `art/.preview/map_partner_village+7more.plain.tints.png`, `art/.preview/map_partner_hold+map_partner_glade+map_partner_pass.anim-idle.png` (the `art/.preview/` folder is not committed). Seen: hold reads as snowy peaks over a gated cliff with a red banner and lit windows; glade as two tall dark trees flanking a thatched round hut; pass as a pale gatehouse between dark shoulders with a flame. Greyed at 0x9e9e9e all three keep their silhouettes and value contrast (pass's pale tower and the hold's gate stay clear; the glade's dark hut is the faintest).
+- For step 07 (all on the `map` canvas, 24x24, anchor 12,12, same origin as `map_partner_village`, no offset; footprint rows 0-21 like the village):
+  - `map_partner_hold`: frames `map_partner_hold/base`, `map_partner_hold/stir`; anim `map_partner_hold/idle` (500 ms).
+  - `map_partner_glade`: frames `base`, `sway`; anim `map_partner_glade/idle` (600 ms).
+  - `map_partner_pass`: frames `base`, `flicker`; anim `map_partner_pass/idle` (400 ms).
+- The 50-campaign check was not run (no rule change).
+- `npm test`: 2545 pass, 1 fails: `scripts/records.test.ts` "keeps each new plan index under 32000 bytes" (index.md is 34741 bytes, not touched by this step; fails on the branch as inherited).
+- Deviations: the index row and `log.md` were not edited (brief); `npm install` modified `package-lock.json`, reverted and not committed.

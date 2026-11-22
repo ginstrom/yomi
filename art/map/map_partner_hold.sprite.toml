@@ -1,0 +1,45 @@
+# A trade partner on the world map: Stonehollow, a mountain hold. Two snowy
+# peaks over a cliff face with a carved gate, torches at the gate, lit windows
+# and a red banner on the high peak.
+canvas = "map"
+outline = "auto"
+
+[frames.base.runs]
+# banner on the high peak
+1 = [[15, "n"]]
+2 = [[15, "n"], [16, "rrr"]]
+3 = [[15, "n"], [16, "rr"]]
+# the peaks
+4 = [[15, "W"]]
+5 = [[14, "aWm"]]
+6 = [[13, "aWWmm"]]
+7 = [[6, "W"], [12, "aaWWmmm"]]
+8 = [[5, "aWm"], [11, "aaaWmmmmm"]]
+9 = [[4, "aaWMM"], [10, "aaaaalmmmmm"]]
+10 = [[3, "aammmM"], [9, "aaaaalmmmmmmm"]]
+11 = [[2, "aaammmaaaaalmmmmmmmmm"]]
+# the cliff face, the gate, the torches and windows
+12 = [[1, "aaaaMaaaaaaaalmmmmmmmm"]]
+13 = [[1, "aaaaaMaaaaaaaaMmmmmmmm"]]
+14 = [[1, "aaaaYaaaFaMMMaYmmmYmmm"]]
+15 = [[1, "aaaaaaaanMNNNMnmmmmmmm"]]
+16 = [[1, "aaaMaaaaaMNNNMmmmMmmmm"]]
+17 = [[1, "aaaaaaaaaMNYNMmmmmmmmm"]]
+18 = [[1, "aaMaaaaaaMNNNMmmmmMmmm"]]
+19 = [[1, "aaaaaMaaaMNNNMmmmMmmmm"]]
+20 = [[1, "mmmmmmmmmmaaaaaammmmmm"]]
+
+# The banner stirs, the torches swap their flames, the gate glow drops.
+[frames.stir]
+from = "base"
+
+[frames.stir.runs]
+2 = [[18, "."]]
+3 = [[16, "rrr"]]
+14 = [[9, "Y"], [15, "F"]]
+17 = [[12, "N"]]
+18 = [[12, "Y"]]
+
+[anim.idle]
+frames = ["base", "stir"]
+ms = 500
