@@ -1,0 +1,41 @@
+# A trade partner on the world map: Elder Glade, a forest people. Two tall
+# dark-green trees either side of a round thatched hut with a lit lantern.
+canvas = "map"
+outline = "auto"
+
+[frames.base.runs]
+# the left tree's crown, then the right tree's
+1 = [[4, "eeg"]]
+2 = [[3, "eeggG"], [17, "eeg"]]
+3 = [[2, "eegggGG"], [16, "eeggG"]]
+4 = [[1, "eeggggGGG"], [15, "eegggGG"]]
+5 = [[1, "egggggGGG"], [14, "eeggggGGG"]]
+6 = [[1, "gggggGGGG"], [14, "egggggGGG"]]
+7 = [[2, "gggGGGG"], [14, "gggggGGGG"]]
+8 = [[3, "ggGGG"], [15, "gggGGGG"]]
+9 = [[5, "nN"], [16, "ggGGG"]]
+10 = [[5, "nN"], [17, "nN"]]
+11 = [[5, "nN"], [11, "Tt"], [17, "nN"]]
+12 = [[4, "nnNN"], [9, "TTTTtt"], [17, "nN"]]
+13 = [[5, "nN"], [8, "TTTTTttt"], [17, "nN"]]
+14 = [[5, "nN"], [7, "TTTTTTtttt"], [17, "nN"]]
+15 = [[5, "nN"], [8, "nnnnnnnn"], [17, "nN"]]
+16 = [[5, "nN"], [8, "nnnNNnyn"], [17, "nN"]]
+17 = [[5, "nN"], [8, "nnnNNnYn"], [17, "nN"]]
+18 = [[5, "nN"], [8, "nnnNNnnn"], [17, "nN"]]
+19 = [[5, "nN"], [8, "nnnNNnnn"], [17, "nN"]]
+20 = [[1, "ggegggeggggeggggeggegg"]]
+
+# The leaves sway and the lantern flickers.
+[frames.sway]
+from = "base"
+
+[frames.sway.runs]
+4 = [[1, "geegg"], [15, "geegg"]]
+5 = [[1, "ge"], [14, "ge"]]
+16 = [[14, "Y"]]
+17 = [[14, "y"]]
+
+[anim.idle]
+frames = ["base", "sway"]
+ms = 600

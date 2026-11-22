@@ -6105,6 +6105,168 @@
       24
     ]
   },
+  "map_partner_glade": {
+    "anchor": [
+      12,
+      12
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "base",
+            "ms": 600
+          },
+          {
+            "frame": "sway",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      0,
+      0,
+      24,
+      22
+    ],
+    "canvas": "map",
+    "display_scale": 2,
+    "file": "map_partner_glade.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          24,
+          22
+        ],
+        "file": "map_partner_glade__base.png"
+      },
+      "sway": {
+        "bounds": [
+          0,
+          0,
+          24,
+          22
+        ],
+        "file": "map_partner_glade__sway.png"
+      }
+    },
+    "size": [
+      24,
+      24
+    ]
+  },
+  "map_partner_hold": {
+    "anchor": [
+      12,
+      12
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "base",
+            "ms": 500
+          },
+          {
+            "frame": "stir",
+            "ms": 500
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      0,
+      0,
+      24,
+      22
+    ],
+    "canvas": "map",
+    "display_scale": 2,
+    "file": "map_partner_hold.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          24,
+          22
+        ],
+        "file": "map_partner_hold__base.png"
+      },
+      "stir": {
+        "bounds": [
+          0,
+          0,
+          24,
+          22
+        ],
+        "file": "map_partner_hold__stir.png"
+      }
+    },
+    "size": [
+      24,
+      24
+    ]
+  },
+  "map_partner_pass": {
+    "anchor": [
+      12,
+      12
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "base",
+            "ms": 400
+          },
+          {
+            "frame": "flicker",
+            "ms": 400
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      0,
+      0,
+      24,
+      22
+    ],
+    "canvas": "map",
+    "display_scale": 2,
+    "file": "map_partner_pass.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          24,
+          22
+        ],
+        "file": "map_partner_pass__base.png"
+      },
+      "flicker": {
+        "bounds": [
+          0,
+          0,
+          24,
+          22
+        ],
+        "file": "map_partner_pass__flicker.png"
+      }
+    },
+    "size": [
+      24,
+      24
+    ]
+  },
   "map_partner_port": {
     "anchor": [
       12,

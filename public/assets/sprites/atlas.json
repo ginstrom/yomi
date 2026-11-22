@@ -1702,7 +1702,7 @@
       "frame": {
         "h": 16,
         "w": 16,
-        "x": 673,
+        "x": 820,
         "y": 256
       },
       "pivot": {
@@ -1732,7 +1732,7 @@
       "frame": {
         "h": 16,
         "w": 16,
-        "x": 690,
+        "x": 837,
         "y": 256
       },
       "pivot": {
@@ -1756,7 +1756,7 @@
       "frame": {
         "h": 16,
         "w": 16,
-        "x": 707,
+        "x": 854,
         "y": 256
       },
       "pivot": {
@@ -1780,7 +1780,7 @@
       "frame": {
         "h": 16,
         "w": 16,
-        "x": 724,
+        "x": 871,
         "y": 256
       },
       "pivot": {
@@ -1804,7 +1804,7 @@
       "frame": {
         "h": 16,
         "w": 16,
-        "x": 741,
+        "x": 888,
         "y": 256
       },
       "pivot": {
@@ -1828,7 +1828,7 @@
       "frame": {
         "h": 16,
         "w": 16,
-        "x": 758,
+        "x": 905,
         "y": 256
       },
       "pivot": {
@@ -1858,7 +1858,7 @@
       "frame": {
         "h": 16,
         "w": 16,
-        "x": 775,
+        "x": 922,
         "y": 256
       },
       "pivot": {
@@ -3922,7 +3922,7 @@
       "frame": {
         "h": 20,
         "w": 20,
-        "x": 726,
+        "x": 876,
         "y": 231
       },
       "pivot": {
@@ -3946,7 +3946,7 @@
       "frame": {
         "h": 20,
         "w": 20,
-        "x": 747,
+        "x": 897,
         "y": 231
       },
       "pivot": {
@@ -3970,7 +3970,7 @@
       "frame": {
         "h": 20,
         "w": 20,
-        "x": 768,
+        "x": 918,
         "y": 231
       },
       "pivot": {
@@ -3994,7 +3994,7 @@
       "frame": {
         "h": 20,
         "w": 20,
-        "x": 789,
+        "x": 939,
         "y": 231
       },
       "pivot": {
@@ -4018,7 +4018,7 @@
       "frame": {
         "h": 20,
         "w": 20,
-        "x": 810,
+        "x": 960,
         "y": 231
       },
       "pivot": {
@@ -4042,7 +4042,7 @@
       "frame": {
         "h": 20,
         "w": 20,
-        "x": 831,
+        "x": 981,
         "y": 231
       },
       "pivot": {
@@ -4066,7 +4066,7 @@
       "frame": {
         "h": 20,
         "w": 20,
-        "x": 852,
+        "x": 1002,
         "y": 231
       },
       "pivot": {
@@ -4090,174 +4090,6 @@
       "frame": {
         "h": 20,
         "w": 20,
-        "x": 873,
-        "y": 231
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      },
-      "rotated": false,
-      "sourceSize": {
-        "h": 20,
-        "w": 20
-      },
-      "spriteSourceSize": {
-        "h": 20,
-        "w": 20,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "icon_circlet/base": {
-      "frame": {
-        "h": 20,
-        "w": 20,
-        "x": 894,
-        "y": 231
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      },
-      "rotated": false,
-      "sourceSize": {
-        "h": 20,
-        "w": 20
-      },
-      "spriteSourceSize": {
-        "h": 20,
-        "w": 20,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "icon_cloak/base": {
-      "frame": {
-        "h": 20,
-        "w": 20,
-        "x": 915,
-        "y": 231
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      },
-      "rotated": false,
-      "sourceSize": {
-        "h": 20,
-        "w": 20
-      },
-      "spriteSourceSize": {
-        "h": 20,
-        "w": 20,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "icon_crossbow/base": {
-      "frame": {
-        "h": 20,
-        "w": 20,
-        "x": 936,
-        "y": 231
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      },
-      "rotated": false,
-      "sourceSize": {
-        "h": 20,
-        "w": 20
-      },
-      "spriteSourceSize": {
-        "h": 20,
-        "w": 20,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "icon_dagger/base": {
-      "frame": {
-        "h": 20,
-        "w": 20,
-        "x": 957,
-        "y": 231
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      },
-      "rotated": false,
-      "sourceSize": {
-        "h": 20,
-        "w": 20
-      },
-      "spriteSourceSize": {
-        "h": 20,
-        "w": 20,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "icon_gauntlets/base": {
-      "frame": {
-        "h": 20,
-        "w": 20,
-        "x": 978,
-        "y": 231
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      },
-      "rotated": false,
-      "sourceSize": {
-        "h": 20,
-        "w": 20
-      },
-      "spriteSourceSize": {
-        "h": 20,
-        "w": 20,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "icon_gloves/base": {
-      "frame": {
-        "h": 20,
-        "w": 20,
-        "x": 999,
-        "y": 231
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      },
-      "rotated": false,
-      "sourceSize": {
-        "h": 20,
-        "w": 20
-      },
-      "spriteSourceSize": {
-        "h": 20,
-        "w": 20,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "icon_greatsword/base": {
-      "frame": {
-        "h": 20,
-        "w": 20,
         "x": 1,
         "y": 256
       },
@@ -4278,7 +4110,7 @@
       },
       "trimmed": false
     },
-    "icon_greaves/base": {
+    "icon_circlet/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4302,7 +4134,7 @@
       },
       "trimmed": false
     },
-    "icon_halberd/base": {
+    "icon_cloak/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4326,7 +4158,7 @@
       },
       "trimmed": false
     },
-    "icon_helm/base": {
+    "icon_crossbow/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4350,7 +4182,7 @@
       },
       "trimmed": false
     },
-    "icon_leather/base": {
+    "icon_dagger/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4374,7 +4206,7 @@
       },
       "trimmed": false
     },
-    "icon_longbow/base": {
+    "icon_gauntlets/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4398,7 +4230,7 @@
       },
       "trimmed": false
     },
-    "icon_mace/base": {
+    "icon_gloves/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4422,7 +4254,7 @@
       },
       "trimmed": false
     },
-    "icon_plate/base": {
+    "icon_greatsword/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4446,7 +4278,7 @@
       },
       "trimmed": false
     },
-    "icon_rapier/base": {
+    "icon_greaves/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4470,7 +4302,7 @@
       },
       "trimmed": false
     },
-    "icon_ring/base": {
+    "icon_halberd/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4494,7 +4326,7 @@
       },
       "trimmed": false
     },
-    "icon_ring_fortune/base": {
+    "icon_helm/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4518,7 +4350,7 @@
       },
       "trimmed": false
     },
-    "icon_robe/base": {
+    "icon_leather/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4542,7 +4374,7 @@
       },
       "trimmed": false
     },
-    "icon_rune_acid/base": {
+    "icon_longbow/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4566,7 +4398,7 @@
       },
       "trimmed": false
     },
-    "icon_rune_dawn/base": {
+    "icon_mace/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4590,7 +4422,7 @@
       },
       "trimmed": false
     },
-    "icon_rune_ember/base": {
+    "icon_plate/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4614,7 +4446,7 @@
       },
       "trimmed": false
     },
-    "icon_rune_life/base": {
+    "icon_rapier/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4638,7 +4470,7 @@
       },
       "trimmed": false
     },
-    "icon_rune_mind/base": {
+    "icon_ring/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4662,7 +4494,7 @@
       },
       "trimmed": false
     },
-    "icon_rune_rime/base": {
+    "icon_ring_fortune/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4686,7 +4518,7 @@
       },
       "trimmed": false
     },
-    "icon_rune_stone/base": {
+    "icon_robe/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4710,7 +4542,7 @@
       },
       "trimmed": false
     },
-    "icon_rune_storm/base": {
+    "icon_rune_acid/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4734,7 +4566,7 @@
       },
       "trimmed": false
     },
-    "icon_rune_venom/base": {
+    "icon_rune_dawn/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4758,7 +4590,7 @@
       },
       "trimmed": false
     },
-    "icon_rune_wind/base": {
+    "icon_rune_ember/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4782,7 +4614,7 @@
       },
       "trimmed": false
     },
-    "icon_shield/base": {
+    "icon_rune_life/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4806,7 +4638,7 @@
       },
       "trimmed": false
     },
-    "icon_shortsword/base": {
+    "icon_rune_mind/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4830,55 +4662,7 @@
       },
       "trimmed": false
     },
-    "icon_socket_empty/base": {
-      "frame": {
-        "h": 6,
-        "w": 6,
-        "x": 826,
-        "y": 256
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      },
-      "rotated": false,
-      "sourceSize": {
-        "h": 6,
-        "w": 6
-      },
-      "spriteSourceSize": {
-        "h": 6,
-        "w": 6,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "icon_socket_filled/base": {
-      "frame": {
-        "h": 6,
-        "w": 6,
-        "x": 833,
-        "y": 256
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      },
-      "rotated": false,
-      "sourceSize": {
-        "h": 6,
-        "w": 6
-      },
-      "spriteSourceSize": {
-        "h": 6,
-        "w": 6,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "icon_spear/base": {
+    "icon_rune_rime/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4902,7 +4686,7 @@
       },
       "trimmed": false
     },
-    "icon_staff/base": {
+    "icon_rune_stone/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4926,7 +4710,7 @@
       },
       "trimmed": false
     },
-    "icon_sword/base": {
+    "icon_rune_storm/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4950,7 +4734,7 @@
       },
       "trimmed": false
     },
-    "icon_sword_ember/base": {
+    "icon_rune_venom/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4974,7 +4758,7 @@
       },
       "trimmed": false
     },
-    "icon_tower_shield/base": {
+    "icon_rune_wind/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4998,7 +4782,7 @@
       },
       "trimmed": false
     },
-    "icon_wand/base": {
+    "icon_shield/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -5022,7 +4806,7 @@
       },
       "trimmed": false
     },
-    "icon_wand_storm/base": {
+    "icon_shortsword/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -5046,11 +4830,227 @@
       },
       "trimmed": false
     },
-    "icon_war_hammer/base": {
+    "icon_socket_empty/base": {
+      "frame": {
+        "h": 6,
+        "w": 6,
+        "x": 973,
+        "y": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 6,
+        "w": 6
+      },
+      "spriteSourceSize": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "icon_socket_filled/base": {
+      "frame": {
+        "h": 6,
+        "w": 6,
+        "x": 980,
+        "y": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 6,
+        "w": 6
+      },
+      "spriteSourceSize": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "icon_spear/base": {
       "frame": {
         "h": 20,
         "w": 20,
         "x": 652,
+        "y": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 20,
+        "w": 20
+      },
+      "spriteSourceSize": {
+        "h": 20,
+        "w": 20,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "icon_staff/base": {
+      "frame": {
+        "h": 20,
+        "w": 20,
+        "x": 673,
+        "y": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 20,
+        "w": 20
+      },
+      "spriteSourceSize": {
+        "h": 20,
+        "w": 20,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "icon_sword/base": {
+      "frame": {
+        "h": 20,
+        "w": 20,
+        "x": 694,
+        "y": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 20,
+        "w": 20
+      },
+      "spriteSourceSize": {
+        "h": 20,
+        "w": 20,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "icon_sword_ember/base": {
+      "frame": {
+        "h": 20,
+        "w": 20,
+        "x": 715,
+        "y": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 20,
+        "w": 20
+      },
+      "spriteSourceSize": {
+        "h": 20,
+        "w": 20,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "icon_tower_shield/base": {
+      "frame": {
+        "h": 20,
+        "w": 20,
+        "x": 736,
+        "y": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 20,
+        "w": 20
+      },
+      "spriteSourceSize": {
+        "h": 20,
+        "w": 20,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "icon_wand/base": {
+      "frame": {
+        "h": 20,
+        "w": 20,
+        "x": 757,
+        "y": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 20,
+        "w": 20
+      },
+      "spriteSourceSize": {
+        "h": 20,
+        "w": 20,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "icon_wand_storm/base": {
+      "frame": {
+        "h": 20,
+        "w": 20,
+        "x": 778,
+        "y": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 20,
+        "w": 20
+      },
+      "spriteSourceSize": {
+        "h": 20,
+        "w": 20,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "icon_war_hammer/base": {
+      "frame": {
+        "h": 20,
+        "w": 20,
+        "x": 799,
         "y": 256
       },
       "pivot": {
@@ -5652,7 +5652,7 @@
       },
       "trimmed": false
     },
-    "map_partner_port/base": {
+    "map_partner_glade/base": {
       "frame": {
         "h": 24,
         "w": 24,
@@ -5676,7 +5676,7 @@
       },
       "trimmed": false
     },
-    "map_partner_port/swell": {
+    "map_partner_glade/sway": {
       "frame": {
         "h": 24,
         "w": 24,
@@ -5700,7 +5700,7 @@
       },
       "trimmed": false
     },
-    "map_partner_village/base": {
+    "map_partner_hold/base": {
       "frame": {
         "h": 24,
         "w": 24,
@@ -5724,7 +5724,7 @@
       },
       "trimmed": false
     },
-    "map_partner_village/turn": {
+    "map_partner_hold/stir": {
       "frame": {
         "h": 24,
         "w": 24,
@@ -5748,7 +5748,7 @@
       },
       "trimmed": false
     },
-    "map_resource/base": {
+    "map_partner_pass/base": {
       "frame": {
         "h": 24,
         "w": 24,
@@ -5772,7 +5772,7 @@
       },
       "trimmed": false
     },
-    "map_resource/glint_0": {
+    "map_partner_pass/flicker": {
       "frame": {
         "h": 24,
         "w": 24,
@@ -5796,7 +5796,7 @@
       },
       "trimmed": false
     },
-    "map_resource/glint_1": {
+    "map_partner_port/base": {
       "frame": {
         "h": 24,
         "w": 24,
@@ -5820,7 +5820,7 @@
       },
       "trimmed": false
     },
-    "map_watchtower/base": {
+    "map_partner_port/swell": {
       "frame": {
         "h": 24,
         "w": 24,
@@ -5844,11 +5844,155 @@
       },
       "trimmed": false
     },
-    "map_watchtower/flag_1": {
+    "map_partner_village/base": {
       "frame": {
         "h": 24,
         "w": 24,
         "x": 701,
+        "y": 231
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 24,
+        "w": 24
+      },
+      "spriteSourceSize": {
+        "h": 24,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "map_partner_village/turn": {
+      "frame": {
+        "h": 24,
+        "w": 24,
+        "x": 726,
+        "y": 231
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 24,
+        "w": 24
+      },
+      "spriteSourceSize": {
+        "h": 24,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "map_resource/base": {
+      "frame": {
+        "h": 24,
+        "w": 24,
+        "x": 751,
+        "y": 231
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 24,
+        "w": 24
+      },
+      "spriteSourceSize": {
+        "h": 24,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "map_resource/glint_0": {
+      "frame": {
+        "h": 24,
+        "w": 24,
+        "x": 776,
+        "y": 231
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 24,
+        "w": 24
+      },
+      "spriteSourceSize": {
+        "h": 24,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "map_resource/glint_1": {
+      "frame": {
+        "h": 24,
+        "w": 24,
+        "x": 801,
+        "y": 231
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 24,
+        "w": 24
+      },
+      "spriteSourceSize": {
+        "h": 24,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "map_watchtower/base": {
+      "frame": {
+        "h": 24,
+        "w": 24,
+        "x": 826,
+        "y": 231
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 24,
+        "w": 24
+      },
+      "spriteSourceSize": {
+        "h": 24,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "map_watchtower/flag_1": {
+      "frame": {
+        "h": 24,
+        "w": 24,
+        "x": 851,
         "y": 231
       },
       "pivot": {
@@ -6364,7 +6508,7 @@
       "frame": {
         "h": 16,
         "w": 16,
-        "x": 792,
+        "x": 939,
         "y": 256
       },
       "pivot": {
@@ -6388,7 +6532,7 @@
       "frame": {
         "h": 16,
         "w": 16,
-        "x": 809,
+        "x": 956,
         "y": 256
       },
       "pivot": {

@@ -1512,6 +1512,54 @@
       "frames": [
         {
           "duration": 600,
+          "frame": "map_partner_glade/base",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "map_partner_glade/sway",
+          "key": "atlas"
+        }
+      ],
+      "key": "map_partner_glade/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 500,
+          "frame": "map_partner_hold/base",
+          "key": "atlas"
+        },
+        {
+          "duration": 500,
+          "frame": "map_partner_hold/stir",
+          "key": "atlas"
+        }
+      ],
+      "key": "map_partner_hold/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 400,
+          "frame": "map_partner_pass/base",
+          "key": "atlas"
+        },
+        {
+          "duration": 400,
+          "frame": "map_partner_pass/flicker",
+          "key": "atlas"
+        }
+      ],
+      "key": "map_partner_pass/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
           "frame": "map_partner_port/base",
           "key": "atlas"
         },
