@@ -107,6 +107,9 @@ const CONFIRM_Y = 432
 const CONFIRM_ALL_Y = CONFIRM_Y - 40
 const REFUSAL_Y = 380
 const MESSAGE_Y = 462
+/** The minimap stack's lowest point: above a message line of up to two lines centred on `MESSAGE_Y`. */
+const STACK_BOTTOM = MESSAGE_Y - 20
+const STACK_GAP = 6
 const BUTTON_Y = 495
 /** The Buy tab's filter: the slot buttons (and Runes) across the frame, the families of the slot under them, eight to a row. */
 const SLOT_Y = 130
@@ -161,6 +164,9 @@ export class TradingPostScene extends Phaser.Scene {
   private routeRefusal: string | null = null
   /** The notes drawn under the minimap (`routeNotes`). */
   private routeNotes: string[] = []
+  private messageHeight = 0
+  /** The bottom of the stack under the minimap, in the frame's units, or null with none drawn. */
+  private routeStackBottom: number | null = null
 
   constructor() {
     super('TradingPost')
@@ -237,6 +243,10 @@ export class TradingPostScene extends Phaser.Scene {
       })),
       routeRefusal: this.routeRefusal,
       routeNotes: [...this.routeNotes],
+      routeStack:
+        this.routeStackBottom === null
+          ? null
+          : { bottom: y + this.routeStackBottom * scale, messageTop: y + (MESSAGE_Y - Math.max(this.messageHeight, 16) / 2) * scale },
     }
   }
 
@@ -324,6 +334,7 @@ export class TradingPostScene extends Phaser.Scene {
     this.routeLines = []
     this.routeRefusal = null
     this.routeNotes = []
+    this.routeStackBottom = null
     this.rowAt = new Map()
     this.slotAt = new Map()
     this.runesAt = null
@@ -338,9 +349,7 @@ export class TradingPostScene extends Phaser.Scene {
       this.add
         .text(CENTRE_X, TITLE_Y + 28, `${actingFor(this.gameState, this.expedition)}${tradingPostName(world.tradingPost)}, level ${world.tradingPost}.  Gold in the stock: ${world.stock.gold ?? 0}`, { fontFamily: FONT, fontSize: '13px', color: DIM })
         .setOrigin(0.5),
-      this.add
-        .text(CENTRE_X, MESSAGE_Y, this.message, { fontFamily: FONT, fontSize: '13px', color: TEXT, align: 'center', wordWrap: { width: FRAME_W - 40 } })
-        .setOrigin(0.5),
+      this.messageLine(),
     ])
     this.button('buyTab', { x: 140, y: TAB_Y, width: 120, height: 30 }, 'Buy', () => this.show('buy'), true, this.tab === 'buy')
     this.button('sellTab', { x: 280, y: TAB_Y, width: 120, height: 30 }, 'Sell', () => this.show('sell'), true, this.tab === 'sell')
@@ -530,21 +539,43 @@ export class TradingPostScene extends Phaser.Scene {
     this.frame.add(g)
     // The road's length is in its row; a caption only when there is no road to draw.
     const caption = row ? (row.road ? null : `No road to ${row.name}`) : 'Nothing to show yet.'
-    // Under the minimap, stacked: the caption, the notes (why security is short, the good's condition), the refusal.
-    let y = MINIMAP.y + MINIMAP.height + 8
-    const stack = (text: string, color: string) => {
-      const shown = this.add.text(DETAILS_X, y, text, { fontFamily: FONT, fontSize: '12px', color, wordWrap: { width: DETAILS_W }, lineSpacing: 2 })
-      this.frame.add(shown)
-      y += shown.height + 6
+    // Under the minimap, stacked: the caption, the notes (the raid, why security is short, the good's condition), the refusal.
+    // Told once: once Open was clicked, the message line says the refusal.
+    const refusal = row?.status === 'closed' && row.refusal && row.refusal !== this.message ? row.refusal : null
+    // With a refusal to tell, the good's condition gives way to it.
+    const notes = row ? routeNotes(row, { good: refusal === null }) : []
+    const items: { text: string; color: string; kind: 'caption' | 'note' | 'refusal' }[] = [
+      ...(caption ? [{ text: caption, color: DIM, kind: 'caption' as const }] : []),
+      ...notes.map((text) => ({ text, color: TEXT, kind: 'note' as const })),
+      ...(refusal ? [{ text: refusal, color: REFUSED, kind: 'refusal' as const }] : []),
+    ]
+    const top = MINIMAP.y + MINIMAP.height + 8
+    const texts = items.map((item) => this.add.text(DETAILS_X, 0, item.text, { fontFamily: FONT, fontSize: '12px', color: item.color, wordWrap: { width: DETAILS_W }, lineSpacing: 2 }))
+    const height = () => texts.reduce((sum, t) => sum + (t.active ? t.height + STACK_GAP : 0), 0)
+    // Kept above the message line: the notes give way from the last (the good's, then security's), never the refusal.
+    for (let i = items.length - 1; i >= 0 && top + height() > STACK_BOTTOM; i--) {
+      if (items[i].kind === 'note') texts[i].destroy()
     }
-    if (caption) stack(caption, DIM)
-    this.routeNotes = row ? routeNotes(row) : []
-    for (const note of this.routeNotes) stack(note, TEXT)
-    // Told once: once Open was clicked, the message line says it.
-    if (row?.status === 'closed' && row.refusal && row.refusal !== this.message) {
-      this.routeRefusal = row.refusal
-      stack(row.refusal, REFUSED)
-    }
+    let y = top
+    this.routeNotes = []
+    items.forEach((item, i) => {
+      if (!texts[i].active) return
+      texts[i].setY(y)
+      this.frame.add(texts[i])
+      y += texts[i].height + STACK_GAP
+      if (item.kind === 'note') this.routeNotes.push(item.text)
+      if (item.kind === 'refusal') this.routeRefusal = item.text
+    })
+    this.routeStackBottom = y - STACK_GAP
+  }
+
+  /** The message line, centred on `MESSAGE_Y`; its height is kept for the probe. */
+  private messageLine(): Phaser.GameObjects.Text {
+    const text = this.add
+      .text(CENTRE_X, MESSAGE_Y, this.message, { fontFamily: FONT, fontSize: '13px', color: TEXT, align: 'center', wordWrap: { width: FRAME_W - 40 } })
+      .setOrigin(0.5)
+    this.messageHeight = this.message ? text.height : 0
+    return text
   }
 
   private chooseRoute(partner: string): void {

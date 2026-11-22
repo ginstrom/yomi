@@ -321,6 +321,8 @@ export interface TradingPostProbe {
   routeRefusal: string | null
   /** The chosen row's notes under the minimap (`routeNotes`: why security is short of 100%, the good's condition). */
   routeNotes: string[]
+  /** The bottom of the stack under the minimap and the top of the message line, on screen; null with no stack. The stack stays above the message. */
+  routeStack: { bottom: number; messageTop: number } | null
 }
 
 export interface CraftingProbe {

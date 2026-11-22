@@ -126,9 +126,10 @@ const GOOD_DAYS = 2 * YIELD_DAYS
  * The chosen row's notes, shown under the minimap: for an offer raided at
  * once, by what (as far as the player knows); why its security is below
  * 100% (its unsafe hexes, towers guarding, parties not), and the condition on
- * the partner's good. Empty with no road.
+ * the partner's good (left out with `good: false`, when a refusal needs the
+ * room). Empty with no road.
  */
-export function routeNotes(row: RouteRow): string[] {
+export function routeNotes(row: RouteRow, { good = true }: { good?: boolean } = {}): string[] {
   if (row.length === null || row.security === null) return []
   const notes: string[] = row.status === 'closed' && row.raid ? [`Raided at once: ${row.raid}.`] : []
   const security = Math.round(row.security * 100)
@@ -139,7 +140,7 @@ export function routeNotes(row: RouteRow): string[] {
     const [count, word] = first.split(' ')
     notes.push(`Security ${security}%: ${[`${count} of ${row.length} hexes ${word}`, ...rest].join(', ')}.`)
   }
-  notes.push(`1 ${row.good} every ${GOOD_DAYS} days while security is 50% or more${row.security < 0.5 ? ' (not now)' : ''}.`)
+  if (good) notes.push(`1 ${row.good} every ${GOOD_DAYS} days while security is 50% or more${row.security < 0.5 ? ' (not now)' : ''}.`)
   return notes
 }
 

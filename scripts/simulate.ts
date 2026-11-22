@@ -406,7 +406,7 @@ export interface CampaignRecord {
   goldBySource: { sites: number; market: number; routes: number; sales: number }
   /** Trade partners contacted (`partner_contacted`). */
   partnersContacted: number
-  /** Trade routes opened at home (`route_opened`), raided (runs of raids: `route_raided` on its first day) and abandoned. */
+  /** Trade routes opened at home (`route_opened`), raided (runs of raids that reach a yield day: `route_raided` with `days` 1, the first raided yield day of a run) and abandoned. */
   routesOpened: number
   routesRaided: number
   routesAbandoned: number

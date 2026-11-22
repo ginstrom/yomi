@@ -198,6 +198,7 @@ describe('routeOffer and routeState', () => {
     expect(routeNotes(closed({ security: 0.4, weak: { tainted: 3, blighted: 2, corrupted: 1 } }))[0]).toBe('Security 40%: 3 of 14 hexes tainted, 2 blighted, 1 corrupted.')
     expect(routeNotes(closed({ security: 0.4, weak: { tainted: 3, blighted: 2, corrupted: 1 } }))[1]).toBe(`1 timber every ${2 * YIELD_DAYS} days while security is 50% or more (not now).`)
     expect(routeNotes(closed({ length: null, road: null, security: null }))).toEqual([])
+    expect(routeNotes(closed(), { good: false })).toEqual([])
   })
 
   it('states an open route: security as a whole percentage, income, raided days', () => {

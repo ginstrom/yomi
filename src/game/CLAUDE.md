@@ -27,7 +27,7 @@ Loaded when working in `src/game/`: encounters and bandits, the company and its 
 - `camp.ts`: camping, a day's rest and camping until healed.
 - `blight.ts`: each hex's level, the day's contest of influence (partners and, at Lodge 3, roads among the clean sources), growth with time, spawning and cleansing; the `WorldEvent`s a turn returns.
 - `territory.ts`: resources and the encampment held and lost, warnings of a site under threat, yields to the stock, the market's gold among them (`MARKET_INCOME`).
-- `trade.ts`: trade partners, contact and silence (`partnerDay`); trade routes, their roads, security and guards, raids and abandonment (`tradeDay`, run by `territory.ts` on yield days).
+- `trade.ts`: trade partners, contact and silence (`partnerDay`); trade routes, their roads, security and guards, raids and abandonment (`tradeDay`, run daily by `territory.ts`).
 - `vision.ts`: fog of war.
 - `buildings.ts`: the stock's arithmetic, the watchtower and shrine, a held resource's improvements (outpost, works, fort) and the Builders' Lodge that allows them (at 3, roads push).
 - `encampment.ts`: the facilities as the encampment screen shows them, and `improveFacility`.

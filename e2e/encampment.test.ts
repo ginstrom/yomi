@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { EncampmentProbe, GuildHallProbe } from '../src/testHook.ts'
 import { PARTNERS } from '../src/game/worldMap.ts'
 import { hexNeighbors, hexToOffset } from '../src/grid/hex.ts'
+import { roadTo } from '../src/game/trade.ts'
 import { useGames, type Game } from './driver.ts'
 
 /** A new game with gold and iron (or `stock`) planted in its stock, reloaded and continued at the encampment. */
@@ -766,5 +767,54 @@ describe('the encampment', () => {
     await game.click(again.buttons.routesTab)
     const raided = await game.settled('TradingPost', (p) => p.routes[0]?.status === 'raided')
     expect(raided.routes[0].line).toMatch(/pays nothing while raided$/)
+  })
+
+  it('keeps the Routes tab\'s notes and refusal above the message line at 840 × 560, in the worst case (verification round 3)', async () => {
+    const game = await games.open()
+    const start = await game.newGame()
+    const road = roadTo(start.world, 'saltmere')!
+    const cols = start.world.board.cols
+    const index = (i: number) => {
+      const { col, row } = hexToOffset(road[i])
+      return row * cols + col
+    }
+    // Saltmere's road: corrupted (explored) far out, blighted and tainted beyond it, so the offer is raided at once,
+    // its security below 50% (the good's note "(not now)"), and with the stock spent on Millbrook's route, refused.
+    const marks = [
+      { index: index(15), level: 3 },
+      ...[16, 17, 18, 19, 20, 21, 22, 23, 24, 25].map((i) => ({ index: index(i), level: 2 })),
+      ...[8, 9, 10, 11, 12, 13, 14, 26, 27].map((i) => ({ index: index(i), level: 1 })),
+    ]
+    await game.page.evaluate((planted) => {
+      const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
+      const { world } = saved.game
+      world.contacted = ['millbrook', 'saltmere']
+      world.tradingPost = 5
+      world.stock = { gold: 27, timber: 10 }
+      for (const { index, level } of planted) {
+        world.blight[index] = level
+        world.seen[index] = level
+      }
+      localStorage.setItem('yomi.save.1', JSON.stringify(saved))
+    }, marks)
+    await game.resize(840, 560)
+    await game.click((await game.reload()).buttons.continue)
+    await game.waitForScenes(['World'])
+    const camp = await enter(game)
+    await game.click(facility(camp, 'trading_post'))
+    await game.click((await game.settled('Encampment', (c) => c.selected === 'trading_post')).buttons.open)
+    await game.waitForScenes(['TradingPost'], ['World'])
+    await game.click((await game.settled('TradingPost')).buttons.routesTab)
+    const tab = await game.settled('TradingPost', (p) => p.tab === 'routes' && p.routes.length === 2)
+    await game.click(tab.routes[0].open!)
+    const opened = await game.settled('TradingPost', (p) => p.routes[0]?.status === 'open' || p.routes[0]?.status === 'raided')
+    expect(opened.message).toBe('A road is opened to Millbrook.')
+    await game.click({ x: opened.routes[1].open!.x - 150, y: opened.routes[1].open!.y })
+    const worst = await game.settled('TradingPost', (p) => p.routes[1]?.selected === true)
+    expect(worst.routes[1].line).toMatch(/Raided at once\.$/)
+    expect(worst.routeRefusal).toMatch(/more than the stock holds/)
+    expect(worst.routeNotes[0]).toMatch(/^Raided at once: the blight has overrun it \d+ hexes out\.$/)
+    expect(worst.routeStack).not.toBeNull()
+    expect(worst.routeStack!.bottom).toBeLessThan(worst.routeStack!.messageTop)
   })
 })

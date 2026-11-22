@@ -244,8 +244,9 @@ export function raidCause(world: WorldState, route: Pick<TradeRoute, 'partner' |
  * (`TradeRoute.raided`). On yield days each route in order is raided
  * (counting its run in `raidedDays`, `route_raided` with that count, and
  * abandoned at `ABANDON_AFTER`) or pays its gold, and on every second yield
- * day 1 of its partner's good when its security is at least ½; a clear yield
- * day ends the run's count. Nothing once the encampment is lost.
+ * day 1 of its partner's good when its security is at least ½. The count
+ * starts afresh the day a route is told safe (`route_restored`), and on a
+ * clear yield day. Nothing once the encampment is lost.
  */
 export function tradeDay(world: WorldState, presences: readonly PartyPresence[]): WorldEvent[] {
   if (world.status === 'lost') return []
@@ -259,6 +260,8 @@ export function tradeDay(world: WorldState, presences: readonly PartyPresence[])
       const raider = now.raider ? { raider: now.raider.id, raiderName: now.raider.name } : {}
       events.push({ type: 'route_raided', ...named, cause: now.cause, ...raider, days: 0 })
     } else if (!now && route.raided) {
+      // Told safe: the run's count starts afresh (the user's decision), so abandonment needs a new run.
+      route.raidedDays = 0
       events.push({ type: 'route_restored', ...named })
     }
     route.raided = now !== null

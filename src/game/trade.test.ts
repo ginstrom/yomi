@@ -546,8 +546,8 @@ describe('the routes\' yield day (economy A6)', () => {
     expect(isNotable(world, cleared[0], [])).toBe(false)
     expect(route.raided).toBe(false)
     expect(day(world, 8)).toEqual([])
-    // The count is kept and cleared on yield days only.
-    expect(route.raidedDays).toBe(1)
+    // Told safe, the count starts afresh at once (verification round 3).
+    expect(route.raidedDays).toBe(0)
     expect(day(world, 10)).toEqual([goldYield, timberYield])
     expect(route.raidedDays).toBe(0)
     // A raid that starts and ends between yield days is told and its end told, and never counted.
@@ -556,6 +556,21 @@ describe('the routes\' yield day (economy A6)', () => {
     world.locations = world.locations.filter((l) => l !== again)
     expect(day(world, 12)).toEqual([{ type: 'route_restored', ...named }])
     expect(day(world, 15)).toEqual([goldYield])
+  })
+
+  it('starts the count afresh once the road is told safe: no abandonment from an older run (verification round 3, the user\'s decision)', () => {
+    const { world, route } = open()
+    nest(world, offsetToHex(5, LANE - 1), 'raider')
+    for (const turn of [5, 10, 15, 20, 25]) day(world, turn)
+    expect(route.raidedDays).toBe(5)
+    world.locations = world.locations.filter((l) => l.id !== 'raider')
+    expect(day(world, 26)).toEqual([{ type: 'route_restored', ...named }])
+    expect(route.raidedDays).toBe(0)
+    nest(world, offsetToHex(5, LANE - 1), 'raider')
+    expect(day(world, 29)).toEqual([{ ...raidedBy, days: 0 }])
+    const thirty = day(world, 30)
+    expect(thirty).toEqual([{ ...raidedBy, days: 1 }])
+    expect(world.routes).toEqual([route])
   })
 
   it('tells silence and corruption without a raider', () => {

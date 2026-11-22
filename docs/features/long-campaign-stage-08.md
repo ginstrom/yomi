@@ -15,7 +15,7 @@
   - Plan log (history): `docs/implementation-plans/long-campaign-stage-08/log.md`
 - Open questions: none (the road's raid range settled by the user, 2026-11-21).
 - Tiers (engineer / reviewer): planner opus; 01, 02, 07, 08 opus / opus; 03–06 sonnet / opus; no escalations. Verification: overall review opus, QA sonnet, simulated user sonnet.
-- Verification: overall review at a12cddd: changes needed (this record over its cap; fixed next commit); QA running; simulated user at a12cddd: goals 1–3 met, 4 partly, 5 found but route unprofitable.
+- Verification: overall review at 0c45352: ready for a PR; QA at 0c45352: 7/8 pass (stack overlap, fixing in round 3); simulated user at a12cddd: goals 1–3 met, 4 partly, 5 found but route unprofitable (friction fixed in rounds 1–2).
 - Carried forward:
   - Accepted, not fixed: a road's shape (avoiding unsighted nests, decision 6) can hint at nests in the fog; the Routes preview's security, income and corruption cause use the true blight, not `seen` (follows C6 and decision 8); the overlay shades fogged road hexes by true blight (user, decision 10).
   - Stage 9: the Routes tab shows at most 4 rows with no paging (a test trips when PARTNERS exceeds it).
@@ -38,3 +38,4 @@
 | 2026-11-22 | Step 05 follow-ups: grey a partner only when contacted or in sight; a raided road's hover says it pays nothing | orchestrator | as contracted | Decision 3 (silence told only for contacted); a raided route pays nothing |
 | 2026-11-22 | Step 08: add a measurement-only simulator flag that starts the trading post at level 4 and reports routes opened, raided and their gold share; full-campaign route figures wait for stage 12's spend-order retune | user | defer only; raise the post now | Routes open 0.03 a campaign at ready level 10 under the kept spend order |
 | 2026-11-22 | Verification UX: the road hover counts parties (preview stays towers-only); a raid is told the day the road turns red (counting stays on yield days); the Routes offer names the good, the reason for low security and where corruption is; Open stays allowed; fogged road colours stay live | user | keep decisions 5 and 8 as planned; a confirm click; shade by last seen | Simulated user and QA friction |
+| 2026-11-22 | A route's raid count resets when the road is told safe again (any day) | user | count only on yield days, reword the manual | 'Safe again' should mean a fresh 30 days |

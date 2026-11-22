@@ -16,7 +16,8 @@ import { ENCAMPMENT_ID, encampment, type QuietLocation, type WorldState } from '
  * site is lost. A watchtower is lost and warned of as a held site is, at
  * `LOSS_LEVEL`, and yields nothing. At the end of the day the trade
  * partners are contacted and fall silent or wake (`partnerDay` in trade.ts),
- * and on yield days the trade routes pay or are raided (`tradeDay`).
+ * then the trade routes' day (`tradeDay`): every day a raid or its end is
+ * told, and on yield days the routes pay or count their raids.
  */
 
 /** What the warning of a tower under threat calls it. */
