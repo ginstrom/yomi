@@ -6,7 +6,7 @@ import type { Expedition } from '../game/expedition.ts'
 import type { GameState } from '../game/gameState.ts'
 import { itemAt, type ItemPlace } from '../game/itemPlace.ts'
 import { materialName, type Material, type Stock } from '../game/territory.ts'
-import { MATERIALS } from '../inventory/catalog.ts'
+import { MATERIALS, type FamilyId } from '../inventory/catalog.ts'
 import { GRADE_DEFS, type Grade } from '../inventory/grades.ts'
 import { baseItem, craftedItem, itemById, type EquipmentSlot, type Item } from '../inventory/inventory.ts'
 import { socketsOf } from '../inventory/runes.ts'
@@ -35,7 +35,7 @@ export const FORGE_SLOT_LABELS: Partial<Record<EquipmentSlot, string>> = {
 export interface ForgeRow {
   /** `<family>:<material>`, as the probe and the selection name it. */
   id: string
-  family: string
+  family: FamilyId
   material: string
   tier: number
   /** The item's name: "Mithril Longsword". */
@@ -45,6 +45,12 @@ export interface ForgeRow {
   refusal: string | null
   item: Item
 }
+
+/** Families whose item names are plural: "The Adamant Gauntlets are". */
+const PLURAL_FAMILIES: readonly FamilyId[] = ['gloves', 'gauntlets', 'boots', 'greaves']
+
+/** What the forge says once the row's item is in the baggage. */
+export const forgedMessage = (row: ForgeRow): string => `The ${row.name} ${PLURAL_FAMILIES.includes(row.family) ? 'are' : 'is'} in the baggage.`
 
 export const forgeRowId = (family: string, material: string): string => `${family}:${material}`
 

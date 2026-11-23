@@ -23,7 +23,7 @@ import { TYPICAL_AP, compareLines, fieldCraftSummary } from './gearCompare.ts'
 import { ITEM_ICON_KEYS, RUNE_COLOURS, RUNE_ICON_KEYS, SOCKET_PIP_KEYS, cssColour, iconTint } from './itemIcons.ts'
 import type { Rect } from './mapScroll.ts'
 import { addPanelButton, fitText } from './panelButton.ts'
-import { FORGE_SLOTS, FORGE_SLOT_LABELS, forgeHint, forgePreview, forgeRows, temperChoices, temperPreview, memberNumbers, type ForgeRow, type TemperChoice } from './forgeView.ts'
+import { FORGE_SLOTS, FORGE_SLOT_LABELS, forgeHint, forgedMessage, forgePreview, forgeRows, temperChoices, temperPreview, memberNumbers, type ForgeRow, type TemperChoice } from './forgeView.ts'
 import { headerLines } from './headerLines.ts'
 import { buttonCue, refusalCue, runeCue } from './sounds.ts'
 import {
@@ -787,9 +787,9 @@ export class CraftingScene extends Phaser.Scene {
 
   /** Forges the row's item into the baggage. */
   private onForge(row: ForgeRow): void {
-    const refusal = forge(this.gameState, this.expedition, row.family as Parameters<typeof forge>[2], row.material)
+    const refusal = forge(this.gameState, this.expedition, row.family, row.material)
     playCue(this, refusalCue(refusal, 'world.craft'))
-    this.message = refusal ?? `The ${row.name} is in the baggage.`
+    this.message = refusal ?? forgedMessage(row)
     this.render()
   }
 

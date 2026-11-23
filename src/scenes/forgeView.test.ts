@@ -3,7 +3,7 @@ import { trophiesFor } from '../game/loot.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
 import type { ItemPlace } from '../game/itemPlace.ts'
 import { itemById } from '../inventory/inventory.ts'
-import { FORGE_SLOTS, forgeHint, forgePreview, forgeRows, temperChoices, temperPreview, trophiesLine } from './forgeView.ts'
+import { FORGE_SLOTS, forgeHint, forgePreview, forgedMessage, forgeRows, temperChoices, temperPreview, trophiesLine } from './forgeView.ts'
 
 function home(workshop: number, stock = { gold: 500, mithril: 20 }): GameState {
   const game = newGame(undefined, null, 1, 'Hearthold')
@@ -40,6 +40,19 @@ describe('the Forge tab rows', () => {
     const game = home(4, { gold: 500, mithril: 3 })
     const row = forgeRows(game, game.parties[0], 'mainHand').find((r) => r.id === 'longsword:mithril')!
     expect(row.refusal).toContain('more than the stock holds')
+  })
+})
+
+describe('the forged message', () => {
+  it('says is for a single item and are for gauntlets, greaves, gloves and boots', () => {
+    const game = home(6)
+    game.world.stock = { gold: 500, mithril: 40, elderwood: 40, wyvern_hide: 40 }
+    const all = FORGE_SLOTS.flatMap((slot) => forgeRows(game, game.parties[0], slot))
+    const says = (family: string) => forgedMessage(all.find((r) => r.family === family)!)
+    expect(says('longsword')).toBe('The Mithril Longsword is in the baggage.')
+    for (const plural of ['gauntlets', 'greaves', 'gloves', 'boots']) {
+      expect(says(plural), plural).toMatch(/^The .+ are in the baggage\.$/)
+    }
   })
 })
 
