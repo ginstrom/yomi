@@ -15,7 +15,7 @@
 - Open questions: for the user at the report: in the real long campaign the home country sees about half the spawns (8.3 a campaign over 1272–1602 days vs 14.5 over 325 near the Source); proposed: defer to stage 12's spawn retune.
 - Tiers (engineer / reviewer): planner opus; 01, 02, 04, 05, 08, 09 opus / opus; 03, 06, 07, 10 sonnet / opus (07 to opus if frame time is poor for an unknown cause). No escalations.
 - Worktrees: 03 and 06 run in their own worktrees and leave index.md and log.md alone; the orchestrator merges them and the next engineer records their status and log lines.
-- Verification: overall review (opus) clean at 296dc0c, ready for a PR (npm test 2632, build, e2e after reruns, 50-check 57fdea15…). QA (sonnet) re-check: pass at 296dc0c; its encampment stock defect fixed in a125235 (test fails without it; not re-reviewed). Simulated user: goals 1, 2, 4 met; 3, 5, 6 partly. Evidence: `.git/pr-review/long-campaign-stage-09/evidence/`.
+- Verification: overall review (opus) clean at 296dc0c, ready for a PR (npm test 2632, build, e2e after reruns, 50-check 57fdea15…). QA (sonnet) re-check: pass at 296dc0c; its encampment stock defect fixed in a125235 (not re-reviewed). Simulated user: goals 1, 2, 4 met; 3, 5, 6 partly. Evidence: `.git/pr-review/long-campaign-stage-09/evidence/`.
 - Carried forward (from stage 8 and earlier, for this plan):
   - The Routes tab shows at most 4 rows, no paging; a test fails once PARTNERS exceeds 4 (stage 9 adds 3).
   - A route whose raid comes and goes between yield days is never abandoned (count resets when told safe); unmeasured.
