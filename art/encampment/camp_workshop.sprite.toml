@@ -1,7 +1,10 @@
 # The workshop: a slate-roofed smithy, its forge glowing in the dark of its
 # open front, an anvil outside. Each level adds to it, as the encampment
 # screen shows the frame of the workshop's level: a smoking stone chimney at
-# level 2, a bowyer's wing hung with bows at level 3.
+# level 2, a bowyer's wing hung with bows at level 3, a forge with embers at
+# its stack and bellows at its wall at level 4, a second hearth and a rack of
+# blades at level 5, and at level 6 a great forge: ringed stacks and a pale
+# star-metal glow, a banner over its door.
 canvas = "building"
 outline = "auto"
 
@@ -91,3 +94,87 @@ from = "level_2"
 44 = [[2, "aaaaaaaa"]]
 45 = [[2, "mmmmmmmm"]]
 46 = [[2, "gggg"]]
+
+# Level 4: a forge. Embers at the stack's mouth, a fire in the open front, and
+# a leather bellows at the east wall, piped in over the anvil.
+[frames.level_4]
+from = "level_3"
+
+[frames.level_4.runs]
+4 = [[16, "oF"]]
+28 = [[45, "n"]]
+29 = [[45, "n"]]
+30 = [[44, "nn"]]
+31 = [[41, "TTTT"], [45, "n"]]
+32 = [[40, "TttttT"], [45, "n"]]
+33 = [[39, "TtnnnntT"]]
+34 = [[16, "moFFom"], [39, "TtnnnntT"]]
+35 = [[16, "mrFFom"], [37, "DDl"], [40, "TttttT"]]
+36 = [[41, "TTTT"]]
+
+# Level 5: a second hearth. A second stack rises over the east roof, and a rack
+# of blades hangs on the front wall.
+[frames.level_5]
+from = "level_4"
+
+[frames.level_5.runs]
+3 = [[30, "ll"]]
+4 = [[29, "lwwl"]]
+5 = [[29, "lwwl"]]
+6 = [[29, "ll"]]
+7 = [[29, "oF"]]
+8 = [[27, "mmmmmm"]]
+9 = [[28, "amMm"]]
+10 = [[28, "amMm"]]
+11 = [[28, "amMm"]]
+12 = [[28, "amMm"]]
+13 = [[28, "amMm"]]
+14 = [[28, "amMm"]]
+15 = [[28, "amMm"]]
+16 = [[28, "amMm"]]
+17 = [[28, "amMm"]]
+18 = [[28, "amMm"]]
+19 = [[28, "amMm"]]
+20 = [[28, "amMm"]]
+21 = [[28, "amMm"]]
+35 = [[23, "nnnnnnnnnn"]]
+36 = [[24, "y"], [28, "y"], [32, "y"]]
+37 = [[23, "yyy"], [27, "yyy"], [31, "yyy"]]
+38 = [[24, "w"], [28, "w"], [32, "w"]]
+39 = [[24, "w"], [28, "w"], [32, "w"]]
+40 = [[24, "w"], [28, "w"], [32, "w"]]
+41 = [[24, "l"], [28, "l"], [32, "l"]]
+42 = [[24, "W"], [28, "W"], [32, "W"]]
+
+# Level 6: a great forge. Both stacks are broader and ringed in gold, the
+# embers burn a pale star-metal white, and a banner hangs over the door.
+[frames.level_6]
+from = "level_5"
+
+[frames.level_6.runs]
+4 = [[16, "zW"]]
+5 = [[13, "mmmmmmmm"], [29, "lwwl"]]
+6 = [[14, "aammMm"], [29, "ll"]]
+7 = [[14, "aammMm"], [29, "zW"]]
+8 = [[14, "aammMm"], [27, "mmmmmm"]]
+9 = [[14, "aammMm"]]
+10 = [[14, "ayyyyy"], [28, "yyyy"]]
+11 = [[14, "aammMm"]]
+12 = [[14, "aammMm"]]
+13 = [[14, "aammMm"]]
+14 = [[14, "aammMm"]]
+15 = [[14, "aammMm"]]
+16 = [[14, "aOOOOm"], [28, "OOOO"]]
+17 = [[14, "aammMm"]]
+18 = [[14, "aammMm"]]
+19 = [[14, "aammMm"]]
+20 = [[14, "aammMm"]]
+21 = [[14, "aammMm"]]
+28 = [[17, "yyyyy"]]
+29 = [[17, "rrrrr"]]
+30 = [[17, "rrYrr"]]
+31 = [[17, "rYYYr"]]
+32 = [[18, "rrr"]]
+34 = [[16, "mzWWzm"]]
+35 = [[16, "mzWWzm"]]
+36 = [[16, "mzWWzm"]]
