@@ -51,7 +51,7 @@ import {
   towerHexRefusal,
 } from '../src/game/buildings.ts'
 import { ABANDON_AFTER, GUARD_RADIUS, ROUTE_TIMBER, isContacted, openRoute, openRouteRefusal, partners, raiders, roadTo, routeLimit, routeOf } from '../src/game/trade.ts'
-import { WORKSHOP_COSTS, craft, craftRefusal, craftTier, forge, forgeCost, forgeOptions, highestGrade, temper, temperCost, temperRefusal, upgradeWorkshop, type ForgeOption } from '../src/game/crafting.ts'
+import { FORGE_LEVEL, WORKSHOP_COSTS, craft, craftRefusal, craftTier, forge, forgeCost, forgeOptions, highestGrade, temper, temperCost, temperRefusal, upgradeWorkshop, type ForgeOption } from '../src/game/crafting.ts'
 import { MAX_PARTIES, presenceOf, type DayAction, type Expedition } from '../src/game/expedition.ts'
 import { newGame, partyById, type GameState } from '../src/game/gameState.ts'
 import {
@@ -491,6 +491,8 @@ export interface CampaignRecord {
   battlesToLevel: Partial<Record<LevelMark, number>>
   /** At the same moments as `battlesToLevel`: each of the party's members' kit (`kitNote`); absent if never. */
   kitAtLevel: Partial<Record<LevelMark, KitNote[]>>
+  /** The marks of `kitAtLevel` reached with the workshop able to forge (level `FORGE_LEVEL[3]`, 4, or more); absent while none (report only). */
+  forgeReadyAt?: LevelMark[]
   /** By role: battles fought, battles lost (each a party wiped), and each party's member levels at the end, in list order. */
   roles: Record<Role, { battles: number; wipes: number; finalLevels: number[][] }>
   /** Parties wiped out in a lost battle, of any role. */
@@ -560,6 +562,20 @@ export interface KitNote {
 export function kitNote(character: Character): KitNote {
   const main = character.equipment.mainHand
   return { role: kitRole(character), tier: (main && baseItem(main) && main.tier) || 0, sockets: runesWorn(character) }
+}
+
+/**
+ * Notes each mark of `LEVEL_MARKS` the party's lowest level reaches for the
+ * first time: the battles fought so far and each member's kit, and, when the
+ * `workshop` can forge then, the mark in `forgeReadyAt` (report only).
+ */
+export function noteMarks(record: CampaignRecord, members: Party, battles: number, workshop: number): void {
+  for (const mark of LEVEL_MARKS) {
+    if (record.battlesToLevel[mark] !== undefined || lowestLevel(members) < mark) continue
+    record.battlesToLevel[mark] = battles
+    record.kitAtLevel[mark] = members.map(kitNote)
+    if (workshop >= FORGE_LEVEL[3]) (record.forgeReadyAt ??= []).push(mark)
+  }
 }
 
 /** The runes embedded across a hero's worn gear. */
@@ -1936,12 +1952,7 @@ function fightAt(run: CampaignRun, party: Expedition, target: MonsterLocation): 
   // The fallen are buried before the experience is given, so each keeps the level it died at.
   record.deathsAtLevel.push(...dead.map((member) => member.level))
   for (const member of members) autoAdvance(member, playerPlan(run.args.plans, member))
-  for (const mark of LEVEL_MARKS) {
-    if (record.battlesToLevel[mark] === undefined && lowestLevel(members) >= mark) {
-      record.battlesToLevel[mark] = battles.length
-      record.kitAtLevel[mark] = members.map(kitNote)
-    }
-  }
+  noteMarks(record, members, battles.length, game.world.workshop)
   record.runesFound += takeRunes(game, target.threat, target.encounter, battleSeed).length
   // None drop this stage (decision 8): `TROPHIES` is empty until stage 11.
   takeTrophies(game, encounter.kinds)
@@ -2593,7 +2604,9 @@ export interface CampaignSummary {
    * kit role, the mean main-hand tier and runes worn of the members of that
    * role then (a role no member had is absent).
    */
-  kit: Array<{ level: LevelMark; campaigns: number; roles: Partial<Record<KitRole, { tier: number; sockets: number }>> }>
+  kit: KitSummary[]
+  /** As `kit`, over only the campaigns whose workshop could forge when their party reached the mark (`forgeReadyAt`; report only). */
+  kitForgeReady: KitSummary[]
   /** The party's lowest and highest level at the end, on average; a campaign with no one left is left out. */
   avgLowestFinalLevel: number
   avgHighestFinalLevel: number
@@ -2665,7 +2678,6 @@ export function summarizeCampaigns(events: readonly LoggedEvent[], records: read
   const avg = (of: (record: CampaignRecord) => number) => records.reduce((sum, r) => sum + of(r), 0) / campaigns
   const outcomes: Record<CampaignOutcome, number> = { source: 0, fallen: 0, encampment: 0, timeout: 0 }
   for (const record of records) outcomes[record.outcome]++
-  const mean = (values: readonly number[]) => (values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0)
   const ended = records.filter((r) => r.finalLevels.length > 0)
   const deaths = new Map<number, number>()
   for (const level of records.flatMap((r) => r.deathsAtLevel)) deaths.set(level, (deaths.get(level) ?? 0) + 1)
@@ -2723,15 +2735,8 @@ export function summarizeCampaigns(events: readonly LoggedEvent[], records: read
     avgSocketsFilled: avg((r) => r.socketsFilled),
     avgGoldOnRunes: avg((r) => r.goldOnRunes),
     avgGoldOnForging: avg((r) => r.goldOnForging),
-    kit: LEVEL_MARKS.map((level) => {
-      const reached = records.flatMap((r) => (r.kitAtLevel[level] ? [r.kitAtLevel[level]] : []))
-      const roles: Partial<Record<KitRole, { tier: number; sockets: number }>> = {}
-      for (const role of KIT_ROLES) {
-        const notes = reached.flat().filter((note) => note.role === role)
-        if (notes.length > 0) roles[role] = { tier: mean(notes.map((n) => n.tier)), sockets: mean(notes.map((n) => n.sockets)) }
-      }
-      return { level, campaigns: reached.length, roles }
-    }),
+    kit: LEVEL_MARKS.map((level) => kitSummary(records, level)),
+    kitForgeReady: LEVEL_MARKS.map((level) => kitSummary(records.filter((r) => r.forgeReadyAt?.includes(level)), level)),
     avgLowestFinalLevel: mean(ended.map((r) => Math.min(...r.finalLevels))),
     avgHighestFinalLevel: mean(ended.map((r) => Math.max(...r.finalLevels))),
     deathsByLevel: [...deaths.entries()].sort(([a], [b]) => a - b).map(([level, deaths]) => ({ level, deaths })),
@@ -2776,17 +2781,43 @@ export function tradeLine(
   )
 }
 
+/** A mark's kit: the campaigns whose party reached it and, by kit role, the mean main-hand tier and runes worn of the members of that role then. */
+export interface KitSummary {
+  level: LevelMark
+  campaigns: number
+  roles: Partial<Record<KitRole, { tier: number; sockets: number }>>
+}
+
+/** The mean of `values`, 0 for none. */
+const mean = (values: readonly number[]) => (values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0)
+
+/** The kit at `level` over `records` (those that reached it). */
+function kitSummary(records: readonly CampaignRecord[], level: LevelMark): KitSummary {
+  const reached = records.flatMap((r) => (r.kitAtLevel[level] ? [r.kitAtLevel[level]] : []))
+  const roles: KitSummary['roles'] = {}
+  for (const role of KIT_ROLES) {
+    const notes = reached.flat().filter((note) => note.role === role)
+    if (notes.length > 0) roles[role] = { tier: mean(notes.map((n) => n.tier)), sockets: mean(notes.map((n) => n.sockets)) }
+  }
+  return { level, campaigns: reached.length, roles }
+}
+
 /**
- * The summary's kit lines, one a mark some campaign reached: each role's mean
- * main-hand tier and runes worn then, against `expectedKit`'s tier and runes.
+ * The summary's kit lines, two a mark some campaign reached: each role's mean
+ * main-hand tier and runes worn then, against `expectedKit`'s tier and runes;
+ * then the same over the forge-ready campaigns only, n of the N reaching it.
  */
-export function kitLines(summary: Pick<CampaignSummary, 'kit'>): string[] {
+export function kitLines(summary: Pick<CampaignSummary, 'kit' | 'kitForgeReady'>): string[] {
+  const byRole = ({ roles }: KitSummary) => KIT_ROLES.flatMap((role) => (roles[role] ? [`${role} tier ${roles[role].tier.toFixed(1)}, ${roles[role].sockets.toFixed(1)} runes`] : [])).join('; ')
   return summary.kit
     .filter(({ campaigns }) => campaigns > 0)
-    .map(({ level, campaigns, roles }) => {
-      const expected = expectedKit('fighter', level)
-      const byRole = KIT_ROLES.flatMap((role) => (roles[role] ? [`${role} tier ${roles[role].tier.toFixed(1)}, ${roles[role].sockets.toFixed(1)} runes`] : []))
-      return `Kit at ${level} (${campaigns} campaigns): ${byRole.join('; ')}; expected tier ${expected.tier}, ${expected.sockets[0]}–${expected.sockets[1]} runes`
+    .flatMap((kit) => {
+      const expected = expectedKit('fighter', kit.level)
+      const ready = summary.kitForgeReady.find((k) => k.level === kit.level)!
+      return [
+        `Kit at ${kit.level} (${kit.campaigns} campaigns): ${byRole(kit)}; expected tier ${expected.tier}, ${expected.sockets[0]}–${expected.sockets[1]} runes`,
+        `Kit at ${kit.level}, forge-ready campaigns: ${ready.campaigns > 0 ? byRole(ready) : 'none'} (${ready.campaigns} of ${kit.campaigns})`,
+      ]
     })
 }
 

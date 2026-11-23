@@ -188,3 +188,10 @@ A stderr line at each home visit (`carryOut`'s `hall` case, after `visitFaciliti
 - Verdict: the step 09 reviewer's diagnosis holds. Outer-site yields and forge/temper costs act only after the workshop reaches 4 (day ~1176, after the vanguards that reach 10 got there), and the gold they would free is spent on wiped recruits. No trial was run (the brief allows one where a lever could plausibly help; none could, above).
 
 Not retuned; `npm test` 107 files, 2,736 tests pass on `82a7969`. Stopped for the orchestrator.
+
+### Step 10: the user's answer and the forge-ready kit line
+
+2026-11-23. The user chose option 1: the kit lag is accepted until stage 12, with "Done when"'s kit clause unmet because of the simulator's policy, not the economy (index decision 21, with options 2–5 as stage 12's first candidates). Added a report-only `Kit at <mark>, forge-ready campaigns: … (n of N)` line (`noteMarks`, `forgeReadyAt`, `kitForgeReady`).
+
+- Refactor guard unedited, passes; 50-campaign check `57fdea1553a35b1af0e33b74a11ea9fe0a0e2f62ef9e5c80972af59276e53e75`, **identical** (23 s); `npm test` 2,738 pass.
+- Long (100, `--log none`, 4:01, load 5.7 → 3.4): all figures identical to the step's `long` run. Forge-ready kit: at 5 none (0 of 84); at 10 none (0 of 53); at 15 fighter 1.9 / 0.6 runes, archer 1.9 / 0.6, mage 1.7 / 1.0 (8 of 16), against tier 4, 3–4 runes.

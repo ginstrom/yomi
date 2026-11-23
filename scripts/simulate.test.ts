@@ -76,6 +76,7 @@ import {
   expectedKit,
   kitLines,
   kitNote,
+  noteMarks,
   kitRole,
   armourScore,
   forgeChoice,
@@ -1330,7 +1331,53 @@ describe('the kit: roles, the expected kit and the record', () => {
     ])
     expect(kitLines(summary)).toEqual([
       'Kit at 5 (2 campaigns): fighter tier 1.5, 0.5 runes; archer tier 1.0, 0.0 runes; mage tier 1.0, 2.0 runes; expected tier 2, 1–2 runes',
+      'Kit at 5, forge-ready campaigns: none (0 of 2)',
       'Kit at 10 (1 campaigns): fighter tier 3.0, 3.0 runes; expected tier 3, 2–3 runes',
+      'Kit at 10, forge-ready campaigns: none (0 of 1)',
+    ])
+  }, 20_000)
+})
+
+describe('the kit of forge-ready campaigns (report only)', () => {
+  const party = () => readyMadeParty().map((member) => ({ ...member, level: 10 }))
+
+  it('notes each mark reached, and marks it forge-ready only with a workshop of level 4 or more then', () => {
+    const { record } = runCampaign(3, 1, EARLY_ONE, 0)
+    const fresh = { ...record, battlesToLevel: {}, kitAtLevel: {}, forgeReadyAt: undefined }
+    noteMarks(fresh, party(), 12, 3)
+    expect(fresh.battlesToLevel).toEqual({ 5: 12, 10: 12 })
+    expect(Object.keys(fresh.kitAtLevel)).toEqual(['5', '10'])
+    expect(fresh.forgeReadyAt).toBeUndefined()
+    const ready = { ...record, battlesToLevel: {}, kitAtLevel: {}, forgeReadyAt: undefined }
+    noteMarks(ready, party().map((m) => ({ ...m, level: 5 })), 4, 4)
+    noteMarks(ready, party(), 9, 4)
+    noteMarks(ready, party(), 10, 5)
+    expect(ready.battlesToLevel).toEqual({ 5: 4, 10: 9 })
+    expect(ready.forgeReadyAt).toEqual([5, 10])
+  }, 20_000)
+
+  it('averages the kit over the forge-ready campaigns of each mark, and prints it under the Kit line with n of N', () => {
+    const base = { ...runCampaign(3, 1, EARLY_ONE, 0).record }
+    const records = [
+      {
+        ...base,
+        kitAtLevel: { 5: [{ role: 'fighter' as const, tier: 1, sockets: 0 }], 10: [{ role: 'fighter' as const, tier: 3, sockets: 2 }, { role: 'mage' as const, tier: 3, sockets: 1 }] },
+        forgeReadyAt: [10 as const],
+      },
+      { ...base, kitAtLevel: { 5: [{ role: 'fighter' as const, tier: 1, sockets: 0 }], 10: [{ role: 'fighter' as const, tier: 1, sockets: 0 }] }, forgeReadyAt: undefined },
+    ]
+    const summary = summarizeCampaigns([], records)
+    expect(summary.kitForgeReady).toEqual([
+      { level: 5, campaigns: 0, roles: {} },
+      { level: 10, campaigns: 1, roles: { fighter: { tier: 3, sockets: 2 }, mage: { tier: 3, sockets: 1 } } },
+      { level: 15, campaigns: 0, roles: {} },
+      { level: 20, campaigns: 0, roles: {} },
+    ])
+    expect(kitLines(summary)).toEqual([
+      'Kit at 5 (2 campaigns): fighter tier 1.0, 0.0 runes; expected tier 2, 1–2 runes',
+      'Kit at 5, forge-ready campaigns: none (0 of 2)',
+      'Kit at 10 (2 campaigns): fighter tier 2.0, 1.0 runes; mage tier 3.0, 1.0 runes; expected tier 3, 2–3 runes',
+      'Kit at 10, forge-ready campaigns: fighter tier 3.0, 2.0 runes; mage tier 3.0, 1.0 runes (1 of 2)',
     ])
   }, 20_000)
 })

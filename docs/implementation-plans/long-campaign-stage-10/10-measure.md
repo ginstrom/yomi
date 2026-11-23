@@ -175,3 +175,29 @@ Recommendation: 1, with 2 + 3 as stage 12's first measured candidates (they are 
 - Kit at 5/10/15: tier 1.0 / 1.0 / 1.3–1.5 against 2 / 3 / 4; runes 0 / 0 / 0.3–0.4 against 1–2 / 2–3 / 3–4. Gold on forging 2271 a campaign, mostly re-arming recruits.
 - Cells: standard all = Now; far `bco9` 2, `bco12` 0, `fh15` 0, `fh18` 0; `sg20-18` 28, `sg20` 71.
 - No retune. Runtime: 100 long campaigns 4:07 alone (stage 9: 10:21).
+
+### The user's answer and the forge-ready kit line (2026-11-23)
+
+**Decision** (index decision 21): option 1. The kit lag is accepted until stage 12, and the design's "Done when" clause "the gear policy tracks the expected kit within a tier" is recorded **unmet, because of the simulator's policy (targeting and spend order), not the economy**. Nothing retuned. **For stage 12, first measured candidates** (options 2–5 above; decision 21 points here): (a) send no party whose lowest level is more than N under the target's threat (e.g. 3); (b) forge and temper only for the vanguard, or only from level 9; (c) raise the workshop before the trading post; (d) a workshop level 2 without stone, or Old Quarry's yield 2 → 4 (a rule change that moves the early game: measure `one` first). The user also asked for a report-only kit figure over the forge-ready campaigns.
+
+**Built** (test-first; report only):
+- `noteMarks(record, members, battles, workshop)` (`scripts/simulate.ts`): `fightAt`'s mark-noting moved out unchanged, plus `forgeReadyAt?: LevelMark[]` on `CampaignRecord`, the marks noted while the workshop was at `FORGE_LEVEL[3]` (4) or more. It is absent while empty, so no record of the guard's campaigns changes (none reaches a level 4 workshop).
+- `CampaignSummary.kitForgeReady` (the `kit` figure over the records with the mark in `forgeReadyAt`; `kitSummary` shared by both), and `kitLines` prints, under each `Kit at <mark>` line, `Kit at <mark>, forge-ready campaigns: <roles> (n of N)`, or `none (0 of N)`.
+- Tests (`scripts/simulate.test.ts`, "the kit of forge-ready campaigns"): `noteMarks` on a fixed party at workshop levels 3, 4 and 5 (marks noted once, forge-ready only at 4+); `summarizeCampaigns` and `kitLines` over two fixed records (one forge-ready at 10). The existing Kit-line test gained the two `none` lines. Red first: `noteMarks` not a function, `kitForgeReady` undefined, the Kit lines short.
+- Docs: `docs/reference/simulator.md` (the campaign paragraph), `.claude/skills/yomi-balance/running.md` (which line carries the figure).
+
+**Proved report only:**
+- Refactor guard passes with `GUARD_RECORDS` and `GUARD_EVENTS_SHA256` unedited.
+- 50-campaign check: `57fdea1553a35b1af0e33b74a11ea9fe0a0e2f62ef9e5c80972af59276e53e75`, **identical** to step 09 (`logs/s10-10-guard-50.*`, 23 s; prints `Kit at 5, forge-ready campaigns: none (0 of 43)`).
+- `npm test`: 107 files, 2,738 tests pass.
+- Long run (100, `--log none`, 4:01, load 5.7 → 3.4, `logs/s10-10-long-forge-ready.txt`): every figure identical to this step's `long` run (Source 1, 1414 days, 42.3 battles, 2271 on forging, the Kit lines).
+
+**The new line's figures:**
+
+| Mark | All campaigns | Forge-ready campaigns | Expected |
+| --- | --- | --- | --- |
+| 5 | 1.0 / 1.0 / 1.0 (84) | none (0 of 84) | tier 2 |
+| 10 | 1.0 / 1.0 / 1.0 (84 → 53) | none (0 of 53) | tier 3 |
+| 15 | fighter 1.5, 0.3 runes; archer 1.5, 0.3; mage 1.3, 0.4 (16) | fighter 1.9, 0.6 runes; archer 1.9, 0.6; mage 1.7, 1.0 (8 of 16) | tier 4, 3–4 runes |
+
+Reading: no party reaches 5 or 10 with a forge at home, which confirms the timing found above. Of the 8 that reach 15 with one, the main hand averages 1.7–1.9, not 3+. Even with the forge built, the vanguard climbing 9–15 hardly comes home to use it (13 home visits at those levels in 100 campaigns), and the stock's gold goes to recruits first. So the forging policy is not yet shown to work when the forge exists. That is stage 12's question as well (targeting and spend order), not a defect found in `forgeGear`: its unit tests pass on fixed states.
