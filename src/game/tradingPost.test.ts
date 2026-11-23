@@ -326,8 +326,16 @@ describe('trading post levels 5 and 6', () => {
     expect(buy(game, game.parties[0], 'mithril_longsword')).toBe('The trading post does not sell that; the workshop forges it.')
     expect(game.world.stock.gold).toBe(10_000)
     expect(game.parties[0].baggage).toEqual([])
-    // Worth nothing to the post until step 03's forgedValue.
-    expect(salePrice(itemById('mithril_longsword')!)).toBe(0)
+  })
+
+  it('buys a forged item for half its forged worth and its runes; tiers 1 and 2 as before', () => {
+    expect(salePrice(itemById('mithril_longsword')!)).toBe(22)
+    expect(salePrice(itemById('mithril_longsword#ember1')!)).toBe(Math.floor((45 + 15) / 2))
+    expect(salePrice(itemById('mithril_longsword@3+balanced2')!)).toBe(90)
+    expect(salePrice(itemById('mithril_longsword@2#ember2')!)).toBe(Math.floor((135 + 45) / 2))
+    expect(salePrice(itemById('starmetal_plate@3')!)).toBe(Math.floor(345 / 2))
+    expect(salePrice(itemById('steel_longsword@3')!)).toBe(buyPrice(itemById('steel_longsword@3')!)! / 2)
+    expect(salePrice(itemById('iron_sword@2')!)).toBe(18)
   })
 
   it('are named Trading Post, Market, Market Hall and Trading House', () => {

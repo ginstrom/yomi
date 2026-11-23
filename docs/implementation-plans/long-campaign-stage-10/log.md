@@ -43,3 +43,13 @@ Outcome (step 01): engineer sonnet, reviewer sonnet, clean, 1 review round.
 - Long run, informational (100, `--log none`, seed 1, ~4 min alone, `logs/s10-02-long.txt`): Source 2 of 100 (step 01: 15), fell 96, out of days 2; 1390 days, 41.7 battles; battles to level 5 6.8 (84), 10 28.3 (53), 15 53.6 (18; was 44), 20 none. Threat win rates: 9 0.712 (was 0.828), 12 0.395 (0.601), 15 0.391 (0.868), 18 2/2, 20 2/3. The far bandits' tiers 3–5 with the party still unable to forge (steps 03, 09).
 
 Outcome (step 02): engineer opus, reviewer opus, clean, 1 review round.
+
+## Step 03: the workshop
+
+2026-11-23, on `7c2084e` plus the step's change.
+
+- 50-campaign check: `57fdea1553a35b1af0e33b74a11ea9fe0a0e2f62ef9e5c80972af59276e53e75`, **identical** to step 02 (about 21 s alone).
+- Refactor guard and policy snapshot: untouched, green.
+- `npm test`: before step 05's merge every test but one passed (`encampmentView.test.ts` asks the atlas for `camp_workshop/level_4`–`6`); after the merge (`dd96b2c`), 105 files, 2,669 tests, all pass.
+
+Step 05 workshop sprites: engineer sonnet, reviewer opus, clean, 1 review round, plus two look passes the orchestrator asked for (level 6 banner moved to the roof with a gold chevron, orange rim on the star-metal glow, level 4 bellows pipe); sprites:check pass, yomi-asset-check pass; no simulation.

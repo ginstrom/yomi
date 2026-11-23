@@ -3,6 +3,7 @@ import { GRADES, type Grade } from '../inventory/grades.ts'
 import { BASE_ITEMS, baseItem, craftedItem, itemById, unruned, type EquipmentSlot, type Item } from '../inventory/inventory.ts'
 import { addToPouch, parseRuneKey, pouchCount, runeName, takeFromPouch, type Rank, type RuneId, type RuneKey } from '../inventory/runes.ts'
 import { atEncampment, canAfford, describeCost, spend } from './buildings.ts'
+import { forgedValue } from './crafting.ts'
 import type { Expedition } from './expedition.ts'
 import { partyById, type GameState } from './gameState.ts'
 import { STALE, allPlaces, itemAt, removeAt, type ItemPlace } from './itemPlace.ts'
@@ -127,13 +128,14 @@ export function buyPrice(item: Item): number | null {
 /**
  * What the post pays for an item: half its base-and-grade price, or half an
  * enchanted item's value, plus half of each embedded rune's price, rounded
- * down. A modifier adds nothing. A tier-3+ item has neither price nor value,
- * so it fetches only its runes' half until step 03 of stage 10 adds `forgedValue`.
+ * down. A modifier adds nothing. A tier-3+ item, which the post never sells,
+ * is worth its `forgedValue` (crafting.ts, called here only, never at load:
+ * the import cycle).
  */
 export function salePrice(item: Item): number {
   const bare = unruned(item)
   const runes = (item.runes ?? []).reduce((sum, key) => sum + runePrice(key), 0)
-  return Math.floor(((buyPrice(bare) ?? VALUES[bare.id] ?? 0) + runes) / 2)
+  return Math.floor(((buyPrice(bare) ?? VALUES[bare.id] ?? forgedValue(bare)) + runes) / 2)
 }
 
 /** Whether the post at its level sells `item`: tier 1 at grades up to min(level, 3); tier 2 at every grade from `TIER_TWO_LEVEL`; never tier 3 and up. */

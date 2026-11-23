@@ -30,12 +30,14 @@ import { CUTSCENE_IDS } from '../story/cutscenes.ts'
  * flag, so a raid is told the day it starts; no migration. Version 30
  * (long campaign stage 9) is the 140 × 72 board with every location moved
  * (`EARLY_SHIFT`) and the Source far out at threat 20: a new map, so an older
- * world cannot go on; no migration.
+ * world cannot go on; no migration. Version 31 (stage 10) adds the trophies
+ * (wolfhide, wyvern hide, basilisk scale, drake scale) to the stock's
+ * materials; no migration.
  * Rules and item numbers may change
  * freely, as a character stores no derived number and an item is saved by
  * its id.
  */
-export const SAVE_VERSION = 30
+export const SAVE_VERSION = 31
 
 /** One slot's contents. */
 export interface SaveFile {

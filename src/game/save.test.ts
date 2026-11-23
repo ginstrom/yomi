@@ -119,8 +119,24 @@ describe('a save', () => {
     expect(parsed.game.parties[0].baggage.length).toBeGreaterThan(0)
   })
 
-  it('is version 30, the 140 × 72 board of stage 9, whose world holds the trade partners, contacts, silence and routes with their raided flag', () => {
-    expect(SAVE_VERSION).toBe(30)
+  it('is version 31, whose stock may hold the trophies of stage 10', () => {
+    expect(SAVE_VERSION).toBe(31)
+  })
+
+  it('round-trips a stock of mithril and a trophy, a forged item in the baggage and a tempered, runed one worn', () => {
+    const game = gameUnderWay()
+    Object.assign(game.world, { workshop: 6 })
+    game.world.stock = { gold: 9, mithril: 12, wyvern_hide: 3, drake_scale: 1 }
+    const forged = itemById('drake_leather')!
+    const tempered = itemById('mithril_longsword@3+balanced2#ember2.storm3')!
+    game.parties[0].baggage.push(forged)
+    game.parties[0].members[0].equipment.mainHand = tempered
+    const file: SaveFile = { game, battle: null, savedAt: 5 }
+    const parsed = parseSave(serializeSave(file))!
+    expect(parsed).toEqual(file)
+    expect(parsed.game.world.stock).toEqual({ gold: 9, mithril: 12, wyvern_hide: 3, drake_scale: 1 })
+    expect(parsed.game.parties[0].baggage.at(-1)).toBe(forged)
+    expect(parsed.game.parties[0].members[0].equipment.mainHand).toBe(tempered)
   })
 
   it('round-trips a hero\'s perk points', () => {
@@ -150,10 +166,10 @@ describe('a save', () => {
     expect(parseSave(broken((hero) => (hero.perkPicks = 2)))).toBeNull()
   })
 
-  it('reads a save of any version but 30 as unreadable: there is no migration (stage 8 decision 15, stage 9)', () => {
+  it('reads a save of any version but 31 as unreadable: there is no migration (stage 8 decision 15, stages 9 and 10)', () => {
     const saved = JSON.parse(serializeSave({ game: gameUnderWay(), battle: null, savedAt: 5 }))
     expect(parseSave(JSON.stringify(saved))).not.toBeNull()
-    for (const version of [17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31]) {
+    for (const version of [17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 32]) {
       expect(parseSave(JSON.stringify({ ...saved, version })), `${version}`).toBeNull()
     }
   })

@@ -67,6 +67,7 @@ interface Command {
 const MATERIALS = Object.keys({
   gold: 0, iron: 0, timber: 0, silver: 0, stone: 0, salt: 0, copper: 0, crystal: 0, peat: 0,
   ironwood: 0, mithril: 0, elderwood: 0, adamant: 0, wyrmwood: 0, starmetal: 0, heartwood: 0,
+  wolfhide: 0, wyvern_hide: 0, basilisk_scale: 0, drake_scale: 0,
 } satisfies Record<Material, number>) as Material[]
 
 class DebugError extends Error {}

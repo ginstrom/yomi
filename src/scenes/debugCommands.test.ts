@@ -79,6 +79,8 @@ describe('debug commands', () => {
     expect(runCommand('stock gold 50', context)).toEqual({ lines: ['Stock: gold 50'], changed: true })
     expect(runCommand('stock gold -80', context).lines).toEqual(['Stock: gold 0'])
     expect(runCommand('stock unobtainium 5', context).lines[0]).toMatch(/No material "unobtainium"/)
+    expect(runCommand('stock wyvern_hide 5 drake_scale 2', context).changed).toBe(true)
+    expect(context.source!.game.world.stock).toMatchObject({ wyvern_hide: 5, drake_scale: 2 })
   })
 
   it('adds several material pairs at once, checking every pair before applying any', () => {
@@ -204,7 +206,9 @@ describe('debug commands', () => {
     const { baggage } = context.source!.game.parties[0]
     expect(runCommand('facility workshop 2', context).changed).toBe(true)
     expect(world.workshop).toBe(2)
-    expect(runCommand('facility workshop 4', context).lines[0]).toMatch(/from 0 to 3/)
+    expect(runCommand('facility workshop 6', context).changed).toBe(true)
+    expect(world.workshop).toBe(6)
+    expect(runCommand('facility workshop 7', context).lines[0]).toMatch(/from 0 to 6/)
     expect(runCommand('facility trading_post 0', context).lines[0]).toMatch(/from 1 to 6/)
     expect(runCommand('facility guild_hall 4', context).changed).toBe(true)
     expect(world.guildHall).toBe(4)

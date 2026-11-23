@@ -8,6 +8,7 @@ import { replaceAt, type ItemPlace } from './itemPlace.ts'
 import {
   EXTRACT_LEVEL,
   embedCost,
+  fuseCost,
   FUSE_LEVELS,
   embed,
   embedRefusal,
@@ -241,6 +242,30 @@ describe('fuse', () => {
     game.runes = { storm2: 1 }
     expect(fuseRefusal(game, game.parties[0], 'storm2')).toMatch(/Greater Storm Rune needs a level 4 workshop/)
     refused(game, () => fuse(game, game.parties[0], 'storm2'), /level 4/)
+  })
+
+  it('fuses three rank-2 runes to rank 3 at a level 4 workshop, refused at 3', () => {
+    const low = home(3)
+    low.runes = { ember2: 3 }
+    refused(low, () => fuse(low, low.parties[0], 'ember2'), /^Fusing to a Greater Ember Rune needs a level 4 workshop\.$/)
+    const game = home(4)
+    game.runes = { ember2: 3 }
+    expect(fuse(game, game.parties[0], 'ember2')).toBeNull()
+    expect(game.runes).toEqual({ ember3: 1 })
+    expect(game.world.stock.gold).toBe(500 - fuseCost('ember2').gold!)
+    expect(fuseCost('ember2')).toEqual({ gold: 30 })
+  })
+
+  it('fuses three rank-3 runes to rank 4 at a level 5 workshop, refused at 4', () => {
+    const low = home(4)
+    low.runes = { ember3: 3 }
+    refused(low, () => fuse(low, low.parties[0], 'ember3'), /^Fusing to a Grand Ember Rune needs a level 5 workshop\.$/)
+    const game = home(5)
+    game.runes = { ember3: 3 }
+    expect(fuse(game, game.parties[0], 'ember3')).toBeNull()
+    expect(game.runes).toEqual({ ember4: 1 })
+    expect(game.world.stock.gold).toBe(500 - 40)
+    expect(fuseCost('ember3')).toEqual({ gold: 40 })
   })
 })
 

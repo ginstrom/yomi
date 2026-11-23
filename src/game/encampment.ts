@@ -134,7 +134,10 @@ const FACILITIES: readonly Facility[] = [
       [
         'Makes the field modifiers, and Bearded, Keen and Braced, at grade 1. Sets runes, and fuses three Lesser runes into one.',
         'Makes Light, Long and Reinforced too, at up to grade 2. Takes runes out again, for a fee.',
-        'Makes every modifier at up to grade 3.',
+        'Makes every modifier at up to grade 3. Tempers forged gear to Fine and Masterwork.',
+        'Forges mithril, elderwood and wyvern-hide gear. Fuses runes up to Greater.',
+        'Forges adamant, wyrmwood and basilisk-scale gear. Fuses runes up to Grand.',
+        'Forges starmetal, heartwood and drake-scale gear.',
       ][level - 1],
     cost: (game) => workshopCost(game.world),
     improve: upgradeWorkshop,

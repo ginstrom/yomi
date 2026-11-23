@@ -174,7 +174,7 @@ The ready-made heroes come to:
 
 `inventory.ts` has the items:
 
-- `BASE_ITEMS`, the plain items the trading post and crafting work with, generated as every family in each material of its kind, in `MATERIALS` order (tiers 1 and 2 first): 140, the Wand of Sparks among them as the wand's tier 1. Names are "<Material> <Family>" ("Mithril Longsword", "Drake-scale Leather", "Starweave Robe"), a family's `tier1` name only at tier 1. The trading post sells tiers 1 and 2 only; tiers 3 to 5 are forged at the workshop;
+- `BASE_ITEMS`, the plain items the trading post and crafting work with, generated as every family in each material of its kind, in `MATERIALS` order (tiers 1 and 2 first): 140, the Wand of Sparks among them as the wand's tier 1. Names are "<Material> <Family>" ("Mithril Longsword", "Drake-scale Leather", "Starweave Robe"), a family's `tier1` name only at tier 1. The trading post sells tiers 1 and 2 only; tiers 3 to 5 are forged at the workshop (levels 4 to 6) and tempered there to Fine and Masterwork, and a forged item is worth `forgedValue`, 1.5 × its forge and temper gold, which the post pays half of (`docs/reference/game.md`, "Crafting");
 - `WEAPONS`, the six plain weapons a new hero carries;
 - `MAGIC_ITEMS`, the enchanted ones won as loot.
 

@@ -1110,13 +1110,19 @@ describe('the trading post and crafting in a campaign', () => {
     })
   })
 
-  it('keeps none of the outer rings\' materials (stage 9), so the careful party sells them', () => {
+  it('keeps of the outer rings\' materials only the workshop\'s levels 4 to 6 ores (stage 10), so the careful party sells the rest', () => {
     const outer = ['ironwood', 'mithril', 'elderwood', 'adamant', 'wyrmwood', 'starmetal', 'heartwood'] as const
-    for (const shape of [{}, { tradingPost: 6, workshop: 3, shrine: 3, infirmary: 3, lodge: 3, guildHall: 5 }]) {
+    const kept = (needs: Stock) => Object.fromEntries(outer.map((material) => [material, needs[material] ?? 0]))
+    const none = { ironwood: 0, mithril: 0, elderwood: 0, adamant: 0, wyrmwood: 0, starmetal: 0, heartwood: 0 }
+    for (const [shape, expected] of [
+      [{}, { ...none, mithril: 20, adamant: 20, starmetal: 10 }],
+      [{ tradingPost: 6, workshop: 3, shrine: 3, infirmary: 3, lodge: 3, guildHall: 5 }, { ...none, mithril: 20, adamant: 20, starmetal: 10 }],
+      [{ workshop: 5 }, { ...none, starmetal: 10 }],
+      [{ workshop: 6 }, none],
+    ] as const) {
       const game = newGame(undefined, null, 1)
       Object.assign(game.world, shape)
-      const needs = materialNeeds(game, 3)
-      for (const material of outer) expect(needs[material] ?? 0, material).toBe(0)
+      expect(kept(materialNeeds(game, 3)), JSON.stringify(shape)).toEqual(expected)
     }
   })
 
