@@ -48,4 +48,17 @@ describe('blightTiles', () => {
   it('draws a small board as one tile', () => {
     expect(blightTiles({ cols: 10, rows: 10 }, WORLD_LAYOUT)).toHaveLength(1)
   })
+
+  it('never puts a hex in the next row’s first tile for reaching past the last column', () => {
+    const all = blightTiles(WORLD_SIZE, WORLD_LAYOUT)
+    const across = all.filter((t) => t.y === 0).length
+    for (const t of all) {
+      for (const i of t.hexes) {
+        const c = boardHexCenter(offsetToHex(i % WORLD_SIZE.cols, Math.floor(i / WORLD_SIZE.cols)), WORLD_LAYOUT)
+        expect(c.x - 40).toBeLessThan(t.x + t.width)
+        expect(c.x + 40).toBeGreaterThan(t.x)
+      }
+    }
+    expect(across).toBeGreaterThan(1)
+  })
 })

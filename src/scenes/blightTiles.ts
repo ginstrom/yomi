@@ -32,11 +32,12 @@ export function blightTiles(board: BoardSize, layout: BoardLayout, tilePx: numbe
     }
   }
   const across = Math.ceil(width / tilePx)
+  const down = Math.ceil(height / tilePx)
   const place = (c: { x: number; y: number }, reachX: number, reachY: number, into: (tile: BlightTile) => number[], i: number): void => {
     const fromX = Math.max(0, Math.floor((c.x - reachX) / tilePx))
     const fromY = Math.max(0, Math.floor((c.y - reachY) / tilePx))
-    const toX = Math.floor((c.x + reachX) / tilePx)
-    const toY = Math.floor((c.y + reachY) / tilePx)
+    const toX = Math.min(across - 1, Math.floor((c.x + reachX) / tilePx))
+    const toY = Math.min(down - 1, Math.floor((c.y + reachY) / tilePx))
     for (let ty = fromY; ty <= toY; ty++) {
       for (let tx = fromX; tx <= toX; tx++) {
         const tile = tiles[ty * across + tx]
