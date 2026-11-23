@@ -1274,12 +1274,10 @@ describe('the kit: roles, the expected kit and the record', () => {
       row(4, [2, 3], [3, 4], [2, 3]),
       row(5, [3, 3], [4, 6], [3, 4]),
     ]
-    for (const role of ['fighter', 'archer', 'mage'] as const) {
-      expect([1, 5, 9, 13, 17, 20].map((level) => expectedKit(role, level))).toEqual([...rows, rows[4]])
-      expect([4, 8, 12, 16].map((level) => expectedKit(role, level).tier)).toEqual([1, 2, 3, 4])
-    }
-    expect(expectedKit('mage', 0)).toEqual(rows[0])
-    expect(expectedKit('mage', 25)).toEqual(rows[4])
+    expect([1, 5, 9, 13, 17, 20].map((level) => expectedKit(level))).toEqual([...rows, rows[4]])
+    expect([4, 8, 12, 16].map((level) => expectedKit(level).tier)).toEqual([1, 2, 3, 4])
+    expect(expectedKit(0)).toEqual(rows[0])
+    expect(expectedKit(25)).toEqual(rows[4])
   })
 
   it('notes the party\'s kit wherever it notes the battles to a level', () => {

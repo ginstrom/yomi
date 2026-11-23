@@ -546,7 +546,7 @@ const EXPECTED_KIT: readonly ExpectedKit[] = [
  * for every role: levels 1–4, 5–8, 9–12, 13–16 and 17–20 a row each. The
  * yardstick the record's kit is printed against.
  */
-export function expectedKit(_role: KitRole, level: number): ExpectedKit {
+export function expectedKit(level: number): ExpectedKit {
   const clamped = Math.min(20, Math.max(1, Math.floor(level)))
   return EXPECTED_KIT[Math.floor((clamped - 1) / 4)]
 }
@@ -2812,7 +2812,7 @@ export function kitLines(summary: Pick<CampaignSummary, 'kit' | 'kitForgeReady'>
   return summary.kit
     .filter(({ campaigns }) => campaigns > 0)
     .flatMap((kit) => {
-      const expected = expectedKit('fighter', kit.level)
+      const expected = expectedKit(kit.level)
       const ready = summary.kitForgeReady.find((k) => k.level === kit.level)!
       return [
         `Kit at ${kit.level} (${kit.campaigns} campaigns): ${byRole(kit)}; expected tier ${expected.tier}, ${expected.sockets[0]}–${expected.sockets[1]} runes`,
