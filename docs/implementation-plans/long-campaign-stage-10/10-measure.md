@@ -197,7 +197,11 @@ Recommendation: 1, with 2 + 3 as stage 12's first measured candidates (they are 
 | Mark | All campaigns | Forge-ready campaigns | Expected |
 | --- | --- | --- | --- |
 | 5 | 1.0 / 1.0 / 1.0 (84) | none (0 of 84) | tier 2 |
-| 10 | 1.0 / 1.0 / 1.0 (84 → 53) | none (0 of 53) | tier 3 |
+| 10 | 1.0 / 1.0 / 1.0 (53) | none (0 of 53) | tier 3 |
 | 15 | fighter 1.5, 0.3 runes; archer 1.5, 0.3; mage 1.3, 0.4 (16) | fighter 1.9, 0.6 runes; archer 1.9, 0.6; mage 1.7, 1.0 (8 of 16) | tier 4, 3–4 runes |
 
 Reading: no party reaches 5 or 10 with a forge at home, which confirms the timing found above. Of the 8 that reach 15 with one, the main hand averages 1.7–1.9, not 3+. Even with the forge built, the vanguard climbing 9–15 hardly comes home to use it (13 home visits at those levels in 100 campaigns), and the stock's gold goes to recruits first. So the forging policy is not yet shown to work when the forge exists. That is stage 12's question as well (targeting and spend order), not a defect found in `forgeGear`: its unit tests pass on fixed states.
+
+### Review round 1 (opus): clean
+
+Two record notes, both fixed: the forge-ready table's row 10 read "(84 → 53)", now "(53)"; index decision 21 now names the report-only forge-ready Kit line (`forgeReadyAt`, `kitForgeReady`). A line under C8 did not fit the index's 32,000-byte cap (16 bytes left after decision 21), so C8 is unchanged and decision 21 carries it. No code changed in this round; `npm test` passes.

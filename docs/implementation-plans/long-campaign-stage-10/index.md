@@ -28,7 +28,7 @@ The plan follows the stage design, then the references, then the code (where the
 18. **The world map header's stock** (carried, low priority): step 08 checks it at 840 × 560 with a stock holding every material; a layout fix within `headerLines` and the header is in scope, anything larger is recorded and left.
 19. **Versions:** `SAVE_VERSION` 30 → 31 in step 03 (the trophies in `Material`, as the design asks), no migration (older saves read as unreadable, stages 8–9's practice). `LOG_SCHEMA_VERSION` unchanged: no battle event changes shape.
 20. **Out of scope:** market income, the simulator's spend order, the company's long-campaign policy skew and home-country spawns (stage 12); the Source's guardians stay at `SOURCE_FOE_LEVEL` 6 (stage 11); trophies from kills and `--player-kit` (stage 11); gear §5.8's step 3 ring-element wards and step 4 unique items by `gearScore`; the trading post selling tier 3+.
-21. **Kit lag accepted until stage 12** *(the user, step 10)*: "Done when"'s kit clause unmet by the simulator's policy, not the economy; stage 12's first candidates in [step 10's record](10-measure.md).
+21. **Kit lag accepted until stage 12** *(the user, step 10)*: "Done when"'s kit clause unmet by the simulator's policy, not the economy; report-only forge-ready Kit line (`forgeReadyAt`, `kitForgeReady`); stage 12's candidates in [step 10](10-measure.md).
 
 ## Scope and shared constraints
 

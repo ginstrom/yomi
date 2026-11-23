@@ -195,3 +195,5 @@ Not retuned; `npm test` 107 files, 2,736 tests pass on `82a7969`. Stopped for th
 
 - Refactor guard unedited, passes; 50-campaign check `57fdea1553a35b1af0e33b74a11ea9fe0a0e2f62ef9e5c80972af59276e53e75`, **identical** (23 s); `npm test` 2,738 pass.
 - Long (100, `--log none`, 4:01, load 5.7 → 3.4): all figures identical to the step's `long` run. Forge-ready kit: at 5 none (0 of 84); at 10 none (0 of 53); at 15 fighter 1.9 / 0.6 runes, archer 1.9 / 0.6, mage 1.7 / 1.0 (8 of 16), against tier 4, 3–4 runes.
+
+Outcome (step 10): engineer opus, reviewer opus, clean, 1 review round (two record notes fixed).
