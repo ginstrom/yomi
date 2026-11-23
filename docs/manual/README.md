@@ -178,7 +178,7 @@ Black hexes have never been seen. The party sees 5 hexes around it, the encampme
   Past the Troll Lairs the land runs on: bandit camps, spider nests and salamander pools stand at threat 7, bandit companies at 9 and 12, and freebooter hosts at 15 and 18. The Source itself, 122 hexes out in the far east, is threat 20.
 - **Trade partners** (Millbrook and Saltmere near home; far out, Stonehollow, a mountain hold that trades mithril, Elder Glade, a forest people's glade that trades elderwood, and Emberwatch, a fortified pass that trades adamant), neutral settlements with their own icons and names in gold. A partner is never held and never lost: walk a party onto its hex and it will trade with your encampment ("Millbrook will trade with Oakvale"). While its own land is blighted (level 2) or worse the partner falls silent, and its icon and name turn grey (once you have contacted it, or while a party can see it); it trades again once that land is clean. Hover a partner to see its good, whether it is contacted, and whether a route runs to it.
 
-![The far east of the map after the whole of it is revealed, the party beside Stonehollow](images/world-outer-rings.png)
+![The threat 7 ring after the whole map is revealed: the party beside Stonehollow](images/world-outer-rings.png)
 
 ### Trade roads
 
@@ -423,7 +423,7 @@ While aiming, the pointer is crossed swords over a valid target of an attacking 
 
 ![Victory](images/battle-victory.png)
 
-You win when every foe has fallen. Every surviving hero earns the full experience reward. The lair disappears from the map, the land around it is cleansed, and its loot goes into the baggage. A lair may also yield a **rune**, which goes into the party's rune pouch: the victory screen names it, as in "Found: Lesser Ember Rune". Lairs of threat 1 to 3 give a Lesser rune half the time; from threat 4 every win gives one, sometimes of the second rank. The Salamander Pool favours Ember runes and the Spider Nest Venom.
+You win when every foe has fallen. Every surviving hero earns the full experience reward. The lair disappears from the map, the land around it is cleansed, and its loot goes into the baggage. A lair may also yield a **rune**, which goes into the party's rune pouch: the victory screen names it, as in "Found: Lesser Ember Rune". Lairs of threat 1 to 3 give a Lesser rune half the time; from threat 4 every win gives one, sometimes of the second rank. Further out the loot grows: from threat 9 a win gives one rune, and a second half the time, of the second or third rank; from threat 14 it gives two, of the second to fourth rank; and the Source gives three, of the third or fourth rank. The Salamander Pool favours Ember runes and the Spider Nest Venom.
 
 The victory screen also says what the battle cost the party in hit points, counted before any level-up healed anyone: "The battle cost 23 HP: Aiko 12, Ren 8, Mia 3.". Heroes are listed most lost first, and a hero who fell counts for the hit points they started with. A battle that cost nothing has no such line.
 

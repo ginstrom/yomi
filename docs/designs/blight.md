@@ -190,7 +190,7 @@ Monster locations stay put for now. Later, a location will be able to move along
 
 ### 4.10 The Source and endless mode
 
-- **The Source** is a monster location in the far east corner at threat `MAX_THREAT`. It has a boss encounter of its own, still to be designed, and is the strongest blight source.
+- **The Source** is a monster location in the far east corner at threat `MAX_THREAT` (stage 9: `SOURCE_THREAT`, 20, 122 hexes from home). It has a boss encounter of its own, still to be designed, and is the strongest blight source.
 - **Beating it** brings a victory screen with two choices:
   - **End:** back to the menu, with the save kept as a finished game.
   - **Continue (endless):** the remaining nests keep pushing and spawns go on.
