@@ -9,10 +9,10 @@ Append-only history for [the plan](index.md) and [the feature record](../../feat
 | Measure | Flags | Source wins | Days | Battles | Heroes dead | Stage 9 | Wall time |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 50-campaign check | `--campaign --battles 50 --parties 1 --ready-level 7 --near-source` | 26 of 50 | | | | hash identical | 19 s |
-| `one` | `--campaign --battles 500 --parties 1 --ready-level 7 --near-source` | 288 of 500 (212 fell) | 331 | 18.8 | 1.2 | 288 / 331 | 6:10 |
-| `company` | `--campaign --battles 500 --ready-level 7 --near-source` | 289 of 500 (211 fell) | 334 | 18.9 | 1.2 | 289 | 5:11 |
-| `rl10` | `--campaign --battles 500 --ready-level 10 --near-source` | 409 of 500 (91 fell) | 530 | 33.9 | 1.3 | 409 / 530 | 9:42 |
-| `long` | `--campaign --battles 100 --log none` | 15 of 100 (85 fell) | 1272 | 46.4 | 3.3 | 15 / 1272 / 46.4 | 3:50 |
+| `one` | `--campaign --battles 500 --parties 1 --ready-level 7 --near-source` | 288 of 500 (212 fell) | 331 | 18.8 | 1.2 | 288 / 331 | 4:19 |
+| `company` | `--campaign --battles 500 --ready-level 7 --near-source` | 289 of 500 (211 fell) | 334 | 18.9 | 1.2 | 289 | 5:07 |
+| `rl10` | `--campaign --battles 500 --ready-level 10 --near-source` | 409 of 500 (91 fell) | 530 | 33.9 | 1.3 | 409 / 530 | 9:41 |
+| `long` | `--campaign --battles 100 --log none` | 15 of 100 (85 fell) | 1272 | 46.4 | 3.3 | 15 / 1272 / 46.4 | 3:48 |
 
 50-campaign SHA-256: `57fdea1553a35b1af0e33b74a11ea9fe0a0e2f62ef9e5c80972af59276e53e75` (identical to stage 9 step 09).
 
@@ -30,4 +30,4 @@ Append-only history for [the plan](index.md) and [the feature record](../../feat
 - Runes a campaign: 44.6 found, 3.4 bought, 2.4 fused; 1.7 sockets filled at the end.
 - Guild hall level 3.7; 30.4 recruits; 5.9 parties wiped; 1.8 guard battles; capstones in 17 campaigns.
 
-Outcome (step 01): engineer sonnet, no review round recorded here (orchestrator's).
+Outcome (step 01): engineer sonnet, reviewer sonnet, clean, 1 review round.
