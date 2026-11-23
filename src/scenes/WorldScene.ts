@@ -50,7 +50,7 @@ import { heroLook, SPRITE_ATLAS, spriteAnim, spriteFrame } from './unitLook.ts'
 import { FRAME_ACTIVE_COLOR, HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
 import { ROAD_COLORS, roadSegments, silenceShown, type RoadSegment } from './roadsView.ts'
 import { advanceMessage, describeDays, describeOthers, describeStanding, describeWalk, describeWorldEvent, describeWorldEvents, yieldSummary } from './worldEvents.ts'
-import { headerLines } from './headerLines.ts'
+import { headerLines, measureCharWidth } from './headerLines.ts'
 import { improveLabel } from './improveButton.ts'
 import { hexInfo } from './hexInfo.ts'
 import { tellStory, type StoryAnchors } from './StoryScene.ts'
@@ -1338,10 +1338,8 @@ export class WorldScene extends Phaser.Scene {
   private statusCharWidth(font: string): number {
     let width = this.statusCharWidths.get(font)
     if (width === undefined) {
-      this.statusText.setFontSize(font).setText('0'.repeat(20))
-      const twenty = this.statusText.width
-      this.statusText.setText('0'.repeat(10))
-      width = (twenty - this.statusText.width) / 10 || 8
+      this.statusText.setFontSize(font)
+      width = measureCharWidth(this.statusText)
       this.statusCharWidths.set(font, width)
     }
     return width

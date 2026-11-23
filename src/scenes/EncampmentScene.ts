@@ -16,7 +16,7 @@ import { addPanelButton } from './panelButton.ts'
 import { tellStory } from './StoryScene.ts'
 import { SPRITE_ATLAS, spriteAnim, spriteFrame } from './unitLook.ts'
 import { overlayScale } from './overlayScale.ts'
-import { headerLines } from './headerLines.ts'
+import { headerLines, measureCharWidth } from './headerLines.ts'
 
 interface EncampmentData {
   game: GameState
@@ -184,7 +184,7 @@ export class EncampmentScene extends Phaser.Scene {
     // Every material held may not fit one line: it wraps between entries onto a second, above the picture, and past two
     // lines the stock ends "+N more" (`headerLines`).
     this.stockText = this.add.text(CENTRE_X, TITLE_Y + 18, '', { fontFamily: FONT, fontSize: '12px', color: DIM, align: 'center' }).setOrigin(0.5, 0)
-    const charWidth = (this.stockText.setText('0'.repeat(20)).width - this.stockText.setText('0'.repeat(10)).width) / 10 || 8
+    const charWidth = measureCharWidth(this.stockText)
     const line = `${actingFor(this.gameState, this.expedition) || 'Your encampment.  '}Stock: ${stock || 'nothing'}`
     this.stockText.setText(headerLines([line], Math.floor((FRAME_W - 40) / charWidth), STOCK_LINES, 0).join('\n'))
     this.frame.add(this.stockText)

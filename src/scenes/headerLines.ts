@@ -38,3 +38,18 @@ export function headerLines(lines: readonly string[], width: number, maxLines = 
   while (count > 1 && kept(count).length > room) count--
   return wrapped.map((w, i) => (i === cut ? kept(count) : w)).flat()
 }
+
+/** The width assumed for a character when text measures as 0 wide (jsdom, which has no fonts). */
+export const FALLBACK_CHAR_WIDTH = 8
+
+/**
+ * A character's width in `text`'s current font, measured as the difference
+ * between 20 and 10 characters (so padding cancels). Leaves `text` showing 10
+ * zeros: set its text again afterwards. Falls back to `FALLBACK_CHAR_WIDTH`.
+ */
+export function measureCharWidth(text: { setText(value: string): unknown; readonly width: number }): number {
+  text.setText('0'.repeat(20))
+  const twenty = text.width
+  text.setText('0'.repeat(10))
+  return (twenty - text.width) / 10 || FALLBACK_CHAR_WIDTH
+}
