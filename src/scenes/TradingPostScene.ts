@@ -354,6 +354,7 @@ export class TradingPostScene extends Phaser.Scene {
 
   private render(): void {
     this.frame.removeAll(true)
+    // On each render on purpose: render runs only on clicks, the header refresh is cheap, and this catches stock changes from any path (the debug console included).
     notifyStock(this)
     this.controls = {}
     this.routeLines = []
