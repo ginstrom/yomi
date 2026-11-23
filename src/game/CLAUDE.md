@@ -32,7 +32,7 @@ Loaded when working in `src/game/`: encounters and bandits, the company and its 
 - `buildings.ts`: the stock's arithmetic, the watchtower and shrine, a held resource's improvements (outpost, works, fort) and the Builders' Lodge that allows them (at 3, roads push).
 - `encampment.ts`: the facilities as the encampment screen shows them, and `improveFacility`.
 - `guildHall.ts`: the hall's level and what it allows (party size, parties, company size), recruiting and the reserves, `homeParties` and `homeParty`.
-- `tradingPost.ts`: buying and selling items, runes and materials.
+- `tradingPost.ts`: buying and selling items, runes, materials and partners' goods.
 - `crafting.ts`: modifiers on items, in the field or at the workshop; the workshop's levels, forging and tempering tiers 3 to 5.
 - `runecraft.ts`: embedding, fusing and extracting runes.
 - `infirmary.ts`: the infirmary and `restHealing`.

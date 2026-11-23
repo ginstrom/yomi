@@ -56,3 +56,7 @@ Outcome (step 02): engineer opus, reviewer opus, clean, 1 review round.
 Outcome (step 03): engineer opus, reviewer opus, clean, 1 review round.
 
 Step 05 workshop sprites: engineer sonnet, reviewer opus, clean, 1 review round, plus two look passes the orchestrator asked for (level 6 banner moved to the roof with a gold chevron, orange rim on the star-metal glow, level 4 bellows pipe); sprites:check pass, yomi-asset-check pass; no simulation.
+
+## Step 04: partners' goods
+
+2026-11-23. 50-campaign check `57fdea1553a35b1af0e33b74a11ea9fe0a0e2f62ef9e5c80972af59276e53e75`, **identical** to step 03. Guard and policy snapshot untouched, green. `npm test`: 105 files, 2,676 tests pass.

@@ -7,7 +7,8 @@ import { forgedValue } from './crafting.ts'
 import type { Expedition } from './expedition.ts'
 import { partyById, type GameState } from './gameState.ts'
 import { STALE, allPlaces, itemAt, removeAt, type ItemPlace } from './itemPlace.ts'
-import type { Material, Stock } from './territory.ts'
+import { materialName, type Material, type Stock } from './territory.ts'
+import { isContacted, isSilent, partners } from './trade.ts'
 import { encampmentName, type WorldState } from './worldMap.ts'
 
 /**
@@ -16,13 +17,14 @@ import { encampmentName, type WorldState } from './worldMap.ts'
  * baggage, and buys whatever the party carries but does not wear, and the
  * stock's materials at a poor rate. From level 4 it is a market, and brings
  * gold every yield day (`MARKET_INCOME`, territory.ts). It also sells runes into the pouch (rank 1
- * from level 2, rank 2 from level 4, six kinds) and buys any from it. It never
- * sells materials, nor a runed item, nor anything of tier 3 and up, which the
+ * from level 2, rank 2 from level 4, six kinds) and buys any from it. From level 5 (the Market Hall) it
+ * also sells each contacted, unsilent partner's good at `GOOD_PRICE` gold a unit
+ * into the stock. It never sells a runed item, nor anything of tier 3 and up, which the
  * workshop forges (long-campaign stage 10). Built from the
  * start; each action returns why it was refused, or null when done.
  */
 
-/** What raising the post to each level costs, from level 1 (built). Levels 1 to 3 sell tier 1 at grades up to the level; level 4 adds tier 2 at every grade, and levels 5 and 6 sell as 4 does. Runes: rank 1 from level 2, rank 2 from level 4. Levels 4 to 6 also bring gold (`MARKET_INCOME`, territory.ts). */
+/** What raising the post to each level costs, from level 1 (built). Levels 1 to 3 sell tier 1 at grades up to the level; level 4 adds tier 2 at every grade, and levels 5 and 6 sell as 4 does. Runes: rank 1 from level 2, rank 2 from level 4. Level 5 and up also sell partners' goods (`goodsForSale`). Levels 4 to 6 also bring gold (`MARKET_INCOME`, territory.ts). */
 export const TRADING_POST_COSTS: readonly Stock[] = [
   {},
   { gold: 40, stone: 15 },
@@ -286,5 +288,47 @@ export function sellRune(game: GameState, party: Expedition, key: RuneKey): stri
   if (pouchCount(game.runes, key) < 1) return `The pouch holds no ${runeName(key)}.`
   takeFromPouch(game.runes, key)
   world.stock.gold = (world.stock.gold ?? 0) + runeSalePrice(key)
+  return null
+}
+
+/** The trading post level (the Market Hall) from which partners' goods are sold. */
+export const GOODS_LEVEL = 5
+/** Gold a unit of a partner's good. */
+export const GOOD_PRICE = 3
+/** Goods a partner sells besides its own until stage 11 brings their monsters (decision 8). */
+export const STAND_IN_GOODS: Readonly<Record<string, readonly Material[]>> = { elder_glade: ['wyvern_hide'] }
+
+export interface GoodOffer { partner: string; name: string; material: Material }
+
+/** What the Market Hall sells: each contacted partner that is not silent, in `PARTNERS` order, its good then its stand-ins; nothing below `GOODS_LEVEL`. */
+export function goodsForSale(world: WorldState): GoodOffer[] {
+  if (world.tradingPost < GOODS_LEVEL) return []
+  const offers: GoodOffer[] = []
+  for (const p of partners(world)) {
+    if (!isContacted(world, p.id) || isSilent(world, p.id)) continue
+    for (const material of [p.good, ...(STAND_IN_GOODS[p.id] ?? [])]) offers.push({ partner: p.id, name: p.name, material })
+  }
+  return offers
+}
+
+/** Why `amount` of a partner's good cannot be bought now, or null when it can. */
+export function buyGoodRefusal(game: GameState, party: Expedition, material: Material, amount: number): string | null {
+  const { world } = game
+  if (!atEncampment(world, party)) return notHere(world)
+  if (world.tradingPost < GOODS_LEVEL) return `A level ${GOODS_LEVEL} trading post sells partners' goods.`
+  if (!goodsForSale(world).some((o) => o.material === material)) return `No partner sells ${materialName(material)} here.`
+  if (!Number.isInteger(amount) || amount < 1) return 'Buy a whole number of at least 1.'
+  const price = GOOD_PRICE * amount
+  if ((world.stock.gold ?? 0) < price) return `It costs ${price} gold, more than the stock holds.`
+  return null
+}
+
+/** Buys `amount` of a partner's good into the stock for `GOOD_PRICE` gold a unit. */
+export function buyGood(game: GameState, party: Expedition, material: Material, amount: number): string | null {
+  const refusal = buyGoodRefusal(game, party, material, amount)
+  if (refusal) return refusal
+  const { stock } = game.world
+  spend(stock, { gold: GOOD_PRICE * amount })
+  stock[material] = (stock[material] ?? 0) + amount
   return null
 }

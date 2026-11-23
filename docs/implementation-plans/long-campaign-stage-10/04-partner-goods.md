@@ -123,3 +123,9 @@ No scene work (step 08), no simulator change, no change to routes, contact or si
 - [ ] One commit, "Stage 10 step 04: partners' goods at the Market Hall", files staged by path, no attribution lines; the index's row 04 updated with status and commit.
 
 ## 7. Execution record
+
+2026-11-23. Decision 9 as the default (user's Q5 confirmed): contacted, not silent partners only; 3 gold a unit; the simulator never buys.
+- Tests first (7 red on missing exports), then C3 in `tradingPost.ts` as written. Refusal texts: "A level 5 trading post sells partners' goods.", "No partner sells <materialName> here.", "Buy a whole number of at least 1.", "It costs N gold, more than the stock holds."
+- `npx vitest run src/game/tradingPost.test.ts`: 35 pass. `npm test`: 105 files, 2,676 tests, all pass; refactor guard untouched and green.
+- 50-campaign check: `57fdea15...e53e75`, identical to step 03.
+- `src/game/CLAUDE.md` 7,413 bytes. `grep "never sells materials"` finds nothing. No deviations. Step 08 reads C3 unchanged.
