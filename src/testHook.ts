@@ -276,6 +276,12 @@ export interface EncampmentProbe {
   facilities: Array<ButtonProbe & { id: FacilityId; level: number; frame: string; labelText: string; building: BoxProbe; label: BoxProbe }>
   /** `improve` builds or raises the facility shown, `open` goes into it (the guild hall, trading post or workshop), `leave` goes back to the map. */
   buttons: { improve: ButtonProbe; open: ButtonProbe; leave: ButtonProbe }
+  /** The line or two under the title: whom it acts for and the stock, shortened with "+N more" past two lines. */
+  stock: string
+  /** That text's box on screen (top-left corner and size). */
+  stockRect: { x: number; y: number; width: number; height: number }
+  /** The top of the encampment's picture on screen. */
+  pictureTop: number
 }
 
 export interface TradingPostProbe {

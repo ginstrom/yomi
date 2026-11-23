@@ -67,6 +67,22 @@ describe('the encampment', () => {
     expect((await game.settled('World')).world).toMatchObject({ shrine: 1, stock: { gold: 80, iron: 50 } })
   })
 
+  it('keeps a stock of every material, at 840 by 560, to two lines above the picture', async () => {
+    const game = await games.open()
+    await game.resize(840, 560)
+    await richAtHome(game, {
+      gold: 120, iron: 60, timber: 40, stone: 30, silver: 20, copper: 20, crystal: 10, salt: 20, peat: 10,
+      mithril: 60, adamant: 60, wyrmwood: 60, starmetal: 30, ironwood: 40, elderwood: 40, heartwood: 40,
+    })
+    const camp = await enter(game)
+    const at = JSON.stringify({ stock: camp.stock, rect: camp.stockRect, pictureTop: camp.pictureTop })
+    expect(camp.stock.startsWith('Your encampment.  Stock: 120 gold, 60 iron'), at).toBe(true)
+    expect(camp.stock.split('\n').length, at).toBeLessThanOrEqual(2)
+    expect(camp.stockRect.y + camp.stockRect.height, at).toBeLessThanOrEqual(camp.pictureTop)
+    expect(camp.stockRect.x, at).toBeGreaterThanOrEqual(0)
+    expect(camp.stockRect.x + camp.stockRect.width, at).toBeLessThanOrEqual(840)
+  })
+
   it('raises the guild hall, goes in to recruit and swap, and gives the map back the new party', async () => {
     const game = await games.open()
     await richAtHome(game)
