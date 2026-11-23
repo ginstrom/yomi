@@ -92,3 +92,14 @@ No code change, no tuning, no band or "Now" change (step 10 updates "Now"), no o
 - [ ] One commit, "Stage 10 step 01: the stage's baseline", of this file, `log.md` and the index's row 01 only, files staged by path, no attribution lines; the index's row 01 updated with status and commit.
 
 ## 7. Execution record
+
+Measured 2026-11-23 on `f3a1102` through `yomi-measure` (seed 1, label `s10-01`); tables in [log.md](log.md). No code changed; no stop-and-report.
+
+**Judgments.** Every figure equals stage 9's final: the 50-campaign hash is identical, `one` 288 (331 days, 1.2 dead), `company` 289, `rl10` 409 (530 days), long 15 of 100. So `6b51b72` and `76b0cf5` moved no play. No move over 5 points. Out-of-band figures (`one`, `company`, days) are the ones the user accepted until stage 12; `rl10` is in band; heroes dead 1.2-1.3 is under 2.0.
+
+**Baseline for stage 10**
+- Early (500, `--near-source`): `one` 288 / 331 days / 18.8 battles / 1.2 dead; `company` 289; `rl10` 409 / 530 days.
+- 50-campaign hash (step 02's reference): `57fdea1553a35b1af0e33b74a11ea9fe0a0e2f62ef9e5c80972af59276e53e75` (26 of 50).
+- Long (100, `--log none`): Source 15 of 100 (85 fell); 1272 days; 46.4 battles; battles to level 5/10/15/20 6.8/28.5/54.3/none in 84/55/44/0 campaigns; ring win rates 7 0.956, 9 0.828, 12 0.601, 15 0.868, 18 0.75 (4 fought), 20 0.833; wall time 3:48 alone (faster than the ~10 min the plan assumed).
+- Kit-free gear figures: workshop level 1.8 at the end; tier-2 items bought 4.3 a campaign; sockets filled 1.7 at the end (runes 44.6 found, 3.4 bought, 2.4 fused); 2234 gold on gear.
+- Wall times: guard-50 ~1 min, `one` 4:19, `company` 5:07, `rl10` 9:41.

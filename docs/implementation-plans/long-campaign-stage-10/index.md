@@ -140,7 +140,7 @@ export function buyGood(game: GameState, party: Expedition, material: Material, 
 
 | Step | Task | Outcome | Depends on | Engineer / reviewer | Status |
 | --- | --- | --- | --- | --- | --- |
-| 01 | [The stage's baseline](01-baseline.md) | `one`, `company`, `rl10` (500, `--near-source`), the 50-campaign hash, the long baseline (100); no code change | — | sonnet / sonnet | pending |
+| 01 | [The stage's baseline](01-baseline.md) | `one`, `company`, `rl10` (500, `--near-source`), the 50-campaign hash, the long baseline (100); no code change | — | sonnet / sonnet | done (Stage 10 step 01: the stage's baseline) |
 | 02 | [Tiers 3 to 5 and bandit gear](02-tiers-and-bandit-gear.md) | Materials, `TIER_BONUS`, relief, sockets, 140 plain items, the post refusing tier 3+, bandits by ring (C1); policy snapshot re-recorded; guard identical | 01 | opus / opus | pending |
 | 03 | [The workshop: forging, tempering, fusing, trophies](03-workshop.md) | Levels 4–6, `forge`, `temper`, `craftCost`, forged worth, fusing to 3 and 4, trophies and `takeTrophies`, `materialName`, save 31 (C2); room made in `src/game/CLAUDE.md`; guard identical | 02 | opus / opus | pending |
 | 04 | [Partners' goods at the Market Hall](04-partner-goods.md) | `goodsForSale`, `buyGood` and its refusal, Elder Glade's wyvern hide (C3); guard identical | 03 | sonnet / opus | pending |
