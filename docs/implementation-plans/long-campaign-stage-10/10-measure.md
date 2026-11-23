@@ -145,3 +145,33 @@ No rule change, no new simulator flag or policy change, no scene or doc work bey
 - [ ] One commit, "Stage 10 step 10: measure and judge", files staged by path, no attribution lines; the index's row 10 updated with status and commit.
 
 ## 7. Execution record
+
+2026-11-23, engineer (opus), on `82a7969`. **Stopped: awaiting the user** (the orchestrator's brief: check step 09's diagnosis after §4.1; if it holds, at most one confirming trial, then report with options; change nothing).
+
+**Measured (§4.1)**, through `yomi-measure`, one at a time, quiet machine; figures and tables in `log.md`, "Step 10".
+- Early: `one` 288 (331 days, 1.2 dead), `company` 289, `rl10` 409 (533 days): wins identical to step 01, no figure further out than accepted; `rl10` days +3. `one` re-run (not reused from step 09: `scripts/simulate.ts` changed in 82a7969).
+- Standard cells all equal "Now"; `sg20-18` 28 and `sg20` 71 equal stage 9; far bandits `bco9` 2, `bco12` 0, `fh15` 0, `fh18` 0 (report only).
+- Long (100, 4:07, quiet): Source 1 of 100 (step 01: 15; stage 9: 15), 1414 days, 42.3 battles; battles to level 5/10/15 6.8/28.4/55.9 in 84/53/16 campaigns; 2271 gold on forging.
+
+**Judged (§4.2)**: the kit is within a tier at 5 (1.0 vs 2) but **lags at 10** (1.0 vs 3, 53 campaigns) **and 15** (1.3–1.5 vs 4, 16 campaigns).
+
+**Diagnosis check** (a temporary stderr trace of every home visit, reverted; `log.md`): step 09's corrected diagnosis holds. The workshop stays at level 1 in 52 of 100 campaigns for want of stone (Old Quarry held in 51 campaigns, from about day 682, mostly blighted; the post takes its 15 stone first); level 4 comes in 37 campaigns around day 1176, after the vanguards that reach 10 (around day 848) got there, and those vanguards hardly come home between 9 and 16 (13 visits in 100 campaigns). 739 of 742 forging visits arm parties at lowest level 4–6, which then wipe at threat 12.
+
+**No trial run.** Outer-site yields act only after the workshop reaches 4 (mithril is short at level 3, but so is gold at every level-3 visit, and Mithril Lode is held at 24 of 182); forge and temper costs act only at level 4+, whose gold goes to wiped recruits. Neither can move the kit at 10, which is fixed before either applies. Nothing retuned; no code changed; `npm test` 107 files, 2,736 pass. The 50-campaign check not needed (no change).
+
+**Options for the user** (none taken):
+1. Accept the lag until stage 12 (the policy skew and spend order are its scope, decision 20); record "Done when"'s kit clause as unmet by the simulator's policy, not the economy. Touches nothing.
+2. Simulator only: do not send a party whose lowest level is more than N under the target's threat (e.g. N = 3: no level-5 recruits at threat 12). Fewer wipes, gold left for the vanguard. Touches `nextTarget` (stage 12's policy skew, pulled forward); `one` and the guard meet nothing above threat 7, so they should hold, but `rl10` fights 234 battles at threat 9 and could move; needs a confirming long run and `rl10`.
+3. Simulator only: forge and temper only for the vanguard (or only for a party at expected tier 3, level 9+). Saves most of the 2271 gold (232 forging visits were guards; 739 at levels 4–6), but on its own does not move the kit at 10: the workshop is not at 4 in time. Pairs with 4 or 5.
+4. Simulator only: raise the workshop before the trading post in `visitFacilities` (the spend order, stage 12). Stone reaches the workshop's level 2 first in the 51 quarry campaigns; level 4 stays held by mithril and gold. May move `one`/`company` slightly (workshop 0.7 there; the post's level 2 would wait).
+5. Rule change: the workshop's level-2 cost without stone (e.g. 40 gold + 15 iron or timber), or Old Quarry's yield 2 → 4. Lets the 49 quarry-less campaigns reach level 2–3, but level 4 still needs 20 mithril and 100 gold. Moves the early game: the workshop's level sets the crafting grade, and `one` ends at workshop 0.7; not measured (a trial is a change). Touches `WORKSHOP_COSTS` / `RESOURCE_YIELDS`, the refactor guard and the 50-campaign hash would likely move, and the docs and manual naming those costs.
+6. Re-read the test: judge the kit only on campaigns whose workshop reached 4 before the mark, or by the day rather than the level. A measure change (C8's record), not a tuning; shows whether the forge policy itself works when the forge exists.
+
+Recommendation: 1, with 2 + 3 as stage 12's first measured candidates (they are the cause); 5 only with an early-game measurement, since it moves the guarded figure.
+
+### Figures for the implementation notes (step 11)
+- Early: `one` 288 / 331 days, `company` 289, `rl10` 409 / 533 days: identical to step 01 in wins.
+- Long: Source 1 of 100 (step 01 and stage 9: 15; step 02: 2), 1414 days (1272), 42.3 battles (46.4); to level 5/10/15: 6.8/28.4/55.9 (6.8/28.5/54.3) in 84/53/16 campaigns (84/55/44).
+- Kit at 5/10/15: tier 1.0 / 1.0 / 1.3–1.5 against 2 / 3 / 4; runes 0 / 0 / 0.3–0.4 against 1–2 / 2–3 / 3–4. Gold on forging 2271 a campaign, mostly re-arming recruits.
+- Cells: standard all = Now; far `bco9` 2, `bco12` 0, `fh15` 0, `fh18` 0; `sg20-18` 28, `sg20` 71.
+- No retune. Runtime: 100 long campaigns 4:07 alone (stage 9: 10:21).

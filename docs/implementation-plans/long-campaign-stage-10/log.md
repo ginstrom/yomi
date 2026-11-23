@@ -139,3 +139,52 @@ Step 08 scenes: engineer sonnet, reviewer opus, clean, 1 review round (five note
 - Review round 1 fixes (no same-tier family switch; diagnosis corrected): `npm test` 2,736 pass; 50-campaign check `57fdea15...6e53e75`, identical.
 
 Outcome (step 09): engineer opus, reviewer opus, clean, 1 review round.
+
+## Step 10: measure and judge
+
+2026-11-23, code `82a7969` (unchanged through the step; nothing retuned, so the 50-campaign check was not needed). Seed 1, label `s10-10`, logs `logs/s10-10-*` (gitignored), run one at a time through `yomi-measure`; the machine was quiet (load 2.2–3.8, the step's own runs only).
+
+| Measure | Flags | Figure | Band | Step 01 | Wall time |
+| --- | --- | --- | --- | --- | --- |
+| `one` | `--campaign --battles 500 --parties 1 --ready-level 7 --near-source` | 288 of 500, 331 days, 18.8 battles, 1.2 dead | 215–250 (288 / 331 days accepted until stage 12) | 288, 331 | 2:54 |
+| `company` | `--campaign --battles 500 --ready-level 7 --near-source` | 289, 334 days | 220–260 (289 accepted) | 289, 334 | 3:49 |
+| `rl10` | `--campaign --battles 500 --ready-level 10 --near-source` | 409, 533 days, 34.0 battles, 1.3 dead | 370–420 | 409, 530, 33.9 | 8:26 |
+| `long` | `--campaign --battles 100 --log none` | 1 of 100 (fell 97, out of days 2), 1414 days, 42.3 battles | report only | 15, 1272, 46.4 | 4:07 |
+| `gr3` `bc3` `bc4` `bc5` `sn5` `sp5` | cells | 500, 455, 454, 494, 451, 475 | bands.md | = Now | 9–10 s each |
+| `sg7` `sg10` `tl5` | cells | 0, 1, 0 | = Now | = Now | 10–17 s |
+| `bco9` `bco12` `fh15` `fh18` | report only | 2, 0, 0, 0 | report only | stage 9: 1, 0, 0, 0 | 13–25 s |
+| `sg20-18` `sg20` | report only | 28, 71 | report only | stage 9: 28, 71 | 30, 37 s |
+
+Early figures: every one identical to step 01 in wins; `rl10`'s days 530 → 533 and battles 33.9 → 34.0 (the gear policy's late home visits; wins unchanged). Gear in `one`/`company`: 1 gold on gear, 0 on forging, 0.0 tier-2 items, 0.0 runes worn; workshop 0.7 and post 1.1 at the end. `rl10`: 26 on gear, 0 on forging, 0.1 tier-2, workshop 1.2, post 2.0.
+
+### Long run (100, `--log none`, 4:07, load 3.1–3.8)
+
+Against step 09's long run (before its review round 1): kit, battles to level and outcomes identical; 1369 → 1414 days, 41.7 → 42.3 battles, forging 2114 → 2271 gold (review round 1's no-same-tier-switch).
+
+- Outcomes: Source 1, fallen 97, encampment lost 0, out of days 2. 53.6 spawns; 7.4 sites captured, 1.6 lost; 64% blighted. Walking 1255.2 days (170.6 home).
+- Final levels: lowest 5.1, highest 6.2.
+- Battles to level: 5 6.8 (84 campaigns), 10 28.4 (53), 15 55.9 (16), 20 none.
+- Deaths by level: 2 (12), 3 (41), 4 (18), 5 (67), 6 (54), 7 (41), 8 (33), 9 (10), 10 (9), 11 (9), 12 (16), 13 (14), 14 (15), 15 (15), 16 (6), 17 (5), 19 (1).
+- Threat table (battles, win rate): 1 200 1.0; 2 369 0.992; 3 287 0.955; 4 441 0.998; 5 489 1.0; 7 754 0.939; 9 767 0.785; 12 768 0.367; 15 156 0.295; 18 1 0; 20 1 1.
+- Gold a campaign: sites 1130, market 721, routes 689, sales 2300; 451 on gear, **2271 on forging and tempering**, 381 on runes. Post / workshop / infirmary 3.3 / 2.3 / 1.8. Tier-2 bought 2.0. Runes 34.6 found, 9.6 bought, 6.3 fused, 1.9 sockets filled. Guild hall 3.6, 40.7 recruits, 8.3 parties wiped.
+
+**Kit against `expectedKit`** (main-hand tier, runes worn; judged where ≥ 10 campaigns):
+
+| Mark (campaigns) | fighter | archer | mage | expected tier (−1 floor) | sockets expected | Verdict |
+| --- | --- | --- | --- | --- | --- | --- |
+| 5 (84) | 1.0, 0.0 | 1.0, 0.0 | 1.0, 0.0 | 2 (1) | 1–2 | within a tier |
+| 10 (53) | 1.0, 0.0 | 1.0, 0.0 | 1.0, 0.0 | 3 (2) | 2–3 | **lags by 2** |
+| 15 (16) | 1.5, 0.3 | 1.5, 0.3 | 1.3, 0.4 | 4 (3) | 3–4 | **lags by 2.5–2.7** |
+| 20 (0) | — | — | — | 5 | 4–6 | not reached |
+
+### The diagnosis check (temporary trace, not committed)
+
+A stderr line at each home visit (`carryOut`'s `hall` case, after `visitFacilities`), 100 long campaigns, seed 1, `--log none`; identical summary to the `long` run (draws untouched); trace reverted. 2,126 visits.
+
+- **The workshop is held at level 1 by stone.** 52 of 100 campaigns never pass level 1 (18 never build it). At 307 of 323 level-1 visits the stock held under 15 stone (and under 40 gold at 204); never both enough. Stone comes only from Old Quarry: held in 51 campaigns, first on about day 682 (median), and blighted at 215 of those 323 visits (half yield). Every campaign that reached level 2 held the quarry; in all 51 that raised the post to 2 it did so first (`visitFacilities` raises the post before the workshop; both cost 15 stone).
+- **Level 3 → 4 (forging) is held by mithril and gold:** of 182 level-3 visits, mithril under 20 at 161 (Mithril Lode held at 24), gold under 100 at all 182. Level 4 reached in 37 campaigns, median day 1176.
+- **The vanguard that reaches 10 does so before the forge exists, and rarely comes home on the way.** Median day the vanguard is first seen home at level 10+: 848; the workshop at 4 before it in 1 of 8. Visits by a vanguard at lowest level 9–12: 10 in 100 campaigns; 13–16: 3. The kit at 10 and 15 is what it left home with at 5–8.
+- **The forging gold re-arms recruits.** 742 visits forged or tempered (227,110 gold, 35 campaigns): 739 of them with the party's lowest level 4–6 (676 at 5); 232 by guards. Those parties then meet threat-12 bandit companies (win rate 0.367) and wipe (8.3 a campaign).
+- Verdict: the step 09 reviewer's diagnosis holds. Outer-site yields and forge/temper costs act only after the workshop reaches 4 (day ~1176, after the vanguards that reach 10 got there), and the gold they would free is spent on wiped recruits. No trial was run (the brief allows one where a lever could plausibly help; none could, above).
+
+Not retuned; `npm test` 107 files, 2,736 tests pass on `82a7969`. Stopped for the orchestrator.
