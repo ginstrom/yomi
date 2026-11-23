@@ -125,3 +125,14 @@ Step 07 review: the reviewer (opus) found the fixture blind to the pathfinder's 
 Outcome (step 07): engineer opus, reviewer opus, clean, 1 review round.
 
 Step 08 scenes: engineer sonnet, reviewer opus, clean, 1 review round (five notes fixed in ed99a2f: forge materials first in the workshop stock line and the preview, probe doc, a temper test, a refused-row e2e, trophies full stop); header stock at 840 checked and left (three lines, '+4 more', clear); npm test 2693 at the branch, 2715 after merge; e2e 13 files 190 tests; no simulation.
+
+## Step 09: the simulator's gear policy
+
+2026-11-23, on `96afb16` plus the step's change (load about 3.5–4.5).
+
+- Refactor guard: part 1 (fields `goldOnForging` 0, `kitAtLevel`) by value, events hash `e4dd3391...fb6394` unchanged; with the policy in, still unchanged, so not re-recorded.
+- 50-campaign check: `57fdea1553a35b1af0e33b74a11ea9fe0a0e2f62ef9e5c80972af59276e53e75`, **identical** (26 of 50; 0 gold on gear, 0 on forging; about 24 s).
+- `one` (500, `--near-source`, `yomi-measure`, `s10-09`): 288 of 500 (212 fell), 331 days, 18.8 battles, 1.2 heroes dead; identical to step 01; about 4 min. Kit at 5 (443): tier 1.0 every role, 0 runes.
+- `long` (100, `--log none`, about 3:45): Source 1 of 100 (fell 97, out of days 2); 1369 days, 41.7 battles, 53.5 spawns; gold sites 1094, market 676, routes 660, sales 2198; 448 on gear, 2114 on forging and tempering; tier-2 bought 1.9; runes 34.5 found, 9.0 bought, 6.1 fused, 1.8 sockets filled; post / workshop / infirmary 3.3 / 2.3 / 1.8; battles to level 5 6.8 (84), 10 28.4 (53), 15 55.9 (16). Kit at 5: tier 1.0 all; at 10: 1.0 all; at 15: fighter 1.5 / 0.3 runes, archer 1.5 / 0.3, mage 1.3 / 0.4 (expected 2, 3, 4). Threat win rates: 7 0.939, 9 0.783, 12 0.384, 15 0.298 (141 battles), 18 0/1, 20 1/1.
+- Diagnostic (10 long campaigns, temporary stderr): forging in 2 of 10, first on days 1111 and 1468 with heroes at levels 4–6; 963 forges and tempers, mostly re-forging each reformed party after a wipe (230 breastplates, 172 war hammers, 169 staffs). The workshop's level 4 comes too late for the vanguard's marks.
+

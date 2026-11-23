@@ -36,5 +36,7 @@ In the `.txt` (the `> yomi@0.0.0 simulate` header, then):
 - Days and battles: `A campaign: 270 days, 18.2 battles, ...` (the first two figures).
 - Heroes dead a campaign: the `Guild hall: level ... recruits and 1.8 heroes dead in battles won (a wiped party's not counted) a campaign` line; `heroes died at level ...` ends the `Levels at the end` line.
 - Routes and walking: the `Trade:` line (partners, routes opened, raided, abandoned; raids told, flickers, routes raided 6+ yield days and kept) and the `Walking:` line (the vanguard's walked days a campaign, and those walking home).
+- Gear: the `Trading post, workshop, infirmary: levels ...; X gold on gear, Y on forging and tempering and Z from sales, ...` line (forging gold: stage 10), `Tier-2 items bought: ...` and `Runes: ...`.
+- The kit against gear §5.8's expected kit: a `Kit at 10 (55 campaigns): fighter tier 2.4, 1.1 runes; archer ...; mage ...; expected tier 3, 2–3 runes` line for each of levels 5, 10, 15, 20 some campaign reached (main-hand tier and runes worn, when the party's lowest level first reached the mark).
 - The waiting check (`--waiting`): `Waiting check: income X a day campaigning, Y waiting at home: waiting earns less`.
 - A cell's wins: the `playerWins` row of the second table (`Values` column), of 500.

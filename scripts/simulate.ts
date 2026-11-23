@@ -27,7 +27,7 @@ import { POLICIES, isPolicyName, type PolicyName } from '../src/engine/policies.
 import { autoAdvance, levelUp, planFor, PLAN_IDS, type PlanId } from '../src/character/progression.ts'
 import type { Character } from '../src/character/character.ts'
 import { calling, capstoneOf, type PathId } from '../src/character/trees.ts'
-import type { PerkId } from '../src/character/perks.ts'
+import { attributesOf, type PerkId } from '../src/character/perks.ts'
 import { SKILL_IDS, type SkillId } from '../src/character/skills.ts'
 import { ABILITY_IDS, type AbilityId } from '../src/combat/abilities.ts'
 import { ENCOUNTERS, heroId, xpReward, type EncounterId } from '../src/game/encounters.ts'
@@ -51,7 +51,7 @@ import {
   towerHexRefusal,
 } from '../src/game/buildings.ts'
 import { ABANDON_AFTER, GUARD_RADIUS, ROUTE_TIMBER, isContacted, openRoute, openRouteRefusal, partners, raiders, roadTo, routeLimit, routeOf } from '../src/game/trade.ts'
-import { WORKSHOP_COSTS, craft, craftRefusal, craftTier, highestGrade, upgradeWorkshop } from '../src/game/crafting.ts'
+import { WORKSHOP_COSTS, craft, craftRefusal, craftTier, forge, forgeCost, forgeOptions, highestGrade, temper, temperCost, temperRefusal, upgradeWorkshop, type ForgeOption } from '../src/game/crafting.ts'
 import { MAX_PARTIES, presenceOf, type DayAction, type Expedition } from '../src/game/expedition.ts'
 import { newGame, partyById, type GameState } from '../src/game/gameState.ts'
 import {
@@ -106,13 +106,14 @@ import {
 } from '../src/game/worldMap.ts'
 import { HexBoard, hexDistance, hexEquals, type Hex } from '../src/grid/hex.ts'
 import type { FamilyId, Tier } from '../src/inventory/catalog.ts'
+import type { ItemStats } from '../src/inventory/inventory.ts'
 import { GRADES, type Grade } from '../src/inventory/grades.ts'
-import { baseItem, craftedItem, itemById, type EquipmentSlot, type Item } from '../src/inventory/inventory.ts'
+import { baseItem, craftedItem, itemById, strengthShortfall, type EquipmentSlot, type Item } from '../src/inventory/inventory.ts'
 import { MODIFIERS, type ModifierId } from '../src/inventory/modifiers.ts'
 import { RANKS, pouchCount, pouchKeys, runeFits, runeKey, slotClass, socketsOf, type Rank, type RuneId, type RuneKey, type SlotClass } from '../src/inventory/runes.ts'
 import { clampHp, maxHp } from '../src/character/character.ts'
-import { replaceAt, type ItemPlace } from '../src/game/itemPlace.ts'
-import { takeRunes } from '../src/game/loot.ts'
+import { removeAt, replaceAt, type ItemPlace } from '../src/game/itemPlace.ts'
+import { takeRunes, takeTrophies } from '../src/game/loot.ts'
 import { embed, extract, extractCost, extractRefusal, fuse, fuseCost, fuseRefusal, embedCost } from '../src/game/runecraft.ts'
 import { buyRune, buyRuneRefusal, runePrice, runeWares } from '../src/game/tradingPost.ts'
 
@@ -711,12 +712,182 @@ export const PREFERRED_MODIFIERS: Readonly<Partial<Record<FamilyId, readonly Mod
   battle_axe: ['light', 'bearded'],
   greatsword: ['balanced'],
   bow: ['recurve', 'long'],
+  // Stage 10's forged crossbow (decision 13, a first value): Long is the one modifier that fits it, the bow's second.
+  crossbow: ['long'],
   shield: ['braced'],
   breastplate: ['reinforced'],
 }
 
-/** The slots whose gear the careful party buys better grades of and crafts: its weapon, shield and armour. */
+/** The slots whose gear the careful party buys better grades of at the trading post: its weapon, shield and armour. */
 const GEAR_SLOTS: readonly EquipmentSlot[] = ['mainHand', 'offHand', 'armor']
+
+/** Every slot the careful party crafts on and fills sockets in: the trading post's three, then the small slots it forges (stage 10). */
+const WORN_SLOTS: readonly EquipmentSlot[] = [...GEAR_SLOTS, 'head', 'gloves', 'boots']
+
+/** The order the careful party forges and tempers in (gear §5.8 step 2): every member's main hand, then body armour, shield and the small slots. */
+export const FORGE_SLOTS: readonly EquipmentSlot[] = ['mainHand', 'armor', 'offHand', 'head', 'gloves', 'boots']
+
+/** The lead foe's resistance from which the careful party's fighter wants the war hammer (decision 13). */
+export const HAMMER_RESISTANCE = 4
+
+/**
+ * The resistance of the lead foe (the first enemy unit) of `target`'s
+ * encounter, built for `party` at the target's threat; 0 without a target.
+ * Building an encounter draws nothing.
+ */
+export function leadFoeResistance(party: Expedition, target: MonsterLocation | null): number {
+  if (!target) return 0
+  const { setup } = ENCOUNTERS[target.encounter](partyFighters(party.members), target.threat)
+  return setup.units.find((unit) => unit.side === 'enemy')?.stats.resistance ?? 0
+}
+
+/**
+ * How the careful party ranks body armour and the small slots' families
+ * (decision 13): armour class, plus 5 for each point of resistance, plus the
+ * to-hit bonus. An armour of `apPenalty` is never wanted (a lost action point
+ * each turn outweighs it), nor one whose strength the wearer lacks.
+ */
+export function armourScore(stats: ItemStats): number {
+  return (stats.acBonus ?? 0) + 5 * (stats.resistance ?? 0) + (stats.toHit ?? 0)
+}
+
+/**
+ * Whether the careful party's policy (gear §5.8 step 1, tier 3 and up) wants
+ * `hero` in `family` in `slot`, at an item of these `stats`:
+ * - the main hand: the fighter a longsword, or a war hammer when the lead foe's
+ *   resistance (`leadResistance`) is `HAMMER_RESISTANCE` or more; the archer a
+ *   crossbow; the mage a staff (the main hand's strength is not weighed: the
+ *   ready-made fighter and Garrick, the one melee pre-roll besides, carry any hammer);
+ * - the off hand: the fighter's shield; the archer's and mage's hands are full;
+ * - body armour: the mage's robe; the others any family whose strength they have
+ *   and which costs no action point (ranked by `armourScore`);
+ * - the small slots: the mage's hide (cap, gloves, boots); the others any family
+ *   whose strength they have (ranked by `armourScore`).
+ */
+export function wantsFamily(hero: Character, slot: EquipmentSlot, family: FamilyId, stats: ItemStats, leadResistance: number): boolean {
+  const role = kitRole(hero)
+  const strong = strengthShortfall(attributesOf(hero).strength, stats) === 0
+  switch (slot) {
+    case 'mainHand':
+      if (role === 'archer') return family === 'crossbow'
+      if (role === 'mage') return family === 'staff'
+      return family === (leadResistance >= HAMMER_RESISTANCE ? 'war_hammer' : 'longsword')
+    case 'offHand':
+      return role === 'fighter' && family === 'shield'
+    case 'armor':
+      return role === 'mage' ? family === 'robe' : strong && !stats.apPenalty
+    default:
+      return role === 'mage' ? ['cap', 'gloves', 'boots'].includes(family) : strong
+  }
+}
+
+/**
+ * The item the careful party would forge for `member`'s `slot` now (gear §5.8
+ * steps 1 and 2, tiers 3 to 5): of the families it wants (`wantsFamily`), the
+ * forge option the stock affords of the highest tier, then the best
+ * `armourScore`, then the first in `forgeOptions`' order. Null when none is
+ * affordable, or when it is no better than the worn item: a higher tier, or
+ * the same tier in a wanted family the worn one is not of while the worn one
+ * is plain (so it never trades a tempered item, or flips back and forth, for one
+ * of its own tier).
+ */
+export function forgeChoice(game: GameState, party: Expedition, member: number, slot: EquipmentSlot, leadResistance: number): ForgeOption | null {
+  const hero = party.members[member]
+  const worn = hero.equipment[slot]
+  // A two-handed weapon leaves no hand for a shield.
+  if (slot === 'offHand' && hero.equipment.mainHand?.stats?.twoHanded) return null
+  let best: ForgeOption | null = null
+  for (const option of forgeOptions(game, party, slot)) {
+    if (option.refusal !== null || !wantsFamily(hero, slot, option.family, option.item.stats ?? {}, leadResistance)) continue
+    const better = !best || option.tier > best.tier || (option.tier === best.tier && armourScore(option.item.stats ?? {}) > armourScore(best.item.stats ?? {}))
+    if (better) best = option
+  }
+  if (!best) return null
+  const wornTier = (worn && baseItem(worn) && worn.tier) || 0
+  if (best.tier > wornTier) return best
+  const wanted = worn?.family !== undefined && wantsFamily(hero, slot, worn.family, worn.stats ?? {}, leadResistance)
+  return best.tier === wornTier && !wanted && (worn?.grade ?? 1) === 1 ? best : null
+}
+
+/**
+ * Puts `item` on `member` in `slot`, the worn one (and, for a two-handed main
+ * hand, the shield) into the baggage to be sold: each old item's runes taken
+ * out first where the workshop can, else sold with it. Returns the gold spent
+ * taking runes out.
+ */
+function wear(game: GameState, party: Expedition, member: number, slot: EquipmentSlot, item: Item): number {
+  const hero = party.members[member]
+  let gold = 0
+  const takeOff = (from: EquipmentSlot) => {
+    for (let old = hero.equipment[from]; old?.runes?.length; old = hero.equipment[from]) {
+      const place = { from: 'worn', party: party.id, member, slot: from, itemId: old.id } as const
+      if (extractRefusal(game, place, 0) !== null) break
+      gold += extractCost(old.runes[0]).gold ?? 0
+      extract(game, place, 0)
+    }
+    return hero.equipment[from]
+  }
+  if (slot === 'mainHand' && item.stats?.twoHanded && hero.equipment.offHand) {
+    const shield = takeOff('offHand')!
+    removeAt(game, { from: 'worn', party: party.id, member, slot: 'offHand', itemId: shield.id })
+    party.baggage.push(shield)
+  }
+  const old = takeOff(slot)
+  if (old) {
+    replaceAt(game, { from: 'worn', party: party.id, member, slot, itemId: old.id }, item)
+    party.baggage.push(old)
+  } else {
+    const before = maxHp(hero)
+    hero.equipment[slot] = item
+    clampHp(hero, before)
+  }
+  return gold
+}
+
+/**
+ * Forges for every member, slot by slot in `FORGE_SLOTS` order (each slot for
+ * every member in party order before the next), what `forgeChoice` picks, and
+ * wears it, the old item to the baggage. Returns the forge gold spent and the
+ * gold spent taking runes out.
+ */
+export function forgeGear(game: GameState, party: Expedition, leadResistance: () => number): { gold: number; runeGold: number; forged: number } {
+  const done = { gold: 0, runeGold: 0, forged: 0 }
+  if (craftTier(game.world, party) === 'field' || forgeOptions(game, party).length === 0) return done
+  const lead = leadResistance()
+  for (const slot of FORGE_SLOTS) {
+    for (const member of party.members.keys()) {
+      const choice = forgeChoice(game, party, member, slot, lead)
+      if (!choice || forge(game, party, choice.family, choice.material) !== null) continue
+      done.gold += forgeCost(choice.family, choice.material).gold ?? 0
+      done.forged++
+      done.runeGold += wear(game, party, member, slot, party.baggage.pop()!)
+    }
+  }
+  return done
+}
+
+/**
+ * Tempers every member's worn tier-3+ items, slot by slot in `FORGE_SLOTS`
+ * order (every main hand first), each to the best grade the stock affords.
+ * Returns the gold spent.
+ */
+export function temperGear(game: GameState, party: Expedition): number {
+  let gold = 0
+  for (const slot of FORGE_SLOTS) {
+    for (const [member, hero] of party.members.entries()) {
+      const item = hero.equipment[slot]
+      if (!item) continue
+      for (const grade of [...GRADES].reverse()) {
+        const place = { from: 'worn', party: party.id, member, slot, itemId: item.id } as const
+        if (temperRefusal(game, place, grade) !== null) continue
+        gold += temperCost(item, grade).gold ?? 0
+        temper(game, place, grade)
+        break
+      }
+    }
+  }
+  return gold
+}
 
 /** How a modifier at a grade ranks for an item: lower is better; an item without one ranks last. */
 function modifierRank(family: FamilyId | undefined, mod: { id: ModifierId; grade: Grade } | undefined): number {
@@ -735,7 +906,7 @@ function modifierRank(family: FamilyId | undefined, mod: { id: ModifierId; grade
 function eachWantedCraft(game: GameState, party: Expedition, done: () => boolean, attempt: (place: ItemPlace, modifier: ModifierId, grade: Grade) => boolean): void {
   const tier = craftTier(game.world, party)
   for (const [member, hero] of party.members.entries()) {
-    for (const slot of GEAR_SLOTS) {
+    for (const slot of WORN_SLOTS) {
       const item = hero.equipment[slot]
       const base = item && baseItem(item)
       if (!item || !base || done()) continue
@@ -839,19 +1010,22 @@ export function runecraftGear(game: GameState, party: Expedition): { embedded: n
   const done = { embedded: 0, fused: 0, bought: 0, gold: 0 }
   const { world } = game
   if (craftTier(world, party) === 'field') return done
-  for (const key of pouchKeys(game.runes)) {
-    if (!key.endsWith('1')) continue
-    while (fuseRefusal(game, party, key) === null) {
-      done.gold += fuseCost(key).gold ?? 0
-      fuse(game, party, key)
-      done.fused++
+  // Each rank in turn, from the Lesser up, so that a rune fused to rank 2 may be fused again where the workshop allows.
+  for (const rank of RANKS) {
+    for (const key of pouchKeys(game.runes)) {
+      if (!key.endsWith(String(rank))) continue
+      while (fuseRefusal(game, party, key) === null) {
+        done.gold += fuseCost(key).gold ?? 0
+        fuse(game, party, key)
+        done.fused++
+      }
     }
   }
   const sold = runeWares(world)
   const claimed: Partial<Record<RuneKey, number>> = {}
   const unclaimed = (key: RuneKey) => pouchCount(game.runes, key) - (claimed[key] ?? 0)
   for (const hero of party.members) {
-    for (const slot of GEAR_SLOTS) {
+    for (const slot of WORN_SLOTS) {
       const item = hero.equipment[slot]
       if (!item) continue
       const kinds = RUNE_ORDER[slotClass(slot)]
@@ -870,7 +1044,7 @@ export function runecraftGear(game: GameState, party: Expedition): { embedded: n
     }
   }
   for (const [member, hero] of party.members.entries()) {
-    for (const slot of GEAR_SLOTS) {
+    for (const slot of WORN_SLOTS) {
       for (let item = hero.equipment[slot]; item && (item.runes?.length ?? 0) < socketsOf(item); item = hero.equipment[slot]) {
         const key = nextRune(item, RUNE_ORDER[slotClass(slot)], (k) => pouchCount(game.runes, k))
         if (!key || embed(game, { from: 'worn', party: party.id, member, slot, itemId: item.id }, key).refusal !== null) break
@@ -901,18 +1075,26 @@ export function lodgeCap(world: WorldState): number {
   return world.routes.length > 0 ? MAX_LODGE_LEVEL : ROAD_LODGE_LEVEL - 1
 }
 
+/** Stock the careful party never sells as surplus: the ores and woods of tiers 3 to 5, and the trophies, which forging, tempering and the workshop's levels spend. */
+export const NEVER_SOLD: ReadonlySet<Material> = new Set<Material>([
+  'mithril', 'adamant', 'starmetal', 'elderwood', 'wyrmwood', 'heartwood', 'wolfhide', 'wyvern_hide', 'basilisk_scale', 'drake_scale',
+])
+
 /**
  * At the encampment, after the guild hall: sells the baggage (the careful
  * party fights without loot, so all of it is surplus) and the materials
- * beyond `materialNeeds`; raises the trading post, the workshop and the
+ * beyond `materialNeeds` (never those of `NEVER_SOLD`); raises the trading post, the workshop and the
  * infirmary as the stock allows; opens routes to the contacted partners
- * (`routeChoices`); raises the Builders' Lodge (to `lodgeCap`); buys each member the best grade it can of
- * its weapon, shield and armour, the old one sold (its runes taken out first
- * where the workshop can, else sold with it); fuses, buys and embeds runes (`runecraftGear`);
- * crafts the best it can on them (`craftGear`); and raises the shrine with
- * what is left.
+ * (`routeChoices`); raises the Builders' Lodge (to `lodgeCap`); forges, from a
+ * level 4 workshop, the families of each member's role at tiers 3 to 5 (`forgeGear`);
+ * buys each member the best grade it can of its weapon, shield and armour of
+ * tiers 1 and 2 (the dearest of the worn family the post sells), the old one sold (its runes taken out first
+ * where the workshop can, else sold with it); tempers the tier-3+ gear (`temperGear`);
+ * fuses, buys and embeds runes (`runecraftGear`); crafts the best it can on
+ * the gear (`craftGear`); and raises the shrine with what is left.
+ * `target` is the party's next target, read for the fighter's war hammer.
  */
-export function visitFacilities(game: GameState, party: Expedition, parties = 1): Trade {
+export function visitFacilities(game: GameState, party: Expedition, parties = 1, target: () => MonsterLocation | null = () => nextTarget(game.world, party)): Trade {
   const { world } = game
   const trade: Trade = {
     goldOnGear: 0, goldFromSales: 0, crafted: 0, tierTwoBought: 0, runesBought: 0, runesFused: 0, runesEmbedded: 0, goldOnRunes: 0, goldOnForging: 0, events: [],
@@ -929,7 +1111,7 @@ export function visitFacilities(game: GameState, party: Expedition, parties = 1)
   for (const [material, amount] of Object.entries(world.stock) as [Material, number][]) {
     const surplus = amount - (needs[material] ?? 0)
     const lots = surplus - (surplus % 2)
-    if (material !== 'gold' && lots >= 2 && sellMaterial(game, party, material, lots) === null) trade.goldFromSales += lots / 2
+    if (material !== 'gold' && !NEVER_SOLD.has(material) && lots >= 2 && sellMaterial(game, party, material, lots) === null) trade.goldFromSales += lots / 2
   }
   while (raiseTradingPost(game, party) === null);
   while (upgradeWorkshop(game, party) === null);
@@ -940,14 +1122,20 @@ export function visitFacilities(game: GameState, party: Expedition, parties = 1)
   }
   // Last of the buildings for the gold; to 2, and to 3 (its roads) once a route is open.
   while (game.world.lodge < lodgeCap(world) && raiseLodge(game, party) === null);
+  // Tiers 3 to 5 at the workshop first, by role (decision 12: from tier 3 only).
+  const forged = forgeGear(game, party, () => leadFoeResistance(party, target()))
+  trade.goldOnForging += forged.gold
+  trade.goldOnRunes += forged.runeGold
   for (const [member, hero] of party.members.entries()) {
     for (const slot of GEAR_SLOTS) {
       const worn = hero.equipment[slot]
       const base = worn && baseItem(worn)
       if (!worn || !base) continue
       if (!worn.family) continue
+      // The post sells tiers 1 and 2 only: a forged item has no price there, and nothing it sells is better.
+      const wornPrice = buyPrice(craftedItem(base, worn.grade ?? 1))
+      if (wornPrice === null) continue
       // The dearest item of the family the post sells that costs more than the worn one (modifier aside); a tie goes to the later, the higher tier or grade.
-      const wornPrice = buyPrice(craftedItem(base, worn.grade ?? 1))!
       let bought: Item | undefined
       for (const candidate of wares(world, { family: worn.family })) {
         const price = buyPrice(candidate)!
@@ -958,19 +1146,12 @@ export function visitFacilities(game: GameState, party: Expedition, parties = 1)
       if (bought.tier === 2) trade.tierTwoBought += 1
       party.baggage.pop()
       // The old item's runes come back to the pouch where the workshop can take them out; any left are sold with it.
-      for (let old = worn; old.runes?.length; old = hero.equipment[slot]!) {
-        const place = { from: 'worn', party: party.id, member, slot, itemId: old.id } as const
-        if (extractRefusal(game, place, 0) !== null) break
-        trade.goldOnRunes += extractCost(old.runes[0]).gold ?? 0
-        extract(game, place, 0)
-      }
-      const old = hero.equipment[slot]!
-      replaceAt(game, { from: 'worn', party: party.id, member, slot, itemId: old.id }, bought)
-      party.baggage.push(old)
+      trade.goldOnRunes += wear(game, party, member, slot, bought)
     }
   }
-  // What was replaced is sold before the runes and the crafts, which the gold may pay for.
+  // What was replaced is sold before the tempering, the runes and the crafts, which the gold may pay for.
   sellAll()
+  trade.goldOnForging += temperGear(game, party)
   const runes = runecraftGear(game, party)
   trade.runesBought += runes.bought
   trade.runesFused += runes.fused
@@ -1764,6 +1945,8 @@ function fightAt(run: CampaignRun, party: Expedition, target: MonsterLocation): 
     }
   }
   record.runesFound += takeRunes(game, target.threat, target.encounter, battleSeed).length
+  // None drop this stage (decision 8): `TROPHIES` is empty until stage 11.
+  takeTrophies(game, encounter.kinds)
   clearLocation(game, target.id)
   return 'won'
 }
@@ -1841,7 +2024,7 @@ export function carryOut(run: CampaignRun, party: Expedition, decision: Decision
         run.roles.set(formed.party.id, 'guard')
         run.plans.set(formed.party.id, newPlan())
       }
-      const trade = visitFacilities(game, party, run.args.parties)
+      const trade = visitFacilities(game, party, run.args.parties, () => nextTarget(world, party, run.args.readyLevel, takenTargets(run, party)))
       record.goldOnGear += trade.goldOnGear
       record.goldFromSales += trade.goldFromSales
       record.tierTwoBought += trade.tierTwoBought
