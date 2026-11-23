@@ -207,3 +207,15 @@ Outcome (step 10): engineer opus, reviewer opus, clean, 1 review round (two reco
 - Screenshots: two added (`crafting-forge`, `trading-post-goods`), `crafting` and `crafting-runes` retaken; 31 others differ by pixel noise only and were restored.
 - `npm test` 107 files, 2,738 pass; build and `sprites:check` pass; `test:browser` 191 tests, 5 timeouts under load 13 to 28, all pass alone.
 
+
+## Verification fixes
+
+2026-11-23, after QA, the simulated user and the overall review. Each fix test-first, one commit apiece.
+
+- Market Hall Goods refusal: placed above both stacked buttons (`GOODS_REFUSAL_BOTTOM`), drawn once (not when the message line says it after a refused click); probe `refusalBox`; e2e checks it clears the buttons. The empty hint says "Click a good to see who sells it and its price."
+- Forge message: "are" for gloves, gauntlets, boots and greaves (`forgedMessage`); `ForgeRow.family` is a `FamilyId`, dropping the cast in `CraftingScene`.
+- Market Hall description: level 5's effect lists partners' goods, level 4's Next says "Adds partners' goods and 3 gold every 5 days." (its old "up from 2" dropped: the line must stay one row with the cost, or the flavour line is dropped; the details text also gained 8 px of width). Manual's trading post row says it.
+- Modify tab: the temper row's two slots are fixed (Fine's empties, Masterwork's stays) and the modifier grid keeps three columns for any plain tier 3+ item (`hasTemperRow`), so no option moves across a temper; e2e tempers to Fine then Masterwork and compares positions (fails without the fix).
+- Map header stock: workshop, market and encampment scenes emit `stock-changed` on each redraw; the paused map redraws its status panel (`refreshStatus`). e2e checks the header while the market is open.
+- "drake=scale": not a defect. The text is "drake-scale" (`encampment.ts`, tested); the screenshot's hyphen is the scaled monospace glyph at the overlay's fractional scale. No change.
+- Sound tween "Cannot set properties of null (setting 'volume')": not seen in this branch's runs of any e2e file here (world, encampment, battle, story, sounds, audio, menu, party, debug, exchange, saves, character). `soundPlayer.ts` and `src/story` have no change since 2059462 (the `stopVoice` fade tween on a sound a scene shutdown destroys is from step 05 of the audio pass), so it predates the branch. Not fixed.
