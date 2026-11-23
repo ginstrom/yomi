@@ -4,7 +4,7 @@
 
 - Request (user's words):
   > The next thing is stage 10 of the long campaign: forging and the high tiers. Its design is docs/designs/long-campaign/stage-10-forging-and-high-tiers.md and it is marked "ready for planning". [...] As with stages 2–9, the approved stage design goes straight to the planner. Start with the bookkeeping commit, then cut a long-campaign-stage-10 branch off main and run the orchestrator. Early figures, the refactor guard and the 50-campaign check run with --near-source as in stage 9. Balance bands are mine to change: bring any out-of-band figures to me.
-- Slug `long-campaign-stage-10` · Phase 5, verification · Next action: overall review, QA, simulated user · Branch: `long-campaign-stage-10`, off main at 4d51a8b (stage 9 merged as PR #11).
+- Slug `long-campaign-stage-10` · Phase 6, done · Next action: a PR when the user asks (pr-reviewer, then pr-creator) · Branch: `long-campaign-stage-10`, off main at 4d51a8b (stage 9 merged as PR #11).
 - Path: Large, but the stage design is the approved design. Straight to planning, as stages 2–9 did.
 - Links:
   - Stages overview: `docs/designs/long-campaign/index.md`
@@ -16,7 +16,7 @@
 - Open questions: none. Plan questions 1–6 answered 2026-11-23 (decision log); step 02's engineer records them in the index.
 - Tiers (engineer / reviewer): planner opus. 01, 06 sonnet / sonnet; 04, 05, 08, 11 sonnet / opus; 02, 03, 07, 09, 10 opus / opus. No escalations.
 - Worktrees: 05, 06, 08 ran in worktrees, merged dd96b2c, 32b401d, 9c0f04c. Steps 01–08 clean, 1 review round each (log.md).
-- Verification: steps 01–11 done, each clean in 1 review round (step 11 needed one fix: index cap). Overall review at 7b97d4b: ready but for this record's cap (fixed). QA: pass, 7 minor. Simulated user (driven by the e2e driver, not the runner): 6/6 goals met, some friction. Fixes in progress.
+- Verification at 7529996: overall review ready (its one blocker, this record's cap, fixed cd91ce2); QA pass, 7 minor; simulated user 6/6 goals (e2e driver, not the runner). 9 findings: 7 fixed (75f0448–7529996), 2 no change; fixes reviewed clean, QA re-check pass, 50-check 57fdea15…. Evidence: `.git/pr-review/long-campaign-stage-10/evidence/`.
 - Carried items from stage 9 (mithril's use, fusing ranks 3–4, bandit stand-in steel, estimate speed, debug levels, header stock): resolved in steps 02–08.
 - Not this stage (stage 12): market income; the simulator's spend order; full-campaign route figures; the company's long-campaign policy skew; home-country spawns in the long campaign (~14%, 8.3 a campaign); the accepted early figures (one 288, company 289, one's days 331). Source Guardians stay at SOURCE_FOE_LEVEL 6 until stage 11. Not urgent: placeholder opening story; `locations all` cut off in a normal window.
 
