@@ -112,6 +112,8 @@ const DETAILS_W = FRAME_W - DETAILS_X - 24
 const CONFIRM_Y = 432
 const CONFIRM_ALL_Y = CONFIRM_Y - 40
 const REFUSAL_Y = 380
+/** The Goods filter's two buttons are stacked; its refusal sits above both, its bottom edge here. */
+const GOODS_REFUSAL_BOTTOM = CONFIRM_ALL_Y - 20
 const MESSAGE_Y = 462
 /** The minimap stack's lowest point: above a message line of up to two lines centred on `MESSAGE_Y`. */
 const STACK_BOTTOM = MESSAGE_Y - 20
@@ -176,6 +178,8 @@ export class TradingPostScene extends Phaser.Scene {
   /** The notes drawn under the minimap (`routeNotes`). */
   private routeNotes: string[] = []
   private messageHeight = 0
+  /** The inline refusal's top and bottom in the frame, for the probe; null with none drawn. */
+  private refusalBox: { top: number; bottom: number } | null = null
   /** The bottom of the stack under the minimap, in the frame's units, or null with none drawn. */
   private routeStackBottom: number | null = null
 
@@ -253,6 +257,7 @@ export class TradingPostScene extends Phaser.Scene {
         open: open ? { ...onScreen(open), visible: true, enabled: openEnabled, width: OPEN_W * this.frame.scale } : null,
         selected,
       })),
+      refusalBox: this.refusalBox ? { top: y + this.refusalBox.top * scale, bottom: y + this.refusalBox.bottom * scale } : null,
       routeRefusal: this.routeRefusal,
       routeNotes: [...this.routeNotes],
       routeStack:
@@ -352,6 +357,7 @@ export class TradingPostScene extends Phaser.Scene {
     this.routeLines = []
     this.routeRefusal = null
     this.routeNotes = []
+    this.refusalBox = null
     this.routeStackBottom = null
     this.rowAt = new Map()
     this.slotAt = new Map()
@@ -466,7 +472,8 @@ export class TradingPostScene extends Phaser.Scene {
   private drawDetails(row: Row | null): void {
     const style = { fontFamily: FONT, fontSize: '12px', color: TEXT, wordWrap: { width: DETAILS_W } }
     if (!row) {
-      const hint = this.tab === 'buy' ? 'Click an item to see its stats and price.' : 'Click an item or a material to see what it fetches.'
+      const hint =
+        this.tab === 'buy' ? (this.filter.slot === 'goods' ? 'Click a good to see who sells it and its price.' : 'Click an item to see its stats and price.') : 'Click an item or a material to see what it fetches.'
       this.frame.add(this.add.text(DETAILS_X, this.listTop, hint, { ...style, color: DIM }))
       return
     }
@@ -482,12 +489,21 @@ export class TradingPostScene extends Phaser.Scene {
       const [one, many] = GOOD_AMOUNTS
       const refusals = GOOD_AMOUNTS.map((amount) => buyGoodRefusal(this.gameState, this.expedition, row.material!, amount))
       const shown = refusals.find((r) => r !== null)
-      if (shown) this.frame.add(this.add.text(DETAILS_X, REFUSAL_Y, shown, { ...style, color: REFUSED }))
+      // The message line says it too after a refused click: one copy.
+      if (shown && !refusals.includes(this.message)) {
+        const text = this.add.text(DETAILS_X, GOODS_REFUSAL_BOTTOM, shown, { ...style, color: REFUSED }).setOrigin(0, 1)
+        this.frame.add(text)
+        this.refusalBox = { top: text.y - text.height, bottom: text.y }
+      }
       this.button('confirmAll', at(CONFIRM_Y), buyLabel(many), () => this.onBuyGood(row, many), refusals[1] === null)
       this.button('confirm', at(CONFIRM_ALL_Y), buyLabel(one), () => this.onBuyGood(row, one), refusals[0] === null)
     } else if (this.tab === 'buy') {
       const refusal = row.rune ? buyRuneRefusal(this.gameState, this.expedition, row.rune) : buyRefusal(this.gameState, this.expedition, row.id)
-      if (refusal) this.frame.add(this.add.text(DETAILS_X, REFUSAL_Y, refusal, { ...style, color: REFUSED }))
+      if (refusal && refusal !== this.message) {
+        const text = this.add.text(DETAILS_X, REFUSAL_Y, refusal, { ...style, color: REFUSED })
+        this.frame.add(text)
+        this.refusalBox = { top: text.y, bottom: text.y + text.height }
+      }
       this.button('confirm', at(CONFIRM_Y), `Buy for ${row.price} gold`, () => (row.rune ? this.onBuyRune(row) : this.onBuy(row)), refusal === null)
     } else if (row.kind === 'rune') {
       this.button('confirm', at(CONFIRM_Y), `Sell one for ${row.price} gold`, () => this.onSellRune(row))

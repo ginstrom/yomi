@@ -327,6 +327,8 @@ export interface TradingPostProbe {
    * the partner id whose road the minimap draws, or null.
    */
   routes: Array<{ partner: string; status: 'open' | 'raided' | 'closed'; line: string; open: ButtonProbe | null; selected: boolean }>
+  /** The Buy tab's inline refusal, top and bottom on screen; null with none (a refused click's message says it instead). */
+  refusalBox: { top: number; bottom: number } | null
   /** The refusal shown under the Routes tab's minimap for the chosen closed row, or null; never the same words as `message`. */
   routeRefusal: string | null
   /** The chosen row's notes under the minimap (`routeNotes`: why security is short of 100%, the good's condition). */

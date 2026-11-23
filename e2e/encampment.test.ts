@@ -810,6 +810,31 @@ describe('the encampment', () => {
     expect((await game.settled('World')).world.stock.mithril).toBe(6)
   })
 
+  it('keeps a refused good’s message clear of both buy buttons, once', async () => {
+    const game = await games.open()
+    await richAtHome(game, { gold: 4 }, 5, { 'world.contacted': ['stonehollow'] })
+    const camp = await enter(game)
+    await game.click(facility(camp, 'trading_post'))
+    const shown = await game.settled('Encampment', (c) => c.selected === 'trading_post')
+    await game.click(shown.buttons.open)
+    await game.waitForScenes(['TradingPost'], ['World'])
+    const post = await game.settled('TradingPost')
+    await game.click(post.goodsButton)
+    const goods = await game.settled('TradingPost', (p) => p.filter.slot === 'goods')
+    expect(goods.details).toEqual([])
+    const row = goods.rows.find((r) => r.id === 'good:stonehollow:mithril')!
+    await game.click(row)
+    const picked = await game.settled('TradingPost', (p) => p.selected === row.id)
+    expect(picked.refusalBox).not.toBeNull()
+    // The buttons are 32 high and 40 apart, stacked: the small buy above the large one.
+    expect(picked.buttons.confirm.y).toBeLessThan(picked.buttons.confirmAll.y)
+    const top = picked.buttons.confirm.y - (picked.buttons.confirmAll.y - picked.buttons.confirm.y) * 0.4
+    expect(picked.refusalBox!.bottom).toBeLessThanOrEqual(top)
+    await game.click(picked.buttons.confirmAll)
+    const refused = await game.settled('TradingPost', (p) => p.message.includes('more than the stock holds'))
+    expect(refused.refusalBox).toBeNull()
+  })
+
   it('shows no Goods filter below the Market Hall', async () => {
     const game = await games.open()
     await richAtHome(game, { gold: 100 }, 4)
