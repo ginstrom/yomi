@@ -89,6 +89,8 @@ const MEMBER_W = 88
 const MEMBER_H = 20
 /** The stock line's width in characters before it is cut ("+N more"). */
 const STOCK_CHARS = 86
+/** Characters of the header line the stock list does not get: "Stock: " (7) and, with several home parties, "For: <party>.  " (about 13). */
+const STOCK_PREFIX_CHARS = 20
 /** The stock the screen always names, in this order; any other material held follows. */
 const STOCK_SHOWN = ['gold', 'iron', 'timber', 'copper', 'crystal'] as const
 
@@ -366,12 +368,12 @@ export class CraftingScene extends Phaser.Scene {
         ? fieldCraftSummary()
         : `Level ${tier}: modifiers up to grade ${gradeNumeral(highestGrade(tier))}, at once.`
     // Gold, then the materials the workshop forges with (so a long line never cuts them), then the rest of the five, then any other held.
-    const forged = [...new Set(MATERIALS.flatMap((m) => (m.stock ? [m.stock as Material] : [])))].filter((m) => (world.stock[m] ?? 0) > 0)
+    const forged = [...new Set(MATERIALS.flatMap((m) => (m.stock ? [m.stock] : [])))].filter((m) => (world.stock[m] ?? 0) > 0)
     const extra = (Object.keys(world.stock) as Material[]).filter((m) => !(STOCK_SHOWN as readonly string[]).includes(m) && !forged.includes(m) && (world.stock[m] ?? 0) > 0)
     // The five a modifier asks for are always named; when every material held will not fit one line, those not held give way.
     const named = (all: Material[]) => all.map((m) => `${world.stock[m] ?? 0} ${materialName(m)}`).join(', ')
     const every = [STOCK_SHOWN[0], ...forged, ...STOCK_SHOWN.slice(1), ...extra]
-    const stock = named(every).length > STOCK_CHARS - 20 ? named(every.filter((m) => (world.stock[m] ?? 0) > 0)) : named(every)
+    const stock = named(every).length > STOCK_CHARS - STOCK_PREFIX_CHARS ? named(every.filter((m) => (world.stock[m] ?? 0) > 0)) : named(every)
     this.frame.add([
       this.add.rectangle(CENTRE_X, FRAME_H / 2, FRAME_W, FRAME_H, 0x241d15, 0.98).setStrokeStyle(3, 0xc9a227),
       this.add.text(CENTRE_X, TITLE_Y, title, { fontFamily: FONT, fontSize: '28px', color: GOLD, fontStyle: 'bold' }).setOrigin(0.5),

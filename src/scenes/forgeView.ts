@@ -1,11 +1,11 @@
 import { deriveCombatStats, type Character } from '../character/character.ts'
 import { attributeLevel } from '../character/perks.ts'
 import { describeCost } from '../game/buildings.ts'
-import { FORGE_LEVEL, forgeOptions, temperCost, temperRefusal, type ForgeOption } from '../game/crafting.ts'
+import { FORGE_LEVEL, forgeOptions, stockOf, temperCost, temperRefusal, type ForgeOption } from '../game/crafting.ts'
 import type { Expedition } from '../game/expedition.ts'
 import type { GameState } from '../game/gameState.ts'
 import { itemAt, type ItemPlace } from '../game/itemPlace.ts'
-import { materialName, type Material, type Stock } from '../game/territory.ts'
+import { materialName, type Stock } from '../game/territory.ts'
 import { MATERIALS, type FamilyId } from '../inventory/catalog.ts'
 import { GRADE_DEFS, type Grade } from '../inventory/grades.ts'
 import { baseItem, craftedItem, itemById, type EquipmentSlot, type Item } from '../inventory/inventory.ts'
@@ -93,7 +93,7 @@ export function forgePreview(game: GameState, row: ForgeRow, member: Character):
   const worn = member.equipment[item.slot]
   const sockets = socketsOf(item)
   const best = socketsOf(itemById(`${item.id}@3`) ?? item)
-  const stockId = MATERIALS.find((m) => m.id === row.material)!.stock as Material
+  const stockId = stockOf(MATERIALS.find((m) => m.id === row.material)!)
   const held = game.world.stock[stockId] ?? 0
   const socketLine = sockets === 0 ? 'No sockets.' : `Sockets: ${sockets}${best > sockets ? `, ${best} at Masterwork` : ''}.`
   return [

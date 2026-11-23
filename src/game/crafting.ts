@@ -69,7 +69,7 @@ const tierLevel = (tier: CraftTier): number => (tier === 'field' ? 0 : tier)
 export const highestGrade = (tier: CraftTier): Grade => Math.min(3, Math.max(1, tierLevel(tier))) as Grade
 
 /** The stock material a tier-3+ catalog material spends, from its `MaterialDef.stock`. */
-const stockOf = (material: MaterialDef): Material => material.stock as Material
+export const stockOf = (material: MaterialDef): Material => material.stock!
 const materialDef = (id: string | undefined): MaterialDef | undefined => MATERIALS.find((m) => m.id === id)
 
 /**

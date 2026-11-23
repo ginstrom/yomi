@@ -1,4 +1,5 @@
 import type { EquipmentSlot, ItemIcon, ItemStats } from './inventory.ts'
+import type { Material } from '../game/territory.ts'
 
 /**
  * The catalog of plain gear (docs/designs/long-campaign/stage-03-gear-families.md):
@@ -22,7 +23,7 @@ export interface MaterialDef {
   /** Its families' spell-skill penalties are halved toward 0 (Math.trunc): Mithril, Starmetal. */
   casterFriendly?: true
   /** Tiers 3 to 5: the stock material (src/game/territory.ts `Material`) forging and tempering it spends. */
-  stock?: string
+  stock?: Material
 }
 
 export type FamilyId =
