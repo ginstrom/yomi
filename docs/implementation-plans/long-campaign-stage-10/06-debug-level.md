@@ -77,3 +77,11 @@ Give the debug console a way to reach the levels the long campaign's play script
 - [ ] One commit, "Stage 10 step 06: high levels in the debug console", files staged by path, no attribution lines; the index's row 06 updated with status and commit; the execution record says no simulation was run and why.
 
 ## 7. Execution record
+
+### Execution record
+
+- Added `level` to `COMMANDS` in `src/scenes/debugCommands.ts` (C5): `level <n> [member|all] [auto] [@party]`; `auto` is read only after `n`, so it is never a member name. All members are checked before any change; refusals: `n` not a whole number, above 20 ("The level can be at most 20."), or not above a member's level ("<name> is level L already."). Result line "<name> is now level N."; with `auto` it adds the plan and the points left. `xp` unchanged.
+- Tests (`src/scenes/debugCommands.test.ts`, `describe('level')`) written first and seen red: level 15 for all, narrowing by number, name and `@party`, `auto` equal to the simulator's raised party (level, perks, trained, points), `auto` not a name, refusals change nothing, `help level`. 
+- `docs/reference/scenes.md` "Debug console" updated. The manual does not list debug commands; `e2e/debug.test.ts` unchanged.
+- Verification: `npm test` 105 files, 2674 tests passed; `npm run test:browser -- -t debug` 5 passed. No simulation was run: a dev tool that moves no rule; the guard and snapshot are untouched and green. In this worktree `node_modules` had to be a real copy (a symlink breaks vitest-canvas-mock for the scenes project).
+- Index row 06 (not edited here, main branch owns it): done, commit of this step.
