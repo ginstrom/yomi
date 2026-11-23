@@ -322,3 +322,10 @@ Engineer (opus-class session), 2026-11-23, branch `long-campaign-stage-10-scenes
 - No simulation run and no 50-campaign check (no rule changed). Refactor guard and policy snapshot untouched and green.
 
 **Verification.** `npm test`: tsc clean, 107 files, 2,692+ tests pass. `npm run test:browser`: all 13 files pass (190 tests); a first full run failed 3 tests in saves and character only because a second copy of the suite ran beside it, and both files pass alone. Screenshots (840 x 560, scratchpad, not in the repo): `forge-840.png`, `temper-840.png`, `goods-840.png`, `header-840.png`, `camp-840.png` under `/private/tmp/claude-501/-Users-ryan-personal-yomi/86304a89-6b6a-4da5-87fa-fe80bbd470c4/scratchpad/`.
+
+**Review round 1 (opus): clean, five notes, all fixed in one commit.**
+1. The workshop stock line lists gold, then the materials the workshop forges with that are held, then the rest of the five and other extras, so a long line cuts the others; `forgePreview` now takes the game and says "The stock holds 40 mithril." before the cost. `forge-840.png` retaken.
+2. Forge rows' probe `enabled` means clickable (a refused row shows its cost in the refused colour and opens to read why); the `testHook.ts` doc now says so. The refused state is the row's `refusal`; Forge it is greyed.
+3. `forgeView.test.ts`: a Masterwork tier-3 item has no temper options.
+4. e2e: the refused-row check is its own test (3 mithril at workshop 4: the row's refusal, the preview's stock line, Forge it disabled); the level-3 test is renamed to what it checks.
+5. `trophiesLine` ends with a full stop.

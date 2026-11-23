@@ -5,7 +5,7 @@ import { FORGE_LEVEL, forgeOptions, temperCost, temperRefusal, type ForgeOption 
 import type { Expedition } from '../game/expedition.ts'
 import type { GameState } from '../game/gameState.ts'
 import { itemAt, type ItemPlace } from '../game/itemPlace.ts'
-import { materialName, type Stock } from '../game/territory.ts'
+import { materialName, type Material, type Stock } from '../game/territory.ts'
 import { MATERIALS } from '../inventory/catalog.ts'
 import { GRADE_DEFS, type Grade } from '../inventory/grades.ts'
 import { baseItem, craftedItem, itemById, type EquipmentSlot, type Item } from '../inventory/inventory.ts'
@@ -81,18 +81,21 @@ export function memberNumbers(member: Character): { ap: number; strength: number
  * What forging `row` gives against what `member` wears in its slot: the sockets it has, what is worn, the changes
  * (or its stats where the slot is empty), and the cost. The refusal is the scene's to add last.
  */
-export function forgePreview(row: ForgeRow, member: Character): string[] {
+export function forgePreview(game: GameState, row: ForgeRow, member: Character): string[] {
   const { item } = row
   const { ap, strength } = memberNumbers(member)
   const worn = member.equipment[item.slot]
   const sockets = socketsOf(item)
   const best = socketsOf(itemById(`${item.id}@3`) ?? item)
+  const stockId = MATERIALS.find((m) => m.id === row.material)!.stock as Material
+  const held = game.world.stock[stockId] ?? 0
   const socketLine = sockets === 0 ? 'No sockets.' : `Sockets: ${sockets}${best > sockets ? `, ${best} at Masterwork` : ''}.`
   return [
     `Forges the ${item.name}, into the baggage.`,
     socketLine,
     worn ? `${member.name} wears the ${worn.name}:` : `${member.name} wears nothing there:`,
     ...(worn ? compareLines(worn, item, ap, strength) : statLines(item, ap, strength)),
+    `The stock holds ${held} ${materialName(stockId)}.`,
     `Costs ${row.costText}.`,
   ]
 }
@@ -142,10 +145,10 @@ export function temperPreview(item: Item, choice: TemperChoice, ap = TYPICAL_AP,
   ]
 }
 
-/** The victory screen's line for the trophies a battle's foes left, or null when none: "Trophies: 3 wyvern hide, 1 wolfhide". */
+/** The victory screen's line for the trophies a battle's foes left, or null when none: "Trophies: 3 wyvern hide, 1 wolfhide.". */
 export function trophiesLine(trophies: Stock): string | null {
   const parts = (Object.entries(trophies) as Array<[keyof Stock, number]>)
     .filter(([, amount]) => amount > 0)
     .map(([material, amount]) => `${amount} ${materialName(material)}`)
-  return parts.length ? `Trophies: ${parts.join(', ')}` : null
+  return parts.length ? `Trophies: ${parts.join(', ')}.` : null
 }

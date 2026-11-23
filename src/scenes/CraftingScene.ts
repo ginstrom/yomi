@@ -4,6 +4,7 @@ import { attributeLevel } from '../character/perks.ts'
 import type { WorldEvent } from '../game/blight.ts'
 import { describeCost } from '../game/buildings.ts'
 import { craft, craftTier, craftables, forge, highestGrade, options, temper, type CraftOption } from '../game/crafting.ts'
+import { MATERIALS } from '../inventory/catalog.ts'
 import { materialName, type Material } from '../game/territory.ts'
 import type { Expedition } from '../game/expedition.ts'
 import { selectedParty, type GameState } from '../game/gameState.ts'
@@ -303,7 +304,7 @@ export class CraftingScene extends Phaser.Scene {
   /** The preview of a forge row against the member picked, its refusal last. */
   private forgeLines(row: ForgeRow): string[] {
     const member = this.expedition.members[this.forgeMember] ?? this.expedition.members[0]
-    return [...forgePreview(row, member), ...(row.refusal ? [row.refusal] : [])]
+    return [...forgePreview(this.gameState, row, member), ...(row.refusal ? [row.refusal] : [])]
   }
 
   private temperLines(place: ItemPlace, choice: TemperChoice): string[] {
@@ -362,10 +363,12 @@ export class CraftingScene extends Phaser.Scene {
       tier === 'field'
         ? fieldCraftSummary()
         : `Level ${tier}: modifiers up to grade ${gradeNumeral(highestGrade(tier))}, at once.`
-    const extra = (Object.keys(world.stock) as Material[]).filter((m) => !(STOCK_SHOWN as readonly string[]).includes(m) && (world.stock[m] ?? 0) > 0)
+    // Gold, then the materials the workshop forges with (so a long line never cuts them), then the rest of the five, then any other held.
+    const forged = [...new Set(MATERIALS.flatMap((m) => (m.stock ? [m.stock as Material] : [])))].filter((m) => (world.stock[m] ?? 0) > 0)
+    const extra = (Object.keys(world.stock) as Material[]).filter((m) => !(STOCK_SHOWN as readonly string[]).includes(m) && !forged.includes(m) && (world.stock[m] ?? 0) > 0)
     // The five a modifier asks for are always named; when every material held will not fit one line, those not held give way.
     const named = (all: Material[]) => all.map((m) => `${world.stock[m] ?? 0} ${materialName(m)}`).join(', ')
-    const every = [...STOCK_SHOWN, ...extra]
+    const every = [STOCK_SHOWN[0], ...forged, ...STOCK_SHOWN.slice(1), ...extra]
     const stock = named(every).length > STOCK_CHARS - 20 ? named(every.filter((m) => (world.stock[m] ?? 0) > 0)) : named(every)
     this.frame.add([
       this.add.rectangle(CENTRE_X, FRAME_H / 2, FRAME_W, FRAME_H, 0x241d15, 0.98).setStrokeStyle(3, 0xc9a227),
@@ -438,7 +441,7 @@ export class CraftingScene extends Phaser.Scene {
       this.frame.add(this.add.text(OPTIONS_X, below, 'Click an item to see what it changes.', { ...style, color: DIM }))
       return
     }
-    this.frame.add(this.add.text(OPTIONS_X, below, forgePreview(row, this.expedition.members[this.forgeMember] ?? this.expedition.members[0]).join('\n'), { ...style, fontSize: '11px', lineSpacing: 3 }))
+    this.frame.add(this.add.text(OPTIONS_X, below, forgePreview(this.gameState, row, this.expedition.members[this.forgeMember] ?? this.expedition.members[0]).join('\n'), { ...style, fontSize: '11px', lineSpacing: 3 }))
     if (row.refusal) this.frame.add(this.add.text(OPTIONS_X, PAGE_Y - 22, row.refusal, { ...style, fontSize: '11px', color: REFUSED }).setOrigin(0, 1))
     this.button('forge', { x: OPTIONS_X + OPTIONS_W / 2, y: PAGE_Y, width: OPTIONS_W, height: 30 }, 'Forge it', () => this.onForge(row), row.refusal === null)
   }

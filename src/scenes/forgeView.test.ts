@@ -48,10 +48,11 @@ describe('the forge preview', () => {
     const game = home(4)
     const member = game.parties[0].members[0]
     const row = forgeRows(game, game.parties[0], 'mainHand').find((r) => r.id === 'longsword:mithril')!
-    const lines = forgePreview(row, member)
+    const lines = forgePreview(game, row, member)
     expect(lines[0]).toBe('Forges the Mithril Longsword, into the baggage.')
     expect(lines).toContain('Sockets: 1, 2 at Masterwork.')
     expect(lines.some((l) => l.startsWith('Damage:'))).toBe(true)
+    expect(lines).toContain('The stock holds 20 mithril.')
     expect(lines[lines.length - 1]).toBe('Costs 30 gold, 8 mithril.')
   })
 })
@@ -67,6 +68,11 @@ describe('the temper choices', () => {
     expect(plain[0].refusal).toBeNull()
     const fine = temperChoices(game, baggagePlace(game, 'mithril_longsword@2'))
     expect(fine.map((c) => c.id)).toEqual(['temper3'])
+  })
+
+  it('offers none for a Masterwork tier-3 item', () => {
+    const game = home(4)
+    expect(temperChoices(game, baggagePlace(game, 'mithril_longsword@3'))).toEqual([])
   })
 
   it('offers none for a tier-2 item', () => {
@@ -86,14 +92,14 @@ describe('the temper choices', () => {
 
 describe('the trophies line', () => {
   it('names materials by materialName, and is null with none', () => {
-    expect(trophiesLine({ wyvern_hide: 3 })).toBe('Trophies: 3 wyvern hide')
-    expect(trophiesLine({ wolfhide: 1, wyvern_hide: 2 })).toBe('Trophies: 1 wolfhide, 2 wyvern hide')
+    expect(trophiesLine({ wyvern_hide: 3 })).toBe('Trophies: 3 wyvern hide.')
+    expect(trophiesLine({ wolfhide: 1, wyvern_hide: 2 })).toBe('Trophies: 1 wolfhide, 2 wyvern hide.')
     expect(trophiesLine({})).toBeNull()
   })
 
   it('words what an injected table gives for a battle, and nothing from the empty table', () => {
     const table = { troll: { material: 'wyvern_hide' as const, amount: 3 } }
-    expect(trophiesLine(trophiesFor(['troll', 'warrior', 'troll'], table))).toBe('Trophies: 6 wyvern hide')
+    expect(trophiesLine(trophiesFor(['troll', 'warrior', 'troll'], table))).toBe('Trophies: 6 wyvern hide.')
     expect(trophiesLine(trophiesFor(['troll', 'goblin']))).toBeNull()
   })
 })

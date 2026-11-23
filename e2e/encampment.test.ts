@@ -748,7 +748,7 @@ describe('the encampment', () => {
     expect(world.stock.mithril).toBe(40 - 8 - 12)
   })
 
-  it('lists no Forge rows below workshop level 4 and says why, and a refused row names its refusal', async () => {
+  it('lists no Forge rows below workshop level 4 and says why', async () => {
     const game = await games.open()
     await richAtHome(game, { gold: 500, mithril: 3 }, undefined, { 'world.workshop': 3 })
     const camp = await enter(game)
@@ -760,6 +760,25 @@ describe('the encampment', () => {
     const low = await game.settled('Crafting', (c) => c.tab === 'forge')
     expect(low.forgeRows).toEqual([])
     expect(low.forgeHint).toBe('A level 4 workshop forges mithril, elderwood, wyvern-hide and mithrilweave.')
+  })
+
+  it('greys Forge it for a row the stock cannot pay, and the preview names the refusal and what the stock holds', async () => {
+    const game = await games.open()
+    await richAtHome(game, { gold: 500, mithril: 3 }, undefined, { 'world.workshop': 4 })
+    const camp = await enter(game)
+    await game.click(facility(camp, 'workshop'))
+    const shown = await game.settled('Encampment', (c) => c.selected === 'workshop')
+    await game.click(shown.buttons.open)
+    await game.waitForScenes(['Crafting'], ['World'])
+    await game.click((await game.settled('Crafting')).buttons.forgeTab)
+    const listed = await game.settled('Crafting', (c) => c.tab === 'forge')
+    const row = listed.forgeRows.find((r) => r.visible)!
+    expect(row.refusal).toContain('more than the stock holds')
+    await game.click(row)
+    const chosen = await game.settled('Crafting', (c) => c.chosen === row.id)
+    expect(chosen.preview).toContain('The stock holds 3 mithril.')
+    expect(chosen.preview.at(-1)).toBe(row.refusal)
+    expect(chosen.buttons.forge.enabled).toBe(false)
   })
 
   it('buys partners’ goods under the Market Hall’s Goods filter', async () => {

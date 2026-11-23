@@ -360,7 +360,7 @@ export interface CraftingProbe {
   /** Forge: the slot filter's buttons, and the slot showing. */
   forgeSlots: Array<ButtonProbe & { slot: string }>
   forgeSlot: string
-  /** Forge: every row of the slot showing, those of other pages not visible (family, material, tier, the cost in words, the domain's refusal or null; greyed when refused, still clickable to read why), what the list says when it has none, and the member compared against (an index into the party). */
+  /** Forge: every row of the slot showing, those of other pages not visible (family, material, tier, the cost in words, the domain's refusal or null; every visible row is enabled, a refused one shows its cost in the refused colour and opens to read why), what the list says when it has none, and the member compared against (an index into the party). */
   forgeRows: Array<ButtonProbe & { id: string; family: string; material: string; tier: number; name: string; cost: string; refusal: string | null }>
   forgeHint: string
   members: Array<ButtonProbe & { index: number; name: string }>
