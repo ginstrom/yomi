@@ -395,6 +395,7 @@ describe('partners\' goods at the Market Hall', () => {
     expect(buyGoodRefusal(game, party, 'mithril', 2)).toBe('It costs 6 gold, more than the stock holds.')
     game.world.tradingPost = 4
     expect(buyGoodRefusal(game, party, 'mithril', 1)).toBe("A level 5 trading post sells partners' goods.")
+    expect(buyGoodRefusal(game, party, 'starmetal', 1)).toBe("A level 5 trading post sells partners' goods.")
     party.position = { q: 40, r: 40 }
     expect(buyGoodRefusal(game, party, 'mithril', 1)).toMatch(/^The trading post is at /)
   })

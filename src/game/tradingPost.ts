@@ -18,7 +18,7 @@ import { encampmentName, type WorldState } from './worldMap.ts'
  * stock's materials at a poor rate. From level 4 it is a market, and brings
  * gold every yield day (`MARKET_INCOME`, territory.ts). It also sells runes into the pouch (rank 1
  * from level 2, rank 2 from level 4, six kinds) and buys any from it. From level 5 (the Market Hall) it
- * also sells each contacted, unsilent partner's good at `GOOD_PRICE` gold a unit
+ * also sells each contacted, not silent partner's good at `GOOD_PRICE` gold a unit
  * into the stock. It never sells a runed item, nor anything of tier 3 and up, which the
  * workshop forges (long-campaign stage 10). Built from the
  * start; each action returns why it was refused, or null when done.

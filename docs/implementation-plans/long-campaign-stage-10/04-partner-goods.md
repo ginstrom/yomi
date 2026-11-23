@@ -129,3 +129,5 @@ No scene work (step 08), no simulator change, no change to routes, contact or si
 - `npx vitest run src/game/tradingPost.test.ts`: 35 pass. `npm test`: 105 files, 2,676 tests, all pass; refactor guard untouched and green.
 - 50-campaign check: `57fdea15...e53e75`, identical to step 03.
 - `src/game/CLAUDE.md` 7,413 bytes. `grep "never sells materials"` finds nothing. No deviations. Step 08 reads C3 unchanged.
+
+Review round 1 (opus): clean, three notes, all fixed in the follow-up commit: trade.ts header and the import-cycle line in `src/game/CLAUDE.md` name the `tradingPost.ts`/`trade.ts` cycle (functions only); "refuse in order" also checks an unlisted material at level 4 gives the level refusal; module comment says "not silent". `npm test` green.
