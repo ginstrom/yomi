@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
+import { MATERIALS } from '../inventory/catalog.ts'
 import { BASE_ITEMS, MAGIC_ITEMS, itemById } from '../inventory/inventory.ts'
 import { RUNE_IDS } from '../inventory/runes.ts'
 import {
@@ -23,8 +24,14 @@ describe('item icons', () => {
     }
   })
 
-  it('tints a tier-2 item by its material, and nothing else', () => {
-    expect(Object.keys(MATERIAL_TINTS).sort()).toEqual(['ironwood', 'silk', 'steel', 'wolfhide'])
+  it('tints an item of tier 2 and up by its material, and nothing else', () => {
+    const tiered = MATERIALS.filter((m) => m.tier >= 2).map((m) => m.id)
+    expect(Object.keys(MATERIAL_TINTS).sort()).toEqual([...tiered].sort())
+    expect(tiered).toHaveLength(16)
+    expect(new Set(Object.values(MATERIAL_TINTS)).size).toBe(16)
+    expect(iconTint(itemById('mithril_longsword')!)).toBe(MATERIAL_TINTS.mithril)
+    expect(iconTint(itemById('starweave_robe@3')!)).toBe(MATERIAL_TINTS.starweave)
+    expect(iconTint(itemById('drake_leather')!)).toBe(MATERIAL_TINTS.drake)
     expect(iconTint(itemById('steel_longsword@2+light1')!)).toBe(MATERIAL_TINTS.steel)
     expect(iconTint(itemById('silk_robe')!)).toBe(MATERIAL_TINTS.silk)
     expect(iconTint(itemById('iron_sword')!)).toBeUndefined()
