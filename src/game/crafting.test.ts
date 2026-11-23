@@ -430,12 +430,18 @@ describe('crafting tier 3 and up', () => {
     expect([1, 2, 3].map((g) => craftCost(itemById('ironwood_bow')!, g as 1 | 2 | 3))).toEqual([{ gold: 5, timber: 5 }, { gold: 10, copper: 5 }, { gold: 20, crystal: 5 }])
   })
 
+  it('keeps the refusal of a Masterwork tier-3 item no modifier fits: it has no temper path left', () => {
+    const game = forgeHome(4)
+    game.parties[0].baggage.push(itemById('mithril_rapier@3')!)
+    expect(craftables(game, game.parties[0]).find(({ item }) => item.id === 'mithril_rapier@3')!.refusal).toBe('No modifier fits it.')
+  })
+
   it('lists a tier-3 item no modifier fits, to be tempered, and the same items as before for tiers 1 and 2', () => {
     const game = forgeHome(4)
     const before = craftables(game, game.parties[0]).map(({ item, refusal }) => [item.id, refusal])
     game.parties[0].baggage.push(itemById('steel_rapier')!, itemById('mithril_rapier')!, itemById('mithril_longsword')!)
     const listed = craftables(game, game.parties[0])
-    expect(listed.map(({ item, refusal }) => [item.id, refusal])).toEqual([...before, ['mithril_rapier', 'No modifier fits it.'], ['mithril_longsword', null]])
+    expect(listed.map(({ item, refusal }) => [item.id, refusal])).toEqual([...before, ['mithril_rapier', null], ['mithril_longsword', null]])
   })
 })
 

@@ -200,7 +200,7 @@ export class CraftingScene extends Phaser.Scene {
       ? socketables(this.gameState, this.expedition).map(({ place, item }) => ({ place, item, refusal: null }))
       : this.tab === 'forge'
         ? []
-        : craftables(this.gameState, this.expedition).map((entry) => ({ ...entry, refusal: this.itemRefusal(entry) }))
+        : craftables(this.gameState, this.expedition)
     const runeItem = runes && item ? itemAt(this.gameState, item) : null
     return {
       actingFor: this.expedition.id,
@@ -293,11 +293,6 @@ export class CraftingScene extends Phaser.Scene {
   private chosenTemper(): TemperChoice | null {
     const place = this.tab === 'modify' ? this.selectedPlace() : null
     return (place && temperChoices(this.gameState, place).find((c) => c.id === this.chosen)) || null
-  }
-
-  /** What the item list says of an item: nothing where it can be worked or tempered, else why no modifier fits. */
-  private itemRefusal({ place, refusal }: { place: ItemPlace; refusal: string | null }): string | null {
-    return refusal !== null && temperChoices(this.gameState, place).length > 0 ? null : refusal
   }
 
   private forgeRowsNow(): ForgeRow[] {
@@ -398,7 +393,7 @@ export class CraftingScene extends Phaser.Scene {
     const pages = Math.max(1, Math.ceil(items.length / ROWS_PER_PAGE))
     this.page = Math.min(this.page, pages - 1)
     items.slice(this.page * ROWS_PER_PAGE, (this.page + 1) * ROWS_PER_PAGE).forEach(({ place, item, refusal }, i) =>
-      this.drawItem(place, item, this.itemRefusal({ place, refusal }), LIST_TOP + i * ROW_H),
+      this.drawItem(place, item, refusal, LIST_TOP + i * ROW_H),
     )
     if (items.length === 0) {
       this.frame.add(this.add.text(LIST_X + 8, LIST_TOP, 'The party carries nothing that can be worked.', { fontFamily: FONT, fontSize: '13px', color: DIM }))

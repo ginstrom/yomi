@@ -107,13 +107,16 @@ export function itemRefusal(item: Item, tier: CraftTier): string | null {
   return null
 }
 
-/** Every item `party` has that crafting could work, member by member (worn, then carried), then the baggage's, a tier-3+ plain item always (it can be tempered); one no modifier here fits says why. */
+/** Every item `party` has that crafting could work, member by member (worn, then carried), then the baggage's, a tier-3+ plain item always (it can be tempered); one with no temper path left and no modifier that fits here says why. */
 export function craftables(game: GameState, party: Expedition): Array<{ place: ItemPlace; item: Item; refusal: string | null }> {
   const tier = craftTier(game.world, party)
   return allPlaces(game, party)
     .filter(({ item }) => baseItem(item) && (modifiersFor(baseItem(item)!.family!).length > 0 || (item.tier ?? 1) >= 3))
-    .map(({ place, item }) => ({ place, item, refusal: itemRefusal(item, tier) }))
+    .map(({ place, item }) => ({ place, item, refusal: hasTemperPath(item) ? null : itemRefusal(item, tier) }))
 }
+
+/** Whether tempering still has a grade to offer `item`: a plain tier-3+ item below Masterwork. Such an item is never greyed in the list. */
+const hasTemperPath = (item: Item): boolean => baseItem(item) !== undefined && isHighTier(item.tier) && (item.grade ?? 1) < 3
 
 /** Why crafting cannot be done where the party stands, or null. */
 function placeRefusal(game: GameState, party: Expedition, tier: CraftTier): string | null {
