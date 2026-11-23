@@ -31,6 +31,8 @@ export function headerLines(lines: readonly string[], width: number, maxLines = 
   if (total <= maxLines || cut >= lines.length) return wrapped.flat()
   const room = Math.max(1, maxLines - (total - wrapped[cut].length))
   const entries = lines[cut].split(/(?<=,) /)
+  // A line of one entry has nothing to drop: leave the lines over the limit rather than lose it.
+  if (entries.length < 2) return wrapped.flat()
   const kept = (count: number) => wrapLine(`${entries.slice(0, count).join(' ').replace(/,$/, '')}, +${entries.length - count} more`, width)
   let count = entries.length - 1
   while (count > 1 && kept(count).length > room) count--

@@ -33,4 +33,11 @@ describe('headerLines', () => {
   it('shortens nothing that fits', () => {
     expect(headerLines(lines, 80, 3)).toEqual(lines)
   })
+
+  it('leaves a cut line with a single entry whole, even when the lines run over', () => {
+    const few = ['Blighted 3% of the land known', 'Stock: nothing yet', 'Yield: iron 2; timber 2; gold 1; salt 2; stone 2']
+    const out = headerLines(few, 20, 3)
+    expect(out).toContain('Stock: nothing yet')
+    expect(out.join(' ')).not.toContain('more')
+  })
 })
