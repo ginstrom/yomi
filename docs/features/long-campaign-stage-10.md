@@ -4,7 +4,7 @@
 
 - Request (user's words):
   > The next thing is stage 10 of the long campaign: forging and the high tiers. Its design is docs/designs/long-campaign/stage-10-forging-and-high-tiers.md and it is marked "ready for planning". [...] As with stages 2–9, the approved stage design goes straight to the planner. Start with the bookkeeping commit, then cut a long-campaign-stage-10 branch off main and run the orchestrator. Early figures, the refactor guard and the 50-campaign check run with --near-source as in stage 9. Balance bands are mine to change: bring any out-of-band figures to me.
-- Slug `long-campaign-stage-10` · Phase 3, planning · Phase 4 · Next action: step 11 (document and play); then verification · Branch: `long-campaign-stage-10`, off main at 4d51a8b (stage 9 merged as PR #11).
+- Slug `long-campaign-stage-10` · Phase 3, planning · Phase 5, verification · Next action: overall review, QA, simulated user · Branch: `long-campaign-stage-10`, off main at 4d51a8b (stage 9 merged as PR #11).
 - Path: Large, but the stage design is the approved design. Straight to planning, as stages 2–9 did.
 - Links:
   - Stages overview: `docs/designs/long-campaign/index.md`
@@ -16,7 +16,7 @@
 - Open questions: none. Plan questions 1–6 answered 2026-11-23 (decision log); step 02's engineer records them in the index.
 - Tiers (engineer / reviewer): planner opus. 01, 06 sonnet / sonnet; 04, 05, 08, 11 sonnet / opus; 02, 03, 07, 09, 10 opus / opus. No escalations.
 - Worktrees: 05, 06, 08 ran in worktrees, merged dd96b2c, 32b401d, 9c0f04c. Steps 01–08 clean, 1 review round each (log.md).
-- Verification: not started.
+- Verification: steps 01–11 done, each clean in 1 review round (step 11 needed one fix: index cap). Overall review, QA, simulated user running at 6a2e808.
 - Carried forward, for this plan (from the user):
   - Mithril and the far ores/woods have no use yet (sell only); the simulated player noticed mithril has no stated use.
   - Rune ranks 3–4 drop and embed but can't be fused into.
