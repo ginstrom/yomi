@@ -4,7 +4,7 @@
 
 - Request (user's words):
   > The next thing is stage 9 of the long campaign: the outer rings. Its design is docs/designs/long-campaign/stage-09-outer-rings.md and it is marked "ready for planning". [...] As with stages 2–8, the approved stage design goes straight to the planner. Start with the bookkeeping commit, then cut a long-campaign-stage-09 branch off main and run the orchestrator. Balance bands are mine to change: bring any out-of-band figures to me.
-- Slug `long-campaign-stage-09` · Phase 4, implementation · Next action: review step 08; then 07 (worktree) alongside 09. 01–06 done and reviewed clean · Branch: `long-campaign-stage-09`, off main at 67e5f0d (67e5f0d on main, not pushed).
+- Slug `long-campaign-stage-09` · Phase 4, implementation · Next action: step 10 running; 01–09 done and reviewed clean · Branch: `long-campaign-stage-09`, off main at 67e5f0d (67e5f0d on main, not pushed).
 - Path: Large, but the stage design is the approved design. Straight to planning, as stages 2–8 did.
 - Links:
   - Stages overview: `docs/designs/long-campaign/index.md`
@@ -12,7 +12,7 @@
   - Previous stage: `docs/features/long-campaign-stage-08.md`
   - Plan: `docs/implementation-plans/long-campaign-stage-09/index.md` (10 steps, 5664289)
   - Plan log (history): `docs/implementation-plans/long-campaign-stage-09/log.md`
-- Open questions: none. For step 09 to bring to the user: `one` 288/500 at step 08 (band 215–250); the long run 0/100 beat the Source (make it winnable); the 50-check rose 22 → 28 at step 04 (+2 board, +4 SPAWN_DIVISOR 840); in the real long campaign the home country sees about half the spawns (outer corruption draws them out).
+- Open questions: for the user at the report: in the real long campaign the home country sees about half the spawns (8.3 a campaign over 1272–1602 days vs 14.5 over 325 near the Source); proposed: defer to stage 12's spawn retune.
 - Tiers (engineer / reviewer): planner opus; 01, 02, 04, 05, 08, 09 opus / opus; 03, 06, 07, 10 sonnet / opus (07 to opus if frame time is poor for an unknown cause). No escalations.
 - Worktrees: 03 and 06 run in their own worktrees and leave index.md and log.md alone; the orchestrator merges them and the next engineer records their status and log lines.
 - Verification: none yet (step verdicts in the plan's log.md). Baseline at 5664289: one 233, company 232, rl10 433; 50-check b50f7b50… (identical through step 02 with `--near-source`).
