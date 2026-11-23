@@ -4,7 +4,7 @@
 
 - Request (user's words):
   > The next thing is stage 9 of the long campaign: the outer rings. Its design is docs/designs/long-campaign/stage-09-outer-rings.md and it is marked "ready for planning". [...] As with stages 2–8, the approved stage design goes straight to the planner. Start with the bookkeeping commit, then cut a long-campaign-stage-09 branch off main and run the orchestrator. Balance bands are mine to change: bring any out-of-band figures to me.
-- Slug `long-campaign-stage-09` · Phase 6, done · Next action: a PR when the user asks (pr-reviewer, then pr-creator) · Branch: `long-campaign-stage-09`, off main at 67e5f0d; both pushed.
+- Slug `long-campaign-stage-09` · Phase 6, done · PR #11 open (https://github.com/ginstrom/yomi/pull/11) · Next action: the user merges it · Branch: `long-campaign-stage-09`, off main at 67e5f0d; pushed.
 - Path: Large, but the stage design is the approved design. Straight to planning, as stages 2–8 did.
 - Links:
   - Stages overview: `docs/designs/long-campaign/index.md`
@@ -15,7 +15,7 @@
 - Open questions: for the user at the report: in the real long campaign the home country sees about half the spawns (8.3 a campaign over 1272–1602 days vs 14.5 over 325 near the Source); proposed: defer to stage 12's spawn retune.
 - Tiers (engineer / reviewer): planner opus; 01, 02, 04, 05, 08, 09 opus / opus; 03, 06, 07, 10 sonnet / opus (07 to opus if frame time is poor for an unknown cause). No escalations.
 - Worktrees: 03 and 06 run in their own worktrees and leave index.md and log.md alone; the orchestrator merges them and the next engineer records their status and log lines.
-- Verification: overall review (opus) clean at 296dc0c, ready for a PR (npm test 2632, build, e2e after reruns, 50-check 57fdea15…). QA (sonnet) re-check: pass at 296dc0c; its encampment stock defect fixed in a125235 (not re-reviewed). Simulated user: goals 1, 2, 4 met; 3, 5, 6 partly. Evidence: `.git/pr-review/long-campaign-stage-09/evidence/`.
+- Verification: overall review (opus) clean at 296dc0c, ready for a PR (npm test 2632, build, e2e after reruns, 50-check 57fdea15…). QA (sonnet) re-check: pass at 296dc0c; its encampment stock defect fixed in a125235 (not re-reviewed). Simulated user: goals 1, 2, 4 met; 3, 5, 6 partly. Evidence: `.git/pr-review/long-campaign-stage-09/evidence/`. pr-reviewer: ready at a225599 (5 CRISP findings fixed in d593b34, 6dbaa99, 6b51b72, 76b0cf5, a225599; 2 simulator findings dismissed); record `.git/pr-review/long-campaign-stage-09.md`.
 - Carried forward (from stage 8 and earlier, for this plan):
   - The Routes tab shows at most 4 rows, no paging; a test fails once PARTNERS exceeds 4 (stage 9 adds 3).
   - A route whose raid comes and goes between yield days is never abandoned (count resets when told safe); unmeasured.
@@ -39,3 +39,4 @@
 | 2026-11-23 | Accept one 288, company 289, one's days 331 (out of band) until stage 12; SPAWN_DIVISOR stays 840 | user | divisor 300 or 400 | Design's per-hex rule; noisy response; stage 12 retunes |
 | 2026-11-23 | Step 09 may tune the Source Guardians' block at threats 6–20 only (threats 1–5 unchanged) until winnable | user | defer to stage 11 | The count alone can't: 0 wins at 5, 4, 3 guards (foe scaling) |
 | 2026-11-23 | The company's long-campaign policy skew (replacements sent far above their level) waits for stage 12 | user | fix in stage 9 | Stage 12 retunes the simulator's policies |
+| 2026-11-23 | Open the stage 9 PR (#11, ready) before stage 10, which branches off main after it merges | user | branch stage 10 off stage 9 | One PR per stage off main |
