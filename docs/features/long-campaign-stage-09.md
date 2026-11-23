@@ -36,3 +36,6 @@
 | 2026-11-22 | Accept the planner's other departures (index decisions) and tiers | orchestrator | — | Routine engineering choices |
 | 2026-11-22 | Under `--near-source`, the simulator's world leaves out the fixed nests above threat 5 (fix B); far sites and partners stay | user | accept the new meaning; only filter nextTarget (fix A) | Outer corruption halved home spawns, so the early check no longer measured the early game |
 | 2026-11-23 | Runtime gate failed (long 100 ≈ 20 min, 500 ≈ 101 min; day cost 3×): make only byte-identical speed-ups; step 09 uses 100-campaign long runs | user | add the blight's far-hex skip (design change); go on as is | Recommended; keeps every result |
+| 2026-11-23 | Accept one 288, company 289, one's days 331 (out of band) until stage 12; SPAWN_DIVISOR stays 840 | user | divisor 300 or 400 | Design's per-hex rule; noisy response; stage 12 retunes |
+| 2026-11-23 | Step 09 may tune the Source Guardians' block at threats 6–20 only (threats 1–5 unchanged) until winnable | user | defer to stage 11 | The count alone can't: 0 wins at 5, 4, 3 guards (foe scaling) |
+| 2026-11-23 | The company's long-campaign policy skew (replacements sent far above their level) waits for stage 12 | user | fix in stage 9 | Stage 12 retunes the simulator's policies |
