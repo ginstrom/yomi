@@ -317,8 +317,8 @@ const HOBGOBLIN_WARBAND: EncounterDef = { slots: HOBGOBLIN_WARBAND_SLOTS, ...TOD
 const TROLL_LAIR: EncounterDef = { slots: TROLL_LAIR_SLOTS, ...TODAY }
 /**
  * The level the Source's guardians are raised to at most (stage 9 step 09, the user's decision: the Source made
- * winnable). Raised from native level 1 to 20 they were never hit (AC 105 to 115 against a level-18 party's to-hit
- * of about 100); at 6 a ready-made level-18 party wins 28 battles of 500 and the long campaign 8 of 50 (7 and above:
+ * winnable). Raised from native level 1 to 20 they were barely hit (hit rate about 0.28; AC 105 to 115 against a
+ * level-18 party's to-hit of about 100); at 6 a ready-made level-18 party wins 28 battles of 500 and the long campaign 8 of 50 (7 and above:
  * no `sg20-18` win). It is at least 5, so the Source near home (threats 1 to 5) fights as before.
  */
 export const SOURCE_FOE_LEVEL = 6

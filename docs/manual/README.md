@@ -159,9 +159,26 @@ Black hexes have never been seen. The party sees 5 hexes around it, the encampme
 ### Places
 
 - **Your encampment**, the only settlement left, where the guild hall, the trading post and the rest of your facilities stand.
-- **Resources** (Iron Vein, Gold Seam, Timber Stand and others). A held site's name is starred and drawn in green. A site under threat is drawn in orange, along with the number of days left until it falls.
-- **Monster lairs**, marked with a skull, each with a **threat** from 1 to 5. The further a lair is from the encampment, the higher its threat.
-- **Trade partners** (Millbrook and Saltmere), neutral settlements with their own icons and names in gold. A partner is never held and never lost: walk a party onto its hex and it will trade with your encampment ("Millbrook will trade with Oakvale"). While its own land is blighted (level 2) or worse the partner falls silent, and its icon and name turn grey (once you have contacted it, or while a party can see it); it trades again once that land is clean. Hover a partner to see its good, whether it is contacted, and whether a route runs to it.
+- **Resources** (Iron Vein, Gold Seam, Timber Stand and others; in the far rings the Ironwood Grove, the Mithril Lode, the Elder Grove, the Adamant Deep, the Wyrmwood Thicket, the Fallen Star and the Heartwood, each yielding a rare material that the trading post buys until the workshop learns to use it). A held site's name is starred and drawn in green. A site under threat is drawn in orange, along with the number of days left until it falls.
+- **Monster lairs**, marked with a skull, each with a **threat**. The further a lair is from the encampment, the higher its threat, in rings around home:
+
+  | Distance from the encampment | Threat |
+  | --- | --- |
+  | up to 10 hexes | 1 |
+  | 11 to 21 | 2 |
+  | 22 to 32 | 3 |
+  | 33 to 43 | 4 |
+  | 44 to 54 | 5 |
+  | 55 to 67 | 7 |
+  | 68 to 80 | 9 |
+  | 81 to 94 | 12 |
+  | 95 to 108 | 15 |
+  | 109 to 122 | 18 |
+
+  Past the Troll Lairs the land runs on: bandit camps, spider nests and salamander pools stand at threat 7, bandit companies at 9 and 12, and freebooter hosts at 15 and 18. The Source itself, 122 hexes out in the far east, is threat 20.
+- **Trade partners** (Millbrook and Saltmere near home; far out, Stonehollow, a mountain hold that trades mithril, Elder Glade, a forest people's glade that trades elderwood, and Emberwatch, a fortified pass that trades adamant), neutral settlements with their own icons and names in gold. A partner is never held and never lost: walk a party onto its hex and it will trade with your encampment ("Millbrook will trade with Oakvale"). While its own land is blighted (level 2) or worse the partner falls silent, and its icon and name turn grey (once you have contacted it, or while a party can see it); it trades again once that land is clean. Hover a partner to see its good, whether it is contacted, and whether a route runs to it.
+
+![The far east of the map after the whole of it is revealed, the party beside Stonehollow](images/world-outer-rings.png)
 
 ### Trade roads
 
@@ -181,7 +198,7 @@ When you walk onto a monster lair, the footer offers four actions:
 
 You can also click a hex to walk away.
 
-**Bandits.** Not every lair holds monsters. Bandits hold the **Bandit Camp** (threat 3) and the **Bandit Hideout** (threat 4), and new **Bandit Gangs** appear where the blight breeds lairs of threat 3 or more. Bandits are people, built the way your heroes are, and always led by a Captain with sword, shield and breastplate. At threat 3 a Brute with a battle axe and breastplate fights beside him; at threat 4 a Hedge-Mage takes the Brute's place, casting Magic Arrow, Flame Arrow and Shield (it never heals); at threat 5 a Bandit Archer takes the Hedge-Mage's place, standing back with a bow and shooting. They have a hero's hit points, the Captain and the Brute a hero's armour, and they carry Fine gear at threats 3 and 5 and plain gear at threat 4. Further out still, beyond threat 5, four bandits take the field together, a **Crossbowman** among them whose bolts punch through armour, all in Fine steel. Expect a hard fight against a party of your level: bring a heavy weapon, or spells, for the armoured ones, and close in on the Archer and the Hedge-Mage, who wear none.
+**Bandits.** Not every lair holds monsters. Bandits hold the **Bandit Camp** (threat 3) and the **Bandit Hideout** (threat 4), and new **Bandit Gangs** appear where the blight breeds lairs of threat 3 or more. Bandits are people, built the way your heroes are, and always led by a Captain with sword, shield and breastplate. At threat 3 a Brute with a battle axe and breastplate fights beside him; at threat 4 a Hedge-Mage takes the Brute's place, casting Magic Arrow, Flame Arrow and Shield (it never heals); at threat 5 a Bandit Archer takes the Hedge-Mage's place, standing back with a bow and shooting. They have a hero's hit points, the Captain and the Brute a hero's armour, and they carry Fine gear at threats 3 and 5 and plain gear at threat 4. Further out still, beyond threat 5, four bandits take the field together, a **Crossbowman** among them whose bolts punch through armour, all in Fine steel from threat 6 and Masterwork steel from threat 8. The far rings add the **Bandit Company** (threats 8 to 13) and the **Freebooter Host** (threats 14 to 20, led by a Freebooter Captain), four or five bandits strong. Expect a hard fight against a party of your level: bring a heavy weapon, or spells, for the armoured ones, and close in on the Archer and the Hedge-Mage, who wear none.
 
 ![Bandits at threat 5: the Captain and the Archer](images/battle-bandits.png)
 
@@ -527,12 +544,12 @@ A hero born with an attribute of 7 or 8 reaches the nodes that ask it from the s
 
 Every hex of land has a blight level from 0 (clean) to 3 (corrupted), shown as a tint over the grass. Corrupted land also shows dark growths. Every day, sources of influence push on the hexes around them, and their strength fades by a point for each hex of distance:
 
-- **Pushing the blight forward**: monster lairs (more strongly the higher their threat), the Source itself, and corrupted land spreading to its neighbours. The blight grows stronger over time, by a tenth every 30 days, up to half again as strong.
+- **Pushing the blight forward**: monster lairs (more strongly the higher their threat), the Source itself, and corrupted land spreading to its neighbours. A lair pushes no harder than a threat 5 lair does, however far out it stands. The blight grows stronger over time, by a tenth every 30 days, up to half again as strong.
 - **Pushing it back**: the encampment (stronger with its shrine), every resource you hold (stronger with an outpost, works or fort), every watchtower, every trade partner (a clean source that is never lost, silent or not), every hex of an open trade road once the Builders' Lodge is at level 3, and the party itself, which grows stronger as the heroes level up.
 
 Consequences:
 
-- **Corrupted land breeds new monster lairs.** A new lair's threat depends on how far from the encampment it appears: goblins and kobolds at any threat, and bandits from threat 3.
+- **Corrupted land breeds new monster lairs.** A new lair's threat depends on how far from the encampment it appears: goblins and kobolds at any threat, bandits from threat 3, and from threat 7 spiders, salamanders, bandit companies and freebooter hosts.
 - **Winning a battle cleanses the land** around the lair, lowering every hex within 1 + its threat by two levels.
 - **Resources** are captured when their land is clean (level 0) and lost when it reaches level 2, or, behind a fort, only when it is corrupted (level 3). A site lost razes whatever was built on it. While the blight gains on a site, the map shows it in orange with the number of days left until it falls. A watchtower can be lost the same way.
 - **Stock**: every 5 days, each site you hold adds its yield to the encampment's stock (gold, iron, timber, silver and so on), and the encampment itself adds 2 gold, with more once its trading post is a Market (see [Building](#9-building)). A site whose land is tainted yields half, and so does the market while the encampment's is.
@@ -628,6 +645,10 @@ Every plain item comes in three **grades**: plain, **Fine** and **Masterwork**. 
 
 ![The Routes tab at the Market Hall: Millbrook's route open, Saltmere's offered, its road on the small map](images/trading-post-routes.png)
 
+With more partners than a page holds, **Prev** and **Next** turn the page:
+
+![The Routes tab's second page, Emberwatch's long road on the small map](images/trading-post-routes-page2.png)
+
 In the encampment, click the trading post and then **Enter the Trading Post**. Click a line to see the item's stats and price, then confirm with the button under them.
 
 - **Buy** lists every plain item at each grade the post sells: plain at level 1, Fine from level 2, Masterwork at level 3, and from level 4 the second tier (steel, ironwood, wolfhide, silk) at every grade. The buttons along the top filter the list by slot (**Weapons**, **Shields**, **Armor**, **Head**, **Hands**, **Feet**) and, under them, by family, or **All** of the slot; the tab opens on weapons. A second-tier item costs 2.5 times the first tier's price, a Fine item 3 times the plain price and a Masterwork one 8 times: a Masterwork Steel Longsword costs 12 × 2.5 × 8 = 240 gold. What you buy goes into the baggage; equip it from the character panel.
@@ -719,7 +740,7 @@ It cannot raise the dead.
 
 ## 10. Winning, losing and saving
 
-- **Victory**: find the heart of the blight and destroy it. It is not on your map when the game begins: explore, and the moment your party or a watchtower sights it, wherever it is, your journey stops and it is marked. What guards it fights at threat 5, so plan to arrive with heroes around level 7. After the victory you can **End** the game or carry on in **endless** mode.
+- **Victory**: find the heart of the blight and destroy it. It is not on your map when the game begins: explore, and the moment your party or a watchtower sights it, wherever it is, your journey stops and it is marked. It lies far in the east, 122 hexes from home, at threat 20, and what guards it fights at the strength of a level-6 foe, so plan a long march and to arrive with heroes around level 18. After the victory you can **End** the game or carry on in **endless** mode.
 - **Defeat**: the game ends if a lost battle leaves you no hero in any party or the reserves, or if your encampment falls to the blight.
 
 **Saving is automatic.** Each playthrough lives in one of three slots, and there is no save button. The world map saves after each journey, camp and panel change. A battle saves at the start of each of your turns, so reloading during a battle rewinds to the start of that turn with the same dice. A defeat that leaves no hero deletes its slot.

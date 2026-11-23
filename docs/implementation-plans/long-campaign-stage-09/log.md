@@ -284,3 +284,5 @@ Deaths by level after: 2 (12), 3 (40), 4 (18), 5 (39), 6 (37), 7 (36), 8 (28), 9
 - `npm test`: 103 files, 2622 tests passed.
 
 Step 09: engineer opus; 2 rounds with the orchestrator (stop-and-report, then the user's decisions); `SOURCE_FOE_LEVEL` 6; review pending.
+
+Step 09 review: reviewer opus, clean in 1 round; 50-check identical (57fdea15…); policy snapshot diff only source_guardians at threats 7–20; 4 non-blocking wording fixes done in step 10.

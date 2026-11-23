@@ -438,6 +438,47 @@ describe('the manual’s screenshots', () => {
     await shot(game, 'world-road')
   })
 
+  it('the outer rings: a far partner and its nest, and the Routes tab’s second page', async () => {
+    const game = await games.open()
+    await game.newGame()
+    await game.page.evaluate(() => {
+      const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
+      saved.game.world.contacted = ['millbrook', 'saltmere', 'stonehollow', 'elder_glade', 'emberwatch']
+      saved.game.world.tradingPost = 5
+      saved.game.world.stock = { gold: 300, timber: 40 }
+      localStorage.setItem('yomi.save.1', JSON.stringify(saved))
+    })
+    await game.click((await game.reload()).buttons.continue)
+    await game.waitForScenes(['World'])
+    // Out among the far rings: the console reveals the map and stands the party beside Stonehollow.
+    await game.press('Shift+Backquote')
+    for (const line of ['reveal', 'goto 56 13']) {
+      await game.page.locator('#yomi-debug input').fill(line)
+      await game.press('Enter')
+    }
+    await game.press('Escape')
+    await game.settled('World', (w) => w.world.seen.every((level) => level !== -1))
+    await game.hover({ x: 0, y: 0 })
+    await shot(game, 'world-outer-rings')
+
+    await game.press('Shift+Backquote')
+    await game.page.locator('#yomi-debug input').fill('goto encampment')
+    await game.press('Enter')
+    await game.press('Escape')
+    await game.click((await game.settled('World')).buttons.enterEncampment)
+    await game.waitForScenes(['Encampment'], ['World'])
+    const camp = await game.settled('Encampment')
+    await game.click(camp.facilities.find((f) => f.id === 'trading_post')!)
+    await game.click((await game.settled('Encampment', (c) => c.selected === 'trading_post')).buttons.open)
+    await game.waitForScenes(['TradingPost'], ['World'])
+    await game.click((await game.settled('TradingPost')).buttons.routesTab)
+    const first = await game.settled('TradingPost', (p) => p.tab === 'routes' && p.routes.length === 4)
+    await game.click(first.buttons.next)
+    await game.settled('TradingPost', (p) => p.tab === 'routes' && p.routes.length === 1)
+    await game.hover({ x: 0, y: 0 })
+    await shot(game, 'trading-post-routes-page2')
+  })
+
   it('a company of two parties: the guild hall’s columns, the exchange and the party bar', async () => {
     const game = await games.open()
     await game.newGame()
