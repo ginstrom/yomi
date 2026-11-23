@@ -45,7 +45,7 @@ Loaded when working in `src/game/`: encounters and bandits, the company and its 
 
 ## The rules
 
-World map, blight and territory, scaling, encounters, bandits and saving each have a section in `docs/reference/game.md`; read it before changing one. Three easy to get wrong: the encampment's name is the player's (read through `encampmentName`, never assumed); a site lost razes its improvement; and the home country is stage 8's map moved by `EARLY_SHIFT`, so a test's fixed world hex is `earlyHex(col, row)` of stage 8's offset (threat comes from `THREAT_RINGS`). Scaling (stage 8): partners, clean from day one, reshuffle spawns: 239 → 233 (company 239 → 232).
+World map, blight and territory, scaling, encounters, bandits and saving each have a section in `docs/reference/game.md`; read it before changing one. Three easy to get wrong: the encampment's name is the player's (read through `encampmentName`, never assumed); a site lost razes its improvement; and the home country is stage 8's map moved by `EARLY_SHIFT`, so a test's fixed world hex is `earlyHex(col, row)` of stage 8's offset (threat comes from `THREAT_RINGS`). Scaling (stage 9, `--near-source`): 233 → 288 (company 232 → 289), mostly `SPAWN_DIVISOR` 840; accepted until stage 12.
 
 ## Adding content
 

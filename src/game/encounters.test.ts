@@ -42,6 +42,7 @@ import {
   koboldScouts,
   salamanderPool,
   sourceGuardians,
+  SOURCE_FOE_LEVEL,
   spiderNest,
   trollLair,
   xpReward,
@@ -96,7 +97,10 @@ describe.each(Object.entries(ENCOUNTERS))('the %s encounter, as the threat rises
       expect(new Set(foes(threat).map((u) => u.stats.name)).size).toBe(foes(threat).length)
       if (threat > min) {
         expect(foes(threat).length).toBeGreaterThanOrEqual(foes(threat - 1).length)
-        expect(foes(threat)[0].stats.maxHp).toBeGreaterThan(foes(threat - 1)[0].stats.maxHp)
+        // The Source's guardians stop growing at SOURCE_FOE_LEVEL (stage 9 step 09), and hold there.
+        const held = id === 'source_guardians' && threat > SOURCE_FOE_LEVEL
+        if (held) expect(foes(threat)[0].stats.maxHp).toBe(foes(threat - 1)[0].stats.maxHp)
+        else expect(foes(threat)[0].stats.maxHp).toBeGreaterThan(foes(threat - 1)[0].stats.maxHp)
       }
     }
     // More at the top than at the bottom, unless the band's counts are flat by design (stage 9 decision 6).
@@ -139,6 +143,13 @@ describe('sourceGuardians', () => {
     expect(BLIGHT_HORROR_STATS.magic?.spells).toEqual(['death_cloud', 'bane'])
   })
 
+  it('raises its foes to SOURCE_FOE_LEVEL at most past threat 5, and to the threat itself up to 5', () => {
+    expect(SOURCE_FOE_LEVEL).toBeGreaterThanOrEqual(HOME_THREATS)
+    const horror = (threat: number) => sourceGuardians(party(), threat).setup.units.find((u) => u.id === 'horror')!.stats
+    for (let threat = 1; threat <= HOME_THREATS; threat++) expect(horror(threat).ac).toBe(foeAtLevel(BLIGHT_HORROR_STATS, threat).ac)
+    for (const threat of [6, 12, 20]) expect(horror(threat)).toEqual({ ...foeAtLevel(BLIGHT_HORROR_STATS, Math.min(threat, SOURCE_FOE_LEVEL)), name: 'Blight Horror' })
+  })
+
   it('is worth more than a Goblin Raid of the same threat', () => {
     expect(xpReward(sourceGuardians(party(), HOME_THREATS))).toBeGreaterThan(xpReward(goblinRaid(party(), HOME_THREATS)))
   })
@@ -148,7 +159,7 @@ describe('sourceGuardians', () => {
     expect(ENCOUNTER_COUNTS.source_guardians).toEqual([2, 3, 3, 3, 4, ...Array(15).fill(5)])
   })
 
-  it('fields the same four at threat 5 as before stage 9, and all five slots at level 20 at the Source\'s threat', () => {
+  it('fields the same four at threat 5 as before stage 9, and all five slots at the Source\'s threat, raised to SOURCE_FOE_LEVEL at most', () => {
     const field = (threat: number) => sourceGuardians(party(), threat).setup.units.filter((u) => u.side === 'enemy')
     expect(field(5).map((u) => u.id)).toEqual(['horror', 'brute', 'shaman', 'sneak'])
     const top = sourceGuardians(party(), 20)
@@ -160,7 +171,7 @@ describe('sourceGuardians', () => {
       ['sneak', 'kobold'],
       ['cutter', 'goblin'],
     ])
-    for (const u of field(20)) expect(u.stats).toEqual({ ...foeStats(top.kinds[u.id] as MonsterKind, 20), name: u.stats.name })
+    for (const u of field(20)) expect(u.stats).toEqual({ ...foeStats(top.kinds[u.id] as MonsterKind, SOURCE_FOE_LEVEL), name: u.stats.name })
     expect(sourceGuardians(party(), 25)).toEqual(top)
   })
 })

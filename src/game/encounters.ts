@@ -181,6 +181,8 @@ interface EncounterDef {
    * changes. One count for each threat of the band.
    */
   counts: readonly number[]
+  /** The highest level its foes are raised to, if lower than the threat's (the Source's provisional block, stage 9). */
+  maxFoeLevel?: number
 }
 
 /**
@@ -190,7 +192,7 @@ interface EncounterDef {
  * a foe at that level (`foeStats`). The numbers behind the counts were
  * chosen with the simulator; see `.claude/skills/yomi-balance/levers.md`.
  */
-function encounter(party: readonly Fighter[], { slots, band, counts }: EncounterDef, threat: number): Encounter {
+function encounter(party: readonly Fighter[], { slots, band, counts, maxFoeLevel = Infinity }: EncounterDef, threat: number): Encounter {
   if (counts.length !== band.max - band.min + 1) throw new Error('An encounter needs a foe count for each threat of its band')
   const level = Math.min(Math.max(Math.floor(threat), band.min), band.max)
   const foes = slots.filter((slot) => (slot.fromThreat ?? 1) <= level).slice(0, counts[level - band.min])
@@ -202,7 +204,7 @@ function encounter(party: readonly Fighter[], { slots, band, counts }: Encounter
         ...foes.map(({ id, kind, name, at }): UnitSetup => ({
           id,
           side: 'enemy',
-          stats: { ...foeStats(kind, level), name },
+          stats: { ...foeStats(kind, Math.min(level, maxFoeLevel)), name },
           position: offsetToHex(...at),
         })),
       ],
@@ -314,14 +316,22 @@ const KOBOLD_SCOUTS: EncounterDef = { slots: KOBOLD_SCOUTS_SLOTS, ...TODAY }
 const HOBGOBLIN_WARBAND: EncounterDef = { slots: HOBGOBLIN_WARBAND_SLOTS, ...TODAY }
 const TROLL_LAIR: EncounterDef = { slots: TROLL_LAIR_SLOTS, ...TODAY }
 /**
+ * The level the Source's guardians are raised to at most (stage 9 step 09, the user's decision: the Source made
+ * winnable). Raised from native level 1 to 20 they were never hit (AC 105 to 115 against a level-18 party's to-hit
+ * of about 100); at 6 a ready-made level-18 party wins 28 battles of 500 and the long campaign 8 of 50 (7 and above:
+ * no `sg20-18` win). It is at least 5, so the Source near home (threats 1 to 5) fights as before.
+ */
+export const SOURCE_FOE_LEVEL = 6
+/**
  * The Source's guardians: today's counts at threats 1 to 5, where the Source near home is fought, and all five from
- * 6 to 20, where it stands in the far ring (`SOURCE_THREAT`). The block at 20 is provisional (long-campaign stage 9:
- * the Horror and its guard by native level 1 rules, clamped; stage 11 replaces it).
+ * 6 to 20, where it stands in the far ring (`SOURCE_THREAT`), raised to `SOURCE_FOE_LEVEL` at most. The block past 5
+ * is provisional (long-campaign stage 9; stage 11 replaces it).
  */
 const SOURCE_GUARDIANS: EncounterDef = {
   slots: SOURCE_GUARDIANS_SLOTS,
   band: { min: 1, max: 20 },
   counts: [...TODAY.counts, ...Array<number>(15).fill(5)],
+  maxFoeLevel: SOURCE_FOE_LEVEL,
 }
 /**
  * The Giant Spider's nest, fought at threats 4 to 9: three at 4 and all four from 5 (long-campaign stage 9; at stage

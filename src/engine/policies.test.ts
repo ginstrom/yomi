@@ -1089,7 +1089,7 @@ describe('policies', () => {
     expect(isPolicyName('toString')).toBe(false)
   })
 
-  describe('the choices of today’s encounters (a snapshot, re-recorded in skill trees step 13 when heroes and bandits learned techniques, in step 16 when a technique came to be weighed by the blows that fit this turn and the Captain took Pin before Heavy Hand, in step 28 when nodes came to cost perk points and the heroes and bandits to save for them, and in step 30 when the knight, swordmaster and evoker_healer plans moved and the bandits at threat 4 went back to plain gear; and in long-campaign stage 9 step 01, when the Bandit Company and Freebooter Host came and the Spider Nest’s, Salamander Pool’s and Source’s bands widened)', () => {
+  describe('the choices of today’s encounters (a snapshot, re-recorded in skill trees step 13 when heroes and bandits learned techniques, in step 16 when a technique came to be weighed by the blows that fit this turn and the Captain took Pin before Heavy Hand, in step 28 when nodes came to cost perk points and the heroes and bandits to save for them, and in step 30 when the knight, swordmaster and evoker_healer plans moved and the bandits at threat 4 went back to plain gear; and in long-campaign stage 9 step 01, when the Bandit Company and Freebooter Host came and the Spider Nest’s, Salamander Pool’s and Source’s bands widened, and in its step 09, when the Source’s guardians were raised to level 6 at most)', () => {
     /** Every action `aggressive` chooses, both sides, over each encounter at each threat of its band against the ready-made party of that level, a few seeds, 8 rounds at most. */
     function choices(): string[] {
       const lines: string[] = []
@@ -1120,8 +1120,8 @@ describe('policies', () => {
 
     it('are what they were', () => {
       const lines = choices()
-      expect(lines.length).toBe(14096)
-      expect(createHash('sha256').update(lines.join('\n')).digest('hex')).toBe('230ecb2728e216972621ca2be2e62eb969d7f20217161ddf3b5be9b69bcb1f71')
+      expect(lines.length).toBe(14836)
+      expect(createHash('sha256').update(lines.join('\n')).digest('hex')).toBe('639fea308b2473b4c4a24719ff0ad711a6097c6258decd8ba25dcfadc3676f48')
     }, 60_000)
   })
 })

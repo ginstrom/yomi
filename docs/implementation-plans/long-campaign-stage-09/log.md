@@ -238,3 +238,49 @@ Unwinnable at the stage's count (0 of 100 `long`, 0 of 500 `sg20-18`). Tried loc
 Cause: foe scaling, not the count. At threat 20 each guardian is raised from its native level 1 by `FOE_AC_PER_LEVEL` and `FOE_TO_HIT_PER_LEVEL` (5 each a level): the Horror has AC 110, to-hit 165 and 1440 HP, its guards AC 105 to 115, against a level-18 ready-made party's to-hit 100 to 109 and AC 16 to 34. The Freebooter Host at 18 (bandits, scaled by gear) has AC 6 to 54. Even the Horror alone could not be hit. Stopped at 3 and brought to the orchestrator; the count is unchanged (5).
 
 - No code changed; `npm test` 103 files, 2621 tests passed. The 50-campaign check not rerun (no code change since step 08's identical `57fdea15…`).
+
+### Step 09, round 2: the user's decisions and the Source (2026-11-23)
+
+The user's answers: (1) the early figures accepted until stage 12 (`SPAWN_DIVISOR` kept at 840; recorded in `bands.md`, stage 12 takes them up with the divisor diagnostics above); (2) tune the Source Guardians' block at threats 6 to 20 only, until winnable; (3) the company's skew on the long campaign deferred to stage 12.
+
+**The Source made winnable: `SOURCE_FOE_LEVEL` (`encounters.ts`), the level its guardians are raised to at most.** Cells tried (500 battles each; counts at 20 in brackets where not 5; logs `logs/s9-09-sg20-18-cap*.txt`, `logs/s9-09-long50-cap*.txt`):
+
+| Foes' level at most | `sg20-18` wins | party hit rate | 50 long campaigns, Source wins |
+| --- | --- | --- | --- |
+| 20 (stage), count 5 / 4 / 3 | 0 / 0 / 0 | 0.28 / 0.26 / 0.24 | 0 / 0 / 0 (round 1) |
+| 14 | 0 | 0.49 | — |
+| 12 | 0 | 0.58 | 0 |
+| 12 (count 3) | 0 | — | — |
+| 10 / 10 (count 3) | 0 / 0 | 0.65 | — |
+| 9 | — | — | 1 |
+| 8 / 8 (count 3) | 0 / 0 | 0.68 | — |
+| 7 | 0 | 0.73 | — |
+| **6** | **28** | 0.76 | **8** |
+
+The count does not help (the Horror's hit points are the mass); a cap of 9 makes the long run winnable but not `sg20-18`, so 6 is the highest cap that meets both of the user's conditions. Kept: 6.
+
+- Threats 1 to 5 untouched: the cap is at least 5 (a test). `sg7` 0 and `sg10` 1, their logs byte-identical to round 1's (`logs/s9-09-fin-sg7.jsonl`, `-sg10.jsonl`). The 50-campaign check `57fdea1553a35b1af0e33b74a11ea9fe0a0e2f62ef9e5c80972af59276e53e75`, **identical** (26 of 50). The refactor guard untouched and passing.
+- Policy snapshot re-recorded: 14096 → 14836 lines, hash `230ecb27…` → `639fea30…`. The lines other than `source_guardians` at threats 6 to 20 (10,535) are identical (diffed); `source_guardians` 6 is unchanged in count (252 lines; its foes were level 6 already); the changes are at 7 to 20 (20: 266 → 301 lines).
+- After: `sg20-18` 28, `sg20` 71 of 500.
+
+**The long baseline on the retuned Source** (100, `--campaign --battles 100 --seed 1 --log none`, `logs/s9-09-long-final.txt`, 3:12 wall, the machine quieter):
+
+| | Before (count 5, level 20) | After (`SOURCE_FOE_LEVEL` 6) |
+| --- | --- | --- |
+| Source / fell / out of days | 0 / 99 / 1 | **15** / 85 / 0 |
+| Days, battles, spawns | 1602, 50.3, 60.1 | 1272, 46.4, 59.8 |
+| Blighted at end; sites captured / lost | 62%; 8.1 / 1.8 | 57%; 8.1 / 1.5 |
+| Walked (home) | 1457.8 (172.2) | 1129.0 (171.3) |
+| Parties wiped; recruits; hall | 9.7; 47.5; 3.7 | 5.9; 30.4; 3.7 |
+| Levels at the end (lowest, highest) | 4.8, 5.9 | 6.7, 7.9 (the 15 winning vanguards 18.1, 19.1) |
+| Battles to level 5 / 10 / 15 / 20 (campaigns) | 6.8 (84) / 28.5 (55) / 54.3 (44) / — | the same |
+| Win rate by threat 7 / 9 / 12 / 15 / 18 / 20 | 0.956 / 0.808 / 0.485 / 0.739 / 0.038 / 0 | 0.956 / 0.828 / 0.601 / 0.868 / 0.75 (4 fought) / 0.833 (15 of 18) |
+| Routes opened / raided / abandoned; flickers; raided long | 1.45 / 0.85 / 0.83; 0; 0 | 1.30 / 0.58 / 0.54; 0; 0 |
+
+Deaths by level after: 2 (12), 3 (40), 4 (18), 5 (39), 6 (37), 7 (36), 8 (28), 9 (15), 10 (16), 11 (3), 12 (3), 13 (7), 14 (2), 15 (21), 16 (29), 17 (16), 18 (4), 20 (1), 21 (1). Battles to level are unchanged; the 18 Source battles are now won 15 times, ending those campaigns, so fewer nests are fought afterwards (threat 18: 79 → 4).
+
+**Recorded as they stand (no rule change):** the company's skew on the long campaign (replacement parties of about level 5 sent at threat 9 to 18 nests and wiped; 9.7 parties wiped a campaign against one party's 1.0 before the retune, 5.9 after), deferred to stage 12. Stage 6's question answered: at ready level 10 the company equals one party (409 each). Routes (`long-tp4`): 0 flickers and 0 routes raided long but kept, so the "safe again" reset case does not arise; nearly every raided route is abandoned (2.48 of 2.57 a campaign); routes are 26% of the gold.
+
+- `npm test`: 103 files, 2622 tests passed.
+
+Step 09: engineer opus; 2 rounds with the orchestrator (stop-and-report, then the user's decisions); `SOURCE_FOE_LEVEL` 6; review pending.

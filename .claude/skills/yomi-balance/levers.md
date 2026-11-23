@@ -2,7 +2,7 @@
 
 ## What a tuner needs to know
 
-- A campaign is lost in a single battle at threat 5, mostly the Source's: the Blight Horror's hit points are the lever for it alone.
+- A campaign is lost in a single battle at threat 5, mostly the Source's: the Blight Horror's hit points are the lever for it alone. The far Source (threat 20) has its own: `SOURCE_FOE_LEVEL` (6, `encounters.ts`) caps its guardians' level, so threats 1 to 5 are untouched (stage 9 step 09; at 7, `sg20-18` wins none).
 - Foe counts feed back through experience, so move them first and in small steps: a fifth foe at threat 5 is a cliff, and threat 5 must never give less experience than threat 4.
 - `FOE_HP_PER_LEVEL` is the finer lever (now 1.15).
 - Gear and several parties change little in the simulator; the game as played runs easier than the tuned figure.

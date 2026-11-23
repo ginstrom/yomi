@@ -172,3 +172,21 @@ Every measure of §4.1 run once, one at a time (figures, tables and logs: [log.m
 - Company against one party: equal at `rl10` (409, 409); far apart on the long campaign (above).
 - Routes (`long-tp4`): 3.87 opened, 2.57 raided, 2.48 abandoned, 0 flickers, 0 raided long; routes 26% of gold.
 - Cells: as in `log.md`. The Source's count at 20: 5 (unchanged; 4 and 3 tried, unwinnable).
+
+### Round 2: the user's decisions, the Source made winnable (2026-11-23)
+
+- **Answers:** (1) the early figures accepted until stage 12, `SPAWN_DIVISOR` kept at 840 (recorded in `bands.md`'s "Now" and an accepted-figures note, and `src/game/CLAUDE.md`'s scaling line; no band value changed); (2) the Source Guardians' block at threats 6 to 20 tuned until winnable, threats 1 to 5 untouched; (3) the company's long-campaign skew deferred to stage 12.
+- **Retune:** `SOURCE_FOE_LEVEL = 6` (`encounters.ts`), an `EncounterDef.maxFoeLevel` used by the Source alone: its guardians are raised to level 6 at most. Departure from §4.2, on the user's answer: the count at 20 is not the lever (counts 4 and 3 gave nothing at any level tried), so the count stays 5. Cells tried: `log.md`, "Step 09, round 2". 6 is the highest cap at which `sg20-18` wins (28 of 500); 9 makes the long run winnable (1 of 50) but not the cell.
+- **Checks:** 50-campaign check identical (`57fdea15…`); refactor guard untouched; `sg7`, `sg10` logs byte-identical; policy snapshot re-recorded, only `source_guardians` 7 to 20 lines differ (proved by diff). Tests: a new one that the cap is at least 5 and the Horror's block follows it; the band-wide test lets the Source's leader hold its hit points past the cap. `npm test` 103 files, 2622 tests.
+- **Docs:** `docs/reference/game.md` (the Source's entry and the level rule), `.claude/skills/yomi-balance/levers.md` (the new lever).
+- **Long baseline re-measured** (100): 15 Source wins, 85 fell; 1272 days, 46.4 battles; full table in `log.md`.
+- Not touched: the feature record (the orchestrator's).
+
+### Figures for the implementation notes (step 10; final)
+
+- Early, against step 01's baseline, accepted until stage 12: `one` 233 → 288 (days 284 → 331, out of 243–297), `company` 232 → 289, `rl10` 433 → 409 (in band); heroes dead 1.2; the standard cells and `tl5` unchanged; the cause mostly `SPAWN_DIVISOR` 840 (divisor 400: 244 and 303 days; 300: 248 and 298).
+- Long baseline (100, `SOURCE_FOE_LEVEL` 6): 15 of 100 beat the Source, 85 fell; 1272 days, 46.4 battles, walked 1129.0 days (171.3 home); levels 5/10/15/20 after 6.8/28.5/54.3/— battles in 84/55/44/0 campaigns; ring win rates 7 0.956, 9 0.828, 12 0.601, 15 0.868, 20 0.833; 5.9 parties wiped a campaign. `long-one` and `long-tp4` were measured before the retune (0 wins each; one party 0.97–1.00 to threat 18, 45 of 100 died at the Source).
+- Company against one party: equal at `rl10` (409 each; stage 6's question answered); on the long campaign the company's replacement parties (about level 5) are sent at threat 9–18 nests and wiped (deferred to stage 12).
+- Routes (`long-tp4`): 3.87 opened, 2.57 raided, 2.48 abandoned, 0 flickers, 0 raided long but kept; routes 26% of gold.
+- The Source: `SOURCE_FOE_LEVEL` 6 (count at 20 still 5); `sg20-18` 28, `sg20` 71. Report-only far cells: bc7 1, sn7 99, sn9 29, sp7 290, sp9 73, bco9 1, bco12 0, fh15 0, fh18 0.
+- Home rings in the long campaign: 8.3 spawns a campaign (before the retune; near Source about 14.5).
