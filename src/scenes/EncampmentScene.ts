@@ -18,6 +18,7 @@ import { tellStory } from './StoryScene.ts'
 import { SPRITE_ATLAS, spriteAnim, spriteFrame } from './unitLook.ts'
 import { overlayScale } from './overlayScale.ts'
 import { headerLines, measureCharWidth } from './headerLines.ts'
+import { notifyStock } from './stockNotice.ts'
 
 interface EncampmentData {
   game: GameState
@@ -169,6 +170,7 @@ export class EncampmentScene extends Phaser.Scene {
 
   private render(): void {
     this.frame.removeAll(true)
+    notifyStock(this)
     this.controls = {}
     this.labelBoxes = {}
     this.detailLines = []

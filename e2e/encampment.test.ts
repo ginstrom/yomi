@@ -815,6 +815,8 @@ describe('the encampment', () => {
     await game.click(picked.buttons.confirmAll)
     const bought = await game.settled('TradingPost', (p) => p.gold === 85)
     expect(bought.message).toBe('Bought 5 mithril for 15 gold.')
+    // The map's header, dimmed behind the post, follows the stock at once.
+    await game.settled('World', (w) => w.status.includes('gold 85'))
     await game.click(bought.buttons.confirm)
     await game.settled('TradingPost', (p) => p.gold === 82)
     await game.click(bought.buttons.close)

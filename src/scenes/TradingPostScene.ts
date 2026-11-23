@@ -48,6 +48,7 @@ import { describeWorldEvent } from './worldEvents.ts'
 import { ROAD_COLORS } from './roadsView.ts'
 import { encampment, encampmentName } from '../game/worldMap.ts'
 import { openRoute, openRouteRefusal, routeLimit } from '../game/trade.ts'
+import { notifyStock } from './stockNotice.ts'
 
 interface TradingPostData {
   game: GameState
@@ -353,6 +354,7 @@ export class TradingPostScene extends Phaser.Scene {
 
   private render(): void {
     this.frame.removeAll(true)
+    notifyStock(this)
     this.controls = {}
     this.routeLines = []
     this.routeRefusal = null

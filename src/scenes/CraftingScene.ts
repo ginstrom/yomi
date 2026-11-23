@@ -41,6 +41,7 @@ import {
 } from './runecraftView.ts'
 import { createPips } from './socketPips.ts'
 import { overlayScale } from './overlayScale.ts'
+import { notifyStock } from './stockNotice.ts'
 
 interface CraftingData {
   game: GameState
@@ -344,6 +345,7 @@ export class CraftingScene extends Phaser.Scene {
 
   private render(): void {
     this.frame.removeAll(true)
+    notifyStock(this)
     this.controls = {}
     this.itemAt = new Map()
     this.optionAt = new Map()
