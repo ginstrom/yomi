@@ -4,7 +4,7 @@
 
 - Request (user's words):
   > The next thing is stage 9 of the long campaign: the outer rings. Its design is docs/designs/long-campaign/stage-09-outer-rings.md and it is marked "ready for planning". [...] As with stages 2–8, the approved stage design goes straight to the planner. Start with the bookkeeping commit, then cut a long-campaign-stage-09 branch off main and run the orchestrator. Balance bands are mine to change: bring any out-of-band figures to me.
-- Slug `long-campaign-stage-09` · Phase 4, implementation · Next action: step 10 running; 01–09 done and reviewed clean · Branch: `long-campaign-stage-09`, off main at 67e5f0d (67e5f0d on main, not pushed).
+- Slug `long-campaign-stage-09` · Phase 5 · Next action: step 10 review, QA (sonnet) and simulated user (sonnet) running; then the overall review (opus). 01–09 done and reviewed clean · Branch: `long-campaign-stage-09`, off main at 67e5f0d (67e5f0d on main, not pushed).
 - Path: Large, but the stage design is the approved design. Straight to planning, as stages 2–8 did.
 - Links:
   - Stages overview: `docs/designs/long-campaign/index.md`
