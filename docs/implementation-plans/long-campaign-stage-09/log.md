@@ -286,3 +286,25 @@ Deaths by level after: 2 (12), 3 (40), 4 (18), 5 (39), 6 (37), 7 (36), 8 (28), 9
 Step 09: engineer opus; 2 rounds with the orchestrator (stop-and-report, then the user's decisions); `SOURCE_FOE_LEVEL` 6; review pending.
 
 Step 09 review: reviewer opus, clean in 1 round; 50-check identical (57fdea15…); policy snapshot diff only source_guardians at threats 7–20; 4 non-blocking wording fixes done in step 10.
+
+## Verification round 1 (2026-11-23)
+
+After the overall review (changes needed, fixed in d383d98) and QA (passed with defects). No rule changed: only scenes, tests, comments and docs; nothing under `src/game` or `src/engine` but two test files and a comment, so the refactor guard (in `npm test`) is untouched.
+
+- **World-map header** (QA qa-40, qa-71): the stock line overprinted the hint (9 materials, x≈423) and ran off screen (15, x = -32). The status lines now wrap between entries (`headerLines.ts`) to the room right of the turn's number, in the first layout clear of the hint and inside the header (13 px level with the turn, 13 px from the top, 11 px from the top), and failing all three the stock is shortened ("+9 more": only at 840 wide with every material and a last yield line). In-browser test: every material, 840 × 560 and 1280 × 800, with and without a last yield: `statusRect.x >= 0`, inside the window, clear of `hintRect`, bottom ≤ 64 (red before: x -534 and -94). Evidence `fix1-header-*-after.png`.
+- **Foe name plates** (QA qa-16): at the battle's start, two names side by side on a row that would run together each drop their first word (`plateNames.ts`): the Freebooter Host shows Captain, Brute, Crossbowman, Hedge-Mage, the Company "Sergeant" and "Hedge-Mage", the Bandit Camp at 6–7 "Captain" (it collided too). The log and the foe panel keep full names; encounters with no collision (kobolds, bandits at 5) are unchanged. Evidence `fix1-battle-*-after.png`.
+- **Frame rate**: headless Chromium (the e2e driver's, software GL), 1280 × 800, a new game, 5 s of `requestAnimationFrame` in fog, then after `reveal` twice; then a 5 s CPU profile. Three rounds alternating main (67e5f0d), the branch before the fix (f389f46) and the fix, each with `uptime`:
+
+  | Round (load 1 min) | main fog / revealed | branch before | fix |
+  | --- | --- | --- | --- |
+  | 1 (4.4–5.6) | 55.0 / 54.6 | 24.8 / 23.5 | 60.1 / 39.6 (18.6 on the second, a load spike) |
+  | 2 (9.3–12.0) | 10.0 / 49.1 | 25.9 / 24.9 | 60.1 / 60.1 |
+  | 3 (8.2–8.6) | 56.4 / 52.4 | 26.5 / 24.7 | 60.0 / 60.1 |
+
+  An earlier pair at load 3.4–5.1: main 60.2 / 60.2, branch 33.6 / 32.2; fix 60.1 / 60.2. Profile: the terrain was one Graphics of every hex (fill and edge), which Phaser draws again every frame: `GraphicsWebGLRenderer` 46–48% inclusive of the profile before (24–26% on main's 2,400 hexes; 10,080 now), 0.4–0.6% after, the page idle 34–37% of the time after against 0% before. Fix: the grass is drawn into the blight layer's render-texture tiles, under the marks, once per tile redraw. Screens: home 272 pixels differ by at most 4 (summed RGB); revealed, fogged hexes differ by 1 level (blend order), the rest is animation (`fix1-map-*-diff.png`). Tables and profiles: evidence `fix1-fps-paired.txt`, `fix1-fps-profiles/`.
+- **Slow tests**: the encounters test builds each threat once and keeps the previous foes (source_guardians 109 ms); `partyFighters` loops from the band's bottom (585 ms); both `{ timeout: 20_000 }`.
+- Docs: the `sourceGuardians` comment; manual (far bandits' steel and ironwood, spawn threats 8 and 14, the far partners' goods); the design's carried-forward note on the battle estimate (about 2 s at level 12+, 10 ms slices, restarted on each action, pre-existing); `docs/reference/scenes.md` (the two helpers, the grass in the tiles).
+- Manual screenshots retaken (`npm run manual:screenshots`, 10 shots passed) and each changed PNG diffed against HEAD: the differences are idle-animation frames and the fogged and blighted hexes' 1-level blend rounding; no shot shows the header or a plate changed (the manual's battles have no names side by side, its map shots short stocks at 1280), so none is committed.
+- Checks: `npm test` 105 files, 2632 tests passed; `npm run build` ok; `npm run test:browser -- e2e/world.test.ts e2e/battle.test.ts e2e/encampment.test.ts` 124 passed (load 6.2).
+
+Verification round 1: engineer opus; 8 items fixed or recorded; no rule change.

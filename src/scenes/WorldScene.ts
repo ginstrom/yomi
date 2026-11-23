@@ -50,6 +50,7 @@ import { heroLook, SPRITE_ATLAS, spriteAnim, spriteFrame } from './unitLook.ts'
 import { FRAME_ACTIVE_COLOR, HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
 import { ROAD_COLORS, roadSegments, silenceShown, type RoadSegment } from './roadsView.ts'
 import { advanceMessage, describeDays, describeOthers, describeStanding, describeWalk, describeWorldEvent, describeWorldEvents, yieldSummary } from './worldEvents.ts'
+import { headerLines } from './headerLines.ts'
 import { improveLabel } from './improveButton.ts'
 import { hexInfo } from './hexInfo.ts'
 import { tellStory, type StoryAnchors } from './StoryScene.ts'
@@ -159,7 +160,7 @@ const SOURCE_SCALE = 3
 /** The bars behind the header and the buttons: the map shows through them, dimmed. */
 const BAR_COLOR = 0x1d1d1d
 const BAR_ALPHA = 0.8
-/** The stock panel's font, and the smaller one its three lines take where they would reach the hint. */
+/** The stock panel's font, and the smaller one it takes where its lines would reach the hint (`fitStatus`). */
 const STATUS_FONT = '13px'
 const STATUS_FONT_SMALL = '11px'
 /** The outcome screen's buttons. */
@@ -297,6 +298,10 @@ export class WorldScene extends Phaser.Scene {
   private visible = new Set<number>()
   /** The share of the land blighted, the blight's growth and the stock, at the header's right. */
   private statusText!: Phaser.GameObjects.Text
+  /** The status text's lines before they are wrapped to the header (`fitStatus`). */
+  private statusLines: string[] = []
+  /** A character's width in the status text's font, by font size (the font is monospace). */
+  private statusCharWidths = new Map<string, number>()
   /** The screen over the map when the game is won or lost, and its buttons: End and Continue, or Main Menu. */
   private outcomeShade!: Phaser.GameObjects.Rectangle
   private outcomeText!: Phaser.GameObjects.Text
@@ -338,7 +343,6 @@ export class WorldScene extends Phaser.Scene {
     this.active = Math.max(0, this.selectedMembers().findIndex(canAdvance))
 
     this.mapLayer = this.add.container(0, 0)
-    this.buildTerrain()
     this.blightMarks = this.make.graphics({}, false)
     this.blightLayer = blightTiles(this.world.board, WORLD_LAYOUT).map((tile) => ({
       tile,
@@ -706,18 +710,17 @@ export class WorldScene extends Phaser.Scene {
     return hexCorners(WORLD_LAYOUT.hexSize).map((p) => new Phaser.Math.Vector2(c.x + p.x, c.y + p.y))
   }
 
-  private buildTerrain(): void {
-    const terrain = this.add.graphics()
-    for (const h of this.board.hexes) {
-      // A three-colouring: no two neighbouring hexes share a shade.
-      const shade = (((h.q - h.r) % 3) + 3) % 3
-      const polygon = this.hexPolygon(h)
-      terrain.fillStyle(GRASS_COLORS[shade], 1)
-      terrain.fillPoints(polygon, true)
-      terrain.lineStyle(1, GRASS_EDGE, 0.5)
-      terrain.strokePoints(polygon, true)
-    }
-    this.mapLayer.add(terrain)
+  /**
+   * One hex's grass, under its blight marks in the same tile. Drawn into the tiles rather than kept as one Graphics:
+   * a Graphics is drawn again every frame, which over the 140 × 72 map's 10,080 hexes halved the frame rate.
+   */
+  private drawTerrain(g: Phaser.GameObjects.Graphics, i: number): void {
+    const h = boardHex(this.world.board, i)
+    // A three-colouring: no two neighbouring hexes share a shade.
+    const shade = (((h.q - h.r) % 3) + 3) % 3
+    const polygon = this.hexPolygon(h)
+    g.fillStyle(GRASS_COLORS[shade], 1).fillPoints(polygon, true)
+    g.lineStyle(1, GRASS_EDGE, 0.5).strokePoints(polygon, true)
   }
 
   /**
@@ -870,7 +873,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
-   * The land as the player knows it (`seen`): black where never explored;
+   * The land as the player knows it (`seen`), drawn with its grass into the tiles: black where never explored;
    * elsewhere each hex's tint for its level as last seen, a growth on corrupted
    * land (faded out of sight) and a faint line along every edge between clean land and blighted,
    * under a veil where out of sight.
@@ -900,6 +903,8 @@ export class WorldScene extends Phaser.Scene {
       if (now === key.value) continue
       key.value = now
       g.clear()
+      // The grass first, all of it, so no hex's grass covers a neighbour's front line.
+      for (const i of tile.hexes) this.drawTerrain(g, i)
       for (const i of tile.hexes) this.drawHexMarks(g, i)
       texture.clear().draw(g, -tile.x, -tile.y).render()
     }
@@ -1211,13 +1216,11 @@ export class WorldScene extends Phaser.Scene {
     const stock = Object.entries(world.stock)
       .map(([material, amount]) => `${material} ${amount}`)
       .join(', ')
-    this.statusText.setText(
-      [
-        `Blighted ${Math.round(knownBlightedShare(world) * 100)}% of the land known${growth > 0 ? `, blight +${growth}%` : ''}${world.status === 'endless' ? ' (endless)' : ''}`,
-        `Stock: ${stock || 'nothing yet'}`,
-        ...(this.lastYield ? [this.lastYield] : []),
-      ].join('\n'),
-    )
+    this.statusLines = [
+      `Blighted ${Math.round(knownBlightedShare(world) * 100)}% of the land known${growth > 0 ? `, blight +${growth}%` : ''}${world.status === 'endless' ? ' (endless)' : ''}`,
+      `Stock: ${stock || 'nothing yet'}`,
+      ...(this.lastYield ? [this.lastYield] : []),
+    ]
     this.fitStatus()
     this.column.refresh(this.active)
     this.partyList.refresh(this.listedParties(), this.selectedParty)
@@ -1302,15 +1305,46 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
-   * Places the stock panel at the header's right. Three lines (with the last yield) start higher, to clear the hint under the
-   * turn's number, and are set smaller when they would still reach it (a narrow window, a long hint).
+   * Places the stock panel at the header's right, wrapped to the room between the turn's number and the window's edge
+   * (`headerLines`), in the first of these that stays clear of the hint under the turn's number and inside the header:
+   * the usual font level with the turn, the usual font from the header's top, the smaller font from its top; and failing
+   * all three (a narrow window, a long stock and a last yield), the smaller font with the stock shortened to fit.
    */
   private fitStatus(): void {
-    this.statusText.setFontSize(STATUS_FONT).setLineSpacing(0).setPosition(this.scale.width - 20, this.lastYield ? 3 : 16)
-    if (!this.lastYield) return
-    const [a, b] = [this.statusText.getBounds(), this.hintText.getBounds()]
-    // Set small and close, from the header's top edge, the three lines end above the hint's row.
-    if (a.x < b.right && b.x < a.right && a.y < b.bottom && b.y < a.bottom) this.statusText.setFontSize(STATUS_FONT_SMALL).setLineSpacing(-2).setY(1)
+    const right = this.scale.width - 20
+    const room = right - this.turnText.getBounds().right - 24
+    const hint = this.hintText.getBounds()
+    const clear = () => {
+      const a = this.statusText.getBounds()
+      const meets = a.x < hint.right && hint.x < a.right && a.y < hint.bottom && hint.y < a.bottom
+      return !meets && a.bottom <= HEADER_BOTTOM
+    }
+    const place = (font: string, spacing: number, y: number, maxLines = Infinity) => {
+      this.statusText.setFontSize(font).setLineSpacing(spacing)
+      const chars = Math.max(20, Math.floor((room - 4) / this.statusCharWidth(font)))
+      this.statusText.setText(headerLines(this.statusLines, chars, maxLines).join('\n')).setPosition(right, y)
+    }
+    for (const [font, spacing, y] of [[STATUS_FONT, 0, 16], [STATUS_FONT, 0, 3], [STATUS_FONT_SMALL, -2, 1]] as const) {
+      place(font, spacing, y)
+      if (clear()) return
+    }
+    for (let lines = this.statusText.text.split('\n').length - 1; lines > this.statusLines.length - 1; lines--) {
+      place(STATUS_FONT_SMALL, -2, 1, lines)
+      if (clear()) return
+    }
+  }
+
+  /** A character's width in the status text at `font`, measured once. */
+  private statusCharWidth(font: string): number {
+    let width = this.statusCharWidths.get(font)
+    if (width === undefined) {
+      this.statusText.setFontSize(font).setText('0'.repeat(20))
+      const twenty = this.statusText.width
+      this.statusText.setText('0'.repeat(10))
+      width = (twenty - this.statusText.width) / 10 || 8
+      this.statusCharWidths.set(font, width)
+    }
+    return width
   }
 
   /** The header's hint: what the selected party may do where it stands, or whom a click on the hovered hex sends it to meet. */

@@ -1083,6 +1083,34 @@ describe('the world map', () => {
       expect(a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height, JSON.stringify({ a, b })).toBe(false)
       expect(a.y + a.height).toBeLessThanOrEqual(64)
     })
+
+    // Every material held, the far rings' among them: the stock wraps, and at 840 by 560 with a last yield it is shortened.
+    const EVERY_MATERIAL = {
+      gold: 12, iron: 6, timber: 4, stone: 3, silver: 2, copper: 2, crystal: 1, salt: 2, peat: 5,
+      mithril: 6, adamant: 6, wyrmwood: 6, starmetal: 3, ironwood: 4, elderwood: 4, heartwood: 4,
+    }
+    const fitsHeader = (shown: WorldProbe, width: number) => {
+      const { statusRect: a, hintRect: b } = shown
+      const at = JSON.stringify({ a, b })
+      expect(a.x, at).toBeGreaterThanOrEqual(0)
+      expect(a.x + a.width, at).toBeLessThanOrEqual(width)
+      expect(a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height, at).toBe(false)
+      expect(a.y + a.height, at).toBeLessThanOrEqual(64)
+    }
+
+    for (const [width, height] of [[840, 560], [1280, 800]] as const) {
+      it(`fits a stock of every material into the header at ${width} by ${height}, clear of the hint, with and without a last yield`, async () => {
+        const game = await games.open()
+        await game.resize(width, height)
+        await game.newGame()
+        const held = await reloadedWith(game, { stock: EVERY_MATERIAL, tradingPost: 6 })
+        for (const material of Object.keys(EVERY_MATERIAL)) expect(held.status).toContain(material)
+        fitsHeader(held, width)
+        const shown = await toYieldDay(game)
+        expect(shown.status).toContain('Stock: gold')
+        fitsHeader(shown, width)
+      })
+    }
   })
 
   describe('Improve', () => {
