@@ -724,13 +724,27 @@ describe('the encampment', () => {
       ['temper2', 'Temper to Fine'],
       ['temper3', 'Temper to Masterwork'],
     ])
-    await game.click(picked.options.find((o) => o.id === 'temper3')!)
+    // Tempering to Fine first: no option moves, so the next click lands where it was aimed.
+    await game.click(picked.options.find((o) => o.id === 'temper2')!)
+    const fineChosen = await game.settled('Crafting', (c) => c.chosen === 'temper2')
+    await game.click(fineChosen.buttons.work)
+    const fine = await game.settled('Crafting', (c) => c.message === 'Made the Fine Mithril Longsword.')
+    const place = (o: { x: number; y: number }) => [Math.round(o.x), Math.round(o.y)]
+    const stay = picked.options.filter((o) => o.id !== 'temper2')
+    expect(stay.length).toBeGreaterThan(1)
+    expect(fine.options.map((o) => o.id)).toEqual(expect.arrayContaining(stay.map((o) => o.id)))
+    for (const was of stay) expect(place(fine.options.find((o) => o.id === was.id)!), was.id).toEqual(place(was))
+    await game.click(fine.options.find((o) => o.id === 'temper3')!)
     const previewed = await game.settled('Crafting', (c) => c.chosen === 'temper3')
     expect(previewed.preview).toContain('Gains a socket: 2 in all.')
     await game.click(previewed.buttons.work)
     const tempered = await game.settled('Crafting', (c) => c.message === 'Made the Masterwork Mithril Longsword.')
     expect(tempered.items.some((i) => i.itemId === 'mithril_longsword@3')).toBe(true)
     expect(tempered.selected).toBe(item.id)
+    // The modifier options kept their places across both tempers, though no temper button is left.
+    const modifiers = stay.filter((o) => !o.id.startsWith('temper'))
+    expect(modifiers.length).toBeGreaterThan(0)
+    for (const was of modifiers) expect(place(tempered.options.find((o) => o.id === was.id)!), was.id).toEqual(place(was))
 
     await game.click(tempered.buttons.runesTab)
     const runes = await game.settled('Crafting', (c) => c.tab === 'runes' && c.items.some((i) => i.itemId === 'mithril_longsword@3'))
@@ -743,9 +757,9 @@ describe('the encampment', () => {
     await game.click((await game.settled('Encampment')).buttons.leave)
     await game.waitForScenes(['World'])
     const world = (await game.settled('World')).world
-    // 30 gold and 8 mithril to forge, 90 gold and 12 mithril to temper to Masterwork.
-    expect(world.stock.gold).toBe(500 - 30 - 90)
-    expect(world.stock.mithril).toBe(40 - 8 - 12)
+    // 30 gold and 8 mithril to forge, 60 and 8 to temper to Fine, then the full 90 and 12 for Masterwork.
+    expect(world.stock.gold).toBe(500 - 30 - 60 - 90)
+    expect(world.stock.mithril).toBe(40 - 8 - 8 - 12)
   })
 
   it('lists no Forge rows below workshop level 4 and says why', async () => {

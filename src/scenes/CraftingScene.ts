@@ -23,7 +23,7 @@ import { TYPICAL_AP, compareLines, fieldCraftSummary } from './gearCompare.ts'
 import { ITEM_ICON_KEYS, RUNE_COLOURS, RUNE_ICON_KEYS, SOCKET_PIP_KEYS, cssColour, iconTint } from './itemIcons.ts'
 import type { Rect } from './mapScroll.ts'
 import { addPanelButton, fitText } from './panelButton.ts'
-import { FORGE_SLOTS, FORGE_SLOT_LABELS, forgeHint, forgedMessage, forgePreview, forgeRows, temperChoices, temperPreview, memberNumbers, type ForgeRow, type TemperChoice } from './forgeView.ts'
+import { FORGE_SLOTS, FORGE_SLOT_LABELS, forgeHint, forgedMessage, forgePreview, hasTemperRow, forgeRows, temperChoices, temperPreview, memberNumbers, type ForgeRow, type TemperChoice } from './forgeView.ts'
 import { headerLines } from './headerLines.ts'
 import { buttonCue, refusalCue, runeCue } from './sounds.ts'
 import {
@@ -653,15 +653,17 @@ export class CraftingScene extends Phaser.Scene {
     const all = this.currentOptions()
     // A tier-3+ item may be tempered: its options sit side by side on the first row, above the modifiers.
     const tempers = temperChoices(this.gameState, place)
-    tempers.forEach((choice, i) => {
+    // The row and its two slots stay where they are once a grade is gone (Fine's slot empties, Masterwork's stays), so the next click lands on the option it was aimed at.
+    const tempering = hasTemperRow(this.gameState, place)
+    tempers.forEach((choice) => {
       const width = (OPTIONS_W - 4) / 2
-      const at: Rect = { x: OPTIONS_X + width / 2 + i * (width + 4), y: LIST_TOP + OPTION_H / 2, width, height: OPTION_H - 2 }
+      const at: Rect = { x: OPTIONS_X + width / 2 + (choice.grade - 2) * (width + 4), y: LIST_TOP + OPTION_H / 2, width, height: OPTION_H - 2 }
       this.optionAt.set(choice.id, { at, enabled: choice.refusal === null, label: choice.label })
       addPanelButton(this, this.frame, at, choice.label, () => this.time.delayedCall(0, () => this.choose(choice.id)), { marked: choice.id === this.chosen, dimmed: choice.refusal !== null, fontSize: 10 })
     })
-    const top = LIST_TOP + (tempers.length ? OPTION_H + 2 : 0)
+    const top = LIST_TOP + (tempering ? OPTION_H + 2 : 0)
     // Beside the temper row there is no room for a line a grade: a tier-3+ item's modifiers sit three to a row.
-    const cols = tempers.length ? 3 : 1
+    const cols = tempering ? 3 : 1
     const colW = (OPTIONS_W - 4 * (cols - 1)) / cols
     all.forEach((option, i) => {
       const key = optionKey(option)

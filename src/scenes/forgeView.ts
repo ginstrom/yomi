@@ -121,6 +121,12 @@ export interface TemperChoice {
 
 export const temperId = (grade: Grade): string => `temper${grade}`
 
+/** Whether the item at `place` has a temper row on the Modify tab: a plain tier-3+ item, whether or not any grade is left. Its options keep their places across a temper. */
+export function hasTemperRow(game: GameState, place: ItemPlace): boolean {
+  const item = itemAt(game, place)
+  return !!item && !!baseItem(item) && (item.tier ?? 1) >= 3
+}
+
 /** The grades a tier-3+ plain item may be tempered to (those above its own), each with its cost and refusal; none for any other item. */
 export function temperChoices(game: GameState, place: ItemPlace): TemperChoice[] {
   const item = itemAt(game, place)
