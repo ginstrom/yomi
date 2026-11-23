@@ -502,7 +502,7 @@ describe('the manual’s screenshots', () => {
     const bench = await game.settled('Crafting')
     await game.click(bench.buttons.forgeTab)
     let forge = await game.settled('Crafting', (c) => c.tab === 'forge')
-    // The Mithril Longsword sits on the weapons' second page.
+    // The Mithril Longsword is on the weapons' first page; the loop pages on only if the list ever grows.
     for (let page = 0; page < 5 && !forge.forgeRows.find((r) => r.id === 'longsword:mithril')?.visible; page++) {
       await game.click(forge.buttons.next)
       forge = await game.settled('Crafting', (c) => c.tab === 'forge')
