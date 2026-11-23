@@ -284,7 +284,7 @@ export class EncampmentScene extends Phaser.Scene {
     }
     const level = facility.level > 0 ? `level ${facility.level} of ${facility.maxLevel}` : 'not built'
     const next = facility.next && facility.cost ? `Next: ${facility.next}  Cost: ${describeCost(facility.cost) || 'nothing'}.` : 'It is as great as it gets.'
-    const left = 40
+    const left = 32
     const title = `${facility.name}, ${level}`
     this.detailLines = [title]
     this.frame.add(this.add.text(left, DETAILS_Y - 16, title, { fontFamily: FONT, fontSize: '16px', color: GOLD }))

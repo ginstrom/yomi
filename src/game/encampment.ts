@@ -6,11 +6,11 @@ import { GUILD_HALL_LEVELS, MAX_GUILD_HALL_LEVEL, homeParty, noPartyHome, upgrad
 import { MAX_WORKSHOP_LEVEL, upgradeWorkshop, workshopCost } from './crafting.ts'
 import { MAX_INFIRMARY_LEVEL, infirmaryCost, infirmaryEffect, raiseInfirmary } from './infirmary.ts'
 import { IMPROVEMENT_YIELD, MARKET_INCOME, YIELD_DAYS, type Stock } from './territory.ts'
-import { GOODS_LEVEL, GOOD_PRICE, MAX_TRADING_POST_LEVEL, RUNE_RANK_LEVELS, raiseTradingPost, tradingPostCost, tradingPostName } from './tradingPost.ts'
+import { GOODS_LEVEL, MAX_TRADING_POST_LEVEL, RUNE_RANK_LEVELS, raiseTradingPost, tradingPostCost, tradingPostName } from './tradingPost.ts'
 import { encampmentName } from './worldMap.ts'
 
 /** What the Market Hall adds to the post's stock. */
-const PARTNER_GOODS = `sells contacted partners' materials, ${GOOD_PRICE} gold a unit`
+const PARTNER_GOODS = `partners' goods`
 
 /**
  * The encampment as the party finds it when it goes in: the facilities built
@@ -109,14 +109,14 @@ const FACILITIES: readonly Facility[] = [
       // Below the market, a word on what it will bring, but not at the level whose Next line already says it.
       const marketLevel = MARKET_INCOME.findIndex((gold) => gold > 0) + 1
       const ahead = level < marketLevel - 1 ? ` From level ${marketLevel}: ${MARKET_INCOME[marketLevel - 1]} to ${Math.max(...MARKET_INCOME)} gold every ${YIELD_DAYS} days.` : ''
-      const goods = level >= GOODS_LEVEL ? `; ${PARTNER_GOODS}` : ''
-      return `Sells ${gear}${runes}${market}${goods}.${ahead}`
+      return `Sells ${gear}${level >= GOODS_LEVEL ? `, runes of the first two ranks and ${PARTNER_GOODS}` : runes}${market}.${ahead}`
     },
     next: (_, level) => {
       if (level === 1) return `Sells ${TRADING_POST_GEAR[0]}.`
       const income = MARKET_INCOME[level - 1] ?? 0
       const before = MARKET_INCOME[level - 2] ?? 0
-      if (before > 0) return `Brings ${income} gold every ${YIELD_DAYS} days, up from ${before}${level === GOODS_LEVEL ? `, and ${PARTNER_GOODS}` : ''}.`
+      // The Next line shares a row with the cost: where it adds the goods it says nothing of the old income, which the effect states.
+      if (before > 0) return level === GOODS_LEVEL ? `Adds ${PARTNER_GOODS} and ${income} gold every ${YIELD_DAYS} days.` : `Brings ${income} gold every ${YIELD_DAYS} days, up from ${before}.`
       const added = [TRADING_POST_GEAR[level - 1]]
       if (RUNE_RANK_LEVELS[1] === level) added.push('Lesser runes')
       if (RUNE_RANK_LEVELS[2] === level) added.push('runes of the second rank')
