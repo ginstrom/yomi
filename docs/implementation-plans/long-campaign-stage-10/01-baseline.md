@@ -100,6 +100,6 @@ Measured 2026-11-23 on `f3a1102` through `yomi-measure` (seed 1, label `s10-01`)
 **Baseline for stage 10**
 - Early (500, `--near-source`): `one` 288 / 331 days / 18.8 battles / 1.2 dead; `company` 289; `rl10` 409 / 530 days.
 - 50-campaign hash (step 02's reference): `57fdea1553a35b1af0e33b74a11ea9fe0a0e2f62ef9e5c80972af59276e53e75` (26 of 50).
-- Long (100, `--log none`): Source 15 of 100 (85 fell); 1272 days; 46.4 battles; battles to level 5/10/15/20 6.8/28.5/54.3/none in 84/55/44/0 campaigns; ring win rates 7 0.956, 9 0.828, 12 0.601, 15 0.868, 18 0.75 (4 fought), 20 0.833; wall time 3:48 alone (faster than the ~10 min the plan assumed).
+- Long (100, `--log none`): Source 15 of 100 (85 fell); 1272 days; 46.4 battles; battles to level 5/10/15/20 6.8/28.5/54.3/none in 84/55/44/0 campaigns; ring win rates 7 0.956, 9 0.828, 12 0.601, 15 0.868, 18 0.75 (4 fought), 20 0.833; wall time 3:50 alone (faster than the ~10 min the plan assumed).
 - Kit-free gear figures: workshop level 1.8 at the end; tier-2 items bought 4.3 a campaign; sockets filled 1.7 at the end (runes 44.6 found, 3.4 bought, 2.4 fused); 2234 gold on gear.
-- Wall times: guard-50 ~1 min, `one` 4:19, `company` 5:07, `rl10` 9:41.
+- Wall times: guard-50 19 s, `one` 6:10, `company` 5:11, `rl10` 9:42.
