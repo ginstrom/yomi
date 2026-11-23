@@ -301,3 +301,31 @@ No rule, cost or constant change (they are steps 02–04's); no simulator change
 - [ ] One commit, "Stage 10 step 08: the scenes", files staged by path, no attribution lines; the index's row 08 updated with status and commit.
 
 ## 7. Execution record
+
+Engineer (opus-class session), 2026-11-23, branch `long-campaign-stage-10-scenes` from `32b401d`.
+
+**Built (C7).**
+- `src/scenes/forgeView.ts` (Phaser-free, with tests): `FORGE_SLOTS`, `forgeRows`, `forgeHint`, `forgePreview`, `temperChoices` (`temper2`, `temper3`), `temperPreview`, `trophiesLine`. `src/scenes/goodsView.ts`: `goodRows`, `buyLabel`, `NO_GOODS`.
+- `CraftingScene`: tabs Modify, Forge, Runes (x 140, 280, 420). Forge: slot filter, `forgeOptions` rows nine a page, member picker (the first by default), preview against that member's worn item, refusal last, Forge it. Modify: a tier-3+ item stays clickable even where no modifier fits (`craftables` lists it), its first option row is the two temper buttons, its modifiers sit three to a row (the one-per-line list left no room for the preview above the button once the temper row was added; items below tier 3 are laid out exactly as before), and Work it becomes Temper it. The stock line names materials by `materialName`, with the held extras; it drops the not-held ones when the line would run long.
+- `itemIcons.ts`: `MATERIAL_TINTS` has all 16 tier-2+ materials, each distinct (a test checks it); `iconTint` tints from tier 2.
+- `TradingPostScene`: Goods filter after Runes from `GOODS_LEVEL` (absent below it; decision: absent, not greyed), rows `good:<partner>:<material>`, Buy 1 on `confirm`, Buy 5 on `confirmAll`. Sell materials named by `materialName`.
+- `BattleScene`: `takeTrophies(game, this.kinds)` after `takeRunes` on a win at a location; the victory lines gain "Trophies: ..." after "Found: ...". Nothing drops while `TROPHIES` is empty.
+- Stock text by `materialName` in the encampment, guild hall and world map header.
+- Probes in `src/testHook.ts`: Crafting `tab 'forge'`, `forgeSlots`, `forgeSlot`, `forgeRows` (all rows of the slot, those of other pages not visible), `forgeHint`, `members`, `member`, `buttons.forgeTab`, `buttons.forge`, temper options among `options`; TradingPost `goodsButton`, rows of kind `good` with `label`.
+- Docs: `docs/reference/scenes.md`, `docs/manual/README.md` (text only; step 11 retakes the shots and adds a Forge tab shot).
+
+**Decisions and findings.**
+- Encampment levels 4 to 6: `facilityFrame` already names `camp_workshop/level_<n>`; "every facility at its top" now plants workshop 6 and its overlap test passes at 840 x 560, so no console error for a missing frame.
+- Header stock (decision 18): at 840 x 560 with all 20 materials held the header shows the stock in the small font from the header's top, three lines, ending "+4 more", clear of the party column and the hint. No change needed to `headerLines` or the header; recorded and left.
+- The Forge tab's probe lists every row of the slot, not the page's (the sword is on page 2 of the weapons); e2e pages with `next` as the Modify tab's test does.
+- No scene smoke test beyond the existing registration tests: jsdom cannot build these screens, so the Forge tab, Temper and Goods are covered in `e2e/encampment.test.ts` (three new tests plus "no Goods filter below the Market Hall").
+- No simulation run and no 50-campaign check (no rule changed). Refactor guard and policy snapshot untouched and green.
+
+**Verification.** `npm test`: tsc clean, 107 files, 2,692+ tests pass. `npm run test:browser`: all 13 files pass (190 tests); a first full run failed 3 tests in saves and character only because a second copy of the suite ran beside it, and both files pass alone. Screenshots (840 x 560, scratchpad, not in the repo): `forge-840.png`, `temper-840.png`, `goods-840.png`, `header-840.png`, `camp-840.png` under `/private/tmp/claude-501/-Users-ryan-personal-yomi/86304a89-6b6a-4da5-87fa-fe80bbd470c4/scratchpad/`.
+
+**Review round 1 (opus): clean, five notes, all fixed in one commit.**
+1. The workshop stock line lists gold, then the materials the workshop forges with that are held, then the rest of the five and other extras, so a long line cuts the others; `forgePreview` now takes the game and says "The stock holds 40 mithril." before the cost. `forge-840.png` retaken.
+2. Forge rows' probe `enabled` means clickable (a refused row shows its cost in the refused colour and opens to read why); the `testHook.ts` doc now says so. The refused state is the row's `refusal`; Forge it is greyed.
+3. `forgeView.test.ts`: a Masterwork tier-3 item has no temper options.
+4. e2e: the refused-row check is its own test (3 mithril at workshop 4: the row's refusal, the preview's stock line, Forge it disabled); the level-3 test is renamed to what it checks.
+5. `trophiesLine` ends with a full stop.

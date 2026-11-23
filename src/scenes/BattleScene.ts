@@ -20,7 +20,7 @@ import { POLICIES } from '../engine/policies.ts'
 import type { Expedition } from '../game/expedition.ts'
 import { ENCOUNTERS, heroId, xpReward, type EncounterId, type UnitKind } from '../game/encounters.ts'
 import { newGame, selectedParty, takeLoot, type GameState } from '../game/gameState.ts'
-import { takeRunes } from '../game/loot.ts'
+import { takeRunes, takeTrophies } from '../game/loot.ts'
 import { Ground, pileChanges } from '../game/ground.ts'
 import { describeRewards, partyFighters, rewardVictory } from '../game/party.ts'
 import { FORECAST_SLICE_MS, Forecaster, battleForecastBase, forecastHint, forecastLabel, workFor, type Forecast } from '../game/forecast.ts'
@@ -87,6 +87,7 @@ import { ITEM_ICON_KEYS, ITEM_ICON_SCALE, RUNE_COLOURS, cssColour, iconTint } fr
 import { PartyColumn } from './PartyColumn.ts'
 import { UnitFigure } from './UnitFigure.ts'
 import { CHEST_POINT, SPRITE_ATLAS, heroLook, pointFromAnchor, spriteAnim, spriteFrame } from './unitLook.ts'
+import { trophiesLine } from './forgeView.ts'
 import { AUTO_DRAG_ON_LINE, DEFAULT_ENCOUNTER, autoResolvedLine, battleSeed, chooseBattle, foundNames } from './battleSetup.ts'
 import { battleCost, costLines } from './battleCost.ts'
 import { HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
@@ -2437,6 +2438,8 @@ export class BattleScene extends Phaser.Scene {
     // Runes roll from the battle's own seed, so a reloaded battle finds the same; a debug fight has no location and none.
     const seed = battleSeed(this.engine.getLog())
     const foundRunes = playerWon && this.location && seed !== null ? takeRunes(this.gameState, this.location.threat, this.location.encounter, seed) : []
+    // Trophies are the foes' kinds', granted with no draw, after the runes.
+    const trophies = playerWon && this.location ? takeTrophies(this.gameState, this.kinds) : {}
     if (playerWon && this.location) clearLocation(this.gameState, this.location.id)
     const foes = this.location ? theNameCapital(this.location.name) : 'Your foes'
     // The reward goes by the hit points the party ended on: who fell, and so who is dead.
@@ -2473,7 +2476,8 @@ export class BattleScene extends Phaser.Scene {
       this.gameState.slot = null
     }
     const foundAll = foundNames(found, foundRunes)
-    const lootLines = foundAll.length > 0 ? [`Found: ${listNames(foundAll)}.`] : []
+    const trophyLine = trophiesLine(trophies)
+    const lootLines = [...(foundAll.length > 0 ? [`Found: ${listNames(foundAll)}.`] : []), ...(trophyLine ? [trophyLine] : [])]
     this.bannerText.setText(playerWon ? 'VICTORY!' : 'DEFEAT')
     this.bannerText.setColor(playerWon ? '#66bb6a' : '#ef5350')
     const [first, ...rest] = playerWon ? [`${foes} are beaten.`, ...xpLines, ...lootLines] : this.defeatLines(wipe!)

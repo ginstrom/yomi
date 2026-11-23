@@ -199,7 +199,7 @@ describe('the encampment', () => {
 
   for (const [name, plant] of [
     ['bare plots', {}],
-    ['every facility at its top', { 'world.guildHall': 5, 'world.shrine': 3, 'world.workshop': 3, 'world.infirmary': 3, 'world.lodge': 3, 'world.tradingPost': 6 }],
+    ['every facility at its top', { 'world.guildHall': 5, 'world.shrine': 3, 'world.workshop': 6, 'world.infirmary': 3, 'world.lodge': 3, 'world.tradingPost': 6 }],
   ] as const) {
     it(`draws all six buildings and their labels inside the frame at 840 by 560, overlapping none (${name})`, async () => {
       const game = await games.open()
@@ -674,6 +674,151 @@ describe('the encampment', () => {
     const world = (await game.settled('World')).world
     expect(world.turn).toBe(1)
     expect(world.stock).toMatchObject({ gold: 200 - 25 - 40 - 5, iron: 50 - 15 - 5 })
+  })
+
+  it('forges a Mithril Longsword on the Forge tab, tempers it to Masterwork on Modify, and the Runes tab lists it with two sockets', async () => {
+    const game = await games.open()
+    await richAtHome(game, { gold: 500, mithril: 40 }, undefined, { 'world.workshop': 4 })
+    const camp = await enter(game)
+    await game.click(facility(camp, 'workshop'))
+    const shown = await game.settled('Encampment', (c) => c.selected === 'workshop')
+    await game.click(shown.buttons.open)
+    await game.waitForScenes(['Crafting'], ['World'])
+    const bench = await game.settled('Crafting')
+    expect(bench.tab).toBe('modify')
+    await game.click(bench.buttons.forgeTab)
+    const forgeTab = await game.settled('Crafting', (c) => c.tab === 'forge')
+    expect(forgeTab.forgeSlot).toBe('mainHand')
+    expect(forgeTab.forgeSlots.map((s) => s.slot)).toEqual(['mainHand', 'offHand', 'armor', 'head', 'gloves', 'boots'])
+    let listing = forgeTab
+    const swordOf = (c: typeof forgeTab) => c.forgeRows.find((r) => r.id === 'longsword:mithril')!
+    // Nine rows a page: the sword may be on a later one.
+    while (!swordOf(listing).visible) {
+      const before = listing.forgeRows.filter((r) => r.visible).map((r) => r.id).join()
+      await game.click(listing.buttons.next)
+      listing = await game.settled('Crafting', (c) => c.forgeRows.filter((r) => r.visible).map((r) => r.id).join() !== before)
+    }
+    const sword = swordOf(listing)
+    expect([sword.name, sword.cost, sword.refusal]).toEqual(['Mithril Longsword', '30 gold, 8 mithril', null])
+    await game.click(sword)
+    const chosen = await game.settled('Crafting', (c) => c.chosen === 'longsword:mithril')
+    expect(chosen.preview).toContain('Sockets: 1, 2 at Masterwork.')
+    expect(chosen.buttons.forge.enabled).toBe(true)
+    await game.click(chosen.buttons.forge)
+    const forged = await game.settled('Crafting', (c) => c.message.startsWith('The Mithril Longsword is in the baggage'))
+    expect(forged.tab).toBe('forge')
+
+    await game.click(forged.buttons.modifyTab)
+    let modify = await game.settled('Crafting', (c) => c.tab === 'modify' && c.items.some((i) => i.itemId === 'mithril_longsword'))
+    // The new item is last in the baggage: its page may be a later one.
+    while (!modify.items.find((i) => i.itemId === 'mithril_longsword')!.visible) {
+      const before = modify.items.filter((i) => i.visible).map((i) => i.id).join()
+      await game.click(modify.buttons.next)
+      modify = await game.settled('Crafting', (c) => c.items.filter((i) => i.visible).map((i) => i.id).join() !== before)
+    }
+    const item = modify.items.find((i) => i.itemId === 'mithril_longsword')!
+    expect(item.enabled).toBe(true)
+    await game.click(item)
+    const picked = await game.settled('Crafting', (c) => c.selected === item.id)
+    expect(picked.options.filter((o) => o.id.startsWith('temper')).map((o) => [o.id, o.label])).toEqual([
+      ['temper2', 'Temper to Fine'],
+      ['temper3', 'Temper to Masterwork'],
+    ])
+    await game.click(picked.options.find((o) => o.id === 'temper3')!)
+    const previewed = await game.settled('Crafting', (c) => c.chosen === 'temper3')
+    expect(previewed.preview).toContain('Gains a socket: 2 in all.')
+    await game.click(previewed.buttons.work)
+    const tempered = await game.settled('Crafting', (c) => c.message === 'Made the Masterwork Mithril Longsword.')
+    expect(tempered.items.some((i) => i.itemId === 'mithril_longsword@3')).toBe(true)
+    expect(tempered.selected).toBe(item.id)
+
+    await game.click(tempered.buttons.runesTab)
+    const runes = await game.settled('Crafting', (c) => c.tab === 'runes' && c.items.some((i) => i.itemId === 'mithril_longsword@3'))
+    await game.click(runes.items.find((i) => i.itemId === 'mithril_longsword@3')!)
+    const sockets = await game.settled('Crafting', (c) => c.sockets.length === 2)
+    expect(sockets.sockets.map((s) => s.rune)).toEqual([null, null])
+
+    await game.click(sockets.buttons.close)
+    await game.waitForScenes(['Encampment'], ['World'])
+    await game.click((await game.settled('Encampment')).buttons.leave)
+    await game.waitForScenes(['World'])
+    const world = (await game.settled('World')).world
+    // 30 gold and 8 mithril to forge, 90 gold and 12 mithril to temper to Masterwork.
+    expect(world.stock.gold).toBe(500 - 30 - 90)
+    expect(world.stock.mithril).toBe(40 - 8 - 12)
+  })
+
+  it('lists no Forge rows below workshop level 4 and says why', async () => {
+    const game = await games.open()
+    await richAtHome(game, { gold: 500, mithril: 3 }, undefined, { 'world.workshop': 3 })
+    const camp = await enter(game)
+    await game.click(facility(camp, 'workshop'))
+    const shown = await game.settled('Encampment', (c) => c.selected === 'workshop')
+    await game.click(shown.buttons.open)
+    await game.waitForScenes(['Crafting'], ['World'])
+    await game.click((await game.settled('Crafting')).buttons.forgeTab)
+    const low = await game.settled('Crafting', (c) => c.tab === 'forge')
+    expect(low.forgeRows).toEqual([])
+    expect(low.forgeHint).toBe('A level 4 workshop forges mithril, elderwood, wyvern-hide and mithrilweave.')
+  })
+
+  it('greys Forge it for a row the stock cannot pay, and the preview names the refusal and what the stock holds', async () => {
+    const game = await games.open()
+    await richAtHome(game, { gold: 500, mithril: 3 }, undefined, { 'world.workshop': 4 })
+    const camp = await enter(game)
+    await game.click(facility(camp, 'workshop'))
+    const shown = await game.settled('Encampment', (c) => c.selected === 'workshop')
+    await game.click(shown.buttons.open)
+    await game.waitForScenes(['Crafting'], ['World'])
+    await game.click((await game.settled('Crafting')).buttons.forgeTab)
+    const listed = await game.settled('Crafting', (c) => c.tab === 'forge')
+    const row = listed.forgeRows.find((r) => r.visible)!
+    expect(row.refusal).toContain('more than the stock holds')
+    await game.click(row)
+    const chosen = await game.settled('Crafting', (c) => c.chosen === row.id)
+    expect(chosen.preview).toContain('The stock holds 3 mithril.')
+    expect(chosen.preview.at(-1)).toBe(row.refusal)
+    expect(chosen.buttons.forge.enabled).toBe(false)
+  })
+
+  it('buys partners’ goods under the Market Hall’s Goods filter', async () => {
+    const game = await games.open()
+    await richAtHome(game, { gold: 100 }, 5, { 'world.contacted': ['stonehollow'] })
+    const camp = await enter(game)
+    await game.click(facility(camp, 'trading_post'))
+    const shown = await game.settled('Encampment', (c) => c.selected === 'trading_post')
+    await game.click(shown.buttons.open)
+    await game.waitForScenes(['TradingPost'], ['World'])
+    const post = await game.settled('TradingPost')
+    expect(post.goodsButton.visible).toBe(true)
+    await game.click(post.goodsButton)
+    const goods = await game.settled('TradingPost', (p) => p.filter.slot === 'goods')
+    expect(goods.familyButtons).toEqual([])
+    const row = goods.rows.find((r) => r.id === 'good:stonehollow:mithril')!
+    expect(row.label).toBe('Mithril, from Stonehollow: 3 gold a unit')
+    await game.click(row)
+    const picked = await game.settled('TradingPost', (p) => p.selected === row.id)
+    await game.click(picked.buttons.confirmAll)
+    const bought = await game.settled('TradingPost', (p) => p.gold === 85)
+    expect(bought.message).toBe('Bought 5 mithril for 15 gold.')
+    await game.click(bought.buttons.confirm)
+    await game.settled('TradingPost', (p) => p.gold === 82)
+    await game.click(bought.buttons.close)
+    await game.waitForScenes(['Encampment'], ['World'])
+    await game.click((await game.settled('Encampment')).buttons.leave)
+    await game.waitForScenes(['World'])
+    expect((await game.settled('World')).world.stock.mithril).toBe(6)
+  })
+
+  it('shows no Goods filter below the Market Hall', async () => {
+    const game = await games.open()
+    await richAtHome(game, { gold: 100 }, 4)
+    const camp = await enter(game)
+    await game.click(facility(camp, 'trading_post'))
+    const shown = await game.settled('Encampment', (c) => c.selected === 'trading_post')
+    await game.click(shown.buttons.open)
+    await game.waitForScenes(['TradingPost'], ['World'])
+    expect((await game.settled('TradingPost')).goodsButton.visible).toBe(false)
   })
 
   it('crafts in the field from the map’s Craft button, a day passing', async () => {

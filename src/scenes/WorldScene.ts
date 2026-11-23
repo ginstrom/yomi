@@ -12,7 +12,7 @@ import { SAVE_FAILED_MESSAGE, SAVE_WARNED_KEY, deleteSlot, saveGame } from '../g
 import { craftTier } from '../game/crafting.ts'
 import { FORECAST_SLICE_MS, Forecaster, forecastHint, forecastLabel, worldForecastStart, workFor, type Forecast } from '../game/forecast.ts'
 import { isContacted, isSilent, partners } from '../game/trade.ts'
-import { daysToFall, improvementName, siteImprovement } from '../game/territory.ts'
+import { daysToFall, improvementName, materialName, siteImprovement, type Material } from '../game/territory.ts'
 import { UNEXPLORED, knownBlightedShare, visibleHexes } from '../game/vision.ts'
 import {
   encampment,
@@ -1214,7 +1214,7 @@ export class WorldScene extends Phaser.Scene {
     this.turnText.setText(`Turn ${world.turn}`)
     const growth = Math.round((blightGrowth(world.turn) - 1) * 100)
     const stock = Object.entries(world.stock)
-      .map(([material, amount]) => `${material} ${amount}`)
+      .map(([material, amount]) => `${materialName(material as Material)} ${amount}`)
       .join(', ')
     this.statusLines = [
       `Blighted ${Math.round(knownBlightedShare(world) * 100)}% of the land known${growth > 0 ? `, blight +${growth}%` : ''}${world.status === 'endless' ? ' (endless)' : ''}`,

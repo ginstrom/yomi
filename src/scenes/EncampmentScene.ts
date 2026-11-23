@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { materialName, type Material } from '../game/territory.ts'
 import { describeCost } from '../game/buildings.ts'
 import { facilities, improveFacility, type FacilityId, type FacilityView } from '../game/encampment.ts'
 import type { Expedition } from '../game/expedition.ts'
@@ -175,7 +176,7 @@ export class EncampmentScene extends Phaser.Scene {
     const { world } = this.gameState
     const stock = Object.entries(world.stock)
       .filter(([, amount]) => amount)
-      .map(([material, amount]) => `${amount} ${material}`)
+      .map(([material, amount]) => `${amount} ${materialName(material as Material)}`)
       .join(', ')
     this.frame.add([
       this.add.rectangle(CENTRE_X, FRAME_H / 2, FRAME_W, FRAME_H, 0x241d15, 0.98).setStrokeStyle(3, 0xc9a227),
