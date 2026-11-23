@@ -119,3 +119,9 @@ At 60 frames a second the after figures are 0.7 to 1.6 s from the battle's start
 **50-campaign check's wall time**, back to back, `--log none`, load 7 to 11: 37.3 s before, 25.3 s after (the campaign's world turns are most of the rest).
 
 Verification: `npx vitest run src/game/forecast.test.ts` 41 pass (before and after every change); `npm test` 105 files, 2,702 tests pass; `npm run test:browser -- -t "Auto|auto-resolve|estimate"` 19 pass.
+
+Step 07 review: the reviewer (opus) found the fixture blind to the pathfinder's tie order (flipping the reduce's `<` to `<=`, or `push` to `unshift` for the routes kept at a hex, left all 18 fixture entries passing; only the refactor guard caught it). Fixed with a test in `hex.test.ts` comparing `reachableHexes` with a copy of its version at `2cdd885` on 400 seeded boards with walls and foes (zones of control), 400 with seeded provokers that tie (over 1,000 tied hexes counted), and 100 with none; both mutations fail it.
+
+Outcome (step 07): engineer opus, reviewer opus, clean, 1 review round.
+
+Step 08 scenes: engineer sonnet, reviewer opus, clean, 1 review round (five notes fixed in ed99a2f: forge materials first in the workshop stock line and the preview, probe doc, a temper test, a refused-row e2e, trophies full stop); header stock at 840 checked and left (three lines, '+4 more', clear); npm test 2693 at the branch, 2715 after merge; e2e 13 files 190 tests; no simulation.
