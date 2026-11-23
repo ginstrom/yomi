@@ -328,8 +328,7 @@ export function newWorld(
       farMonsters('last_host', 'The Last Host', 117, 50, 'freebooter_host', [RING_FORTUNE]),
       farMonsters('blightmarch_freebooters', 'Blightmarch Freebooters', 110, 64, 'freebooter_host', [AMULET_FOCUS]),
       {
-        ...(monsters(SOURCE_ID, 'The Blight Source', 58, 19, 'source_guardians', [STORM_WAND]) as MonsterLocation),
-        position: { ...source.position },
+        ...(monstersAt(SOURCE_ID, 'The Blight Source', { ...source.position }, 'source_guardians', [STORM_WAND]) as MonsterLocation),
         threat: source.threat,
         source: true,
       },
