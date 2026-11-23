@@ -4,7 +4,7 @@
 
 - Request (user's words):
   > The next thing is stage 10 of the long campaign: forging and the high tiers. Its design is docs/designs/long-campaign/stage-10-forging-and-high-tiers.md and it is marked "ready for planning". [...] As with stages 2–9, the approved stage design goes straight to the planner. Start with the bookkeeping commit, then cut a long-campaign-stage-10 branch off main and run the orchestrator. Early figures, the refactor guard and the 50-campaign check run with --near-source as in stage 9. Balance bands are mine to change: bring any out-of-band figures to me.
-- Slug `long-campaign-stage-10` · Phase 3, planning · Phase 4 · Next action: step 09 (gear policy) running; then 10, 11 · Branch: `long-campaign-stage-10`, off main at 4d51a8b (stage 9 merged as PR #11).
+- Slug `long-campaign-stage-10` · Phase 3, planning · Phase 4 · Next action: step 10 finishing (report-only kit line); then 11 · Branch: `long-campaign-stage-10`, off main at 4d51a8b (stage 9 merged as PR #11).
 - Path: Large, but the stage design is the approved design. Straight to planning, as stages 2–9 did.
 - Links:
   - Stages overview: `docs/designs/long-campaign/index.md`
@@ -37,3 +37,4 @@
 | 2026-11-23 | Plan Q4–5: trophies table empty until stage 11 (hide tiers 4–5 via debug only; wyvern hide from Elder Glade); partners' goods from contacted, unsilenced partners, any whole amount, 3 gold; simulator never buys | user | more partner stand-ins | Design's scope |
 | 2026-11-23 | Plan Q6: the simulator applies families by role only from tier 3, keeping today's early policy | user | stop and ask at step 09's gate | Keep the early figure from moving |
 | 2026-11-23 | Accept the planner's other departures (index decisions) and tiers | orchestrator | — | Routine engineering choices |
+| 2026-11-23 | Step 10: accept the long campaign's gear lag until stage 12 (kit "Done when" clause unmet: Source 1/100, main hand tier 1 at level 10); add a report-only kit line over forge-ready campaigns; stage 12's candidates: keep weak parties off strong targets, forge for the vanguard, workshop before post, workshop level-2 stone cost | user | fix targeting now; cheaper workshop; workshop first | Cause is the simulator's targeting and spend order (stage 12), not the design's levers |
