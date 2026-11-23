@@ -419,7 +419,7 @@ const COMMANDS: Record<string, Command> = {
         throw new DebugError(`${spawnKind.encounter} is fought at threats ${band.min} to ${band.max}${spawnKind.fromThreat === undefined ? '' : ` and spawns from ${spawnKind.fromThreat}`}; ${offset({ position: at })} is threat ${threat}.`)
       }
       world.spawns += 1
-      const nest: MonsterLocation = { id: `spawn_${world.spawns}`, kind: 'monsters', name: spawnKind.name, position: at, encounter: spawnKind.encounter, threat: threatAt(at), loot: [] }
+      const nest: MonsterLocation = { id: `spawn_${world.spawns}`, kind: 'monsters', name: spawnKind.name, position: at, encounter: spawnKind.encounter, threat, loot: [] }
       world.locations.push(nest)
       world.blight[boardIndex(world.board, at)] = MAX_BLIGHT
       world.sighted.push(nest.id)
