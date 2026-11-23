@@ -224,7 +224,8 @@ Write it as small exported helpers in `scripts/simulate.ts` so the tests can cal
 3. **Materials:** `materialNeeds` keeps today's terms; additionally tier-3+ ores and woods (mithril, adamant, starmetal, elderwood, wyrmwood, heartwood) and the trophies are never sold as surplus (they are for forging, tempering and the workshop's levels).
 4. **No partner goods** (decision 9) and no change to the spend order of buildings (stage 12): the workshop is still raised greedily as today, so it reaches level 4 once 100 gold and 20 mithril are spare.
 5. **Trophies:** in `fightAt`, after a win and beside `takeRunes`, `takeTrophies(game, encounter.kinds)`; none drop this stage (decision 8), so it changes nothing played.
-6. `Trade.tierTwoBought` may stay (it is in `GUARD_RECORDS` history) or give way to a count by tier; if renamed, search the docs.
+6. **Guard the post's prices against forged gear** (step 02 review): `visitFacilities`' buying loop (`scripts/simulate.ts`, about lines 889–896 at `31e4612`) asserts `buyPrice(...)!` for the worn item, each candidate and the item bought; `buyPrice` is null for tier 3 and up, so once a member wears a forged item that loop must skip it (or the slot) rather than read a null price as a number. Test it on a fixed state with a forged item worn.
+7. `Trade.tierTwoBought` may stay (it is in `GUARD_RECORDS` history) or give way to a count by tier; if renamed, search the docs.
 
 ### 4.4 Tests (`scripts/simulate.test.ts`)
 

@@ -215,3 +215,8 @@ No forging, tempering, workshop level, `Material` or stock change (step 03); no 
 
 **For later steps.** Step 03: `MaterialDef.stock` holds the stock material (`wyvern_hide`, …; the weaves their ore); tier-3+ `salePrice` is 0 until `forgedValue`. Step 08: tier-3+ materials have no tint yet (`iconTint` tints tier 2 only); the Runes tab hint wording above. Step 09/10: the long baseline above is the far bandits' effect alone.
 
+**Review round 1** (reviewer opus): clean, with two non-blocking notes, both acted on:
+1. Tier 4/5 `armorPierce` +1 tells only in a melee weapon or the crossbow (a shot pierces only with `rangedPierce`, `character.ts` `deriveCombatStats`); the behaviour is kept as the plan has it, and `docs/reference/characters.md`'s tier note and the `heartwood_bow` test's comment now say so.
+2. `scripts/simulate.ts`'s buying loop (about lines 889–896) asserts `buyPrice(...)!`, null for tier 3+: step 09's task file (§4.3 item 6) now tells it to guard those lines once the party wears forged gear.
+`npm test` rerun green after the fixes.
+

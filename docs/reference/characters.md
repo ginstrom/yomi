@@ -166,7 +166,7 @@ The ready-made heroes come to:
   | armour | AC +2, resistance +1 | AC +4, resistance +1 | AC +6, resistance +2 | AC +8, resistance +3 |
   | small | AC +1 | AC +1 | AC +2 | AC +3 |
 
-  A small-slot family with resistance at tier 1 (helm, gauntlets, greaves) also gains `SMALL_RESISTANCE` (1, 1, 2 at tiers 3, 4, 5). A tier never changes attack AP, range, two-handedness or a penalty; piercing only by the weapon's +1 at tiers 4 and 5.
+  A small-slot family with resistance at tier 1 (helm, gauntlets, greaves) also gains `SMALL_RESISTANCE` (1, 1, 2 at tiers 3, 4, 5). A tier never changes attack AP, range, two-handedness or a penalty; piercing only by the weapon's +1 at tiers 4 and 5, which tells only in a melee weapon or the crossbow: a shot pierces only with `rangedPierce` (`deriveCombatStats`), so a bow, longbow or wand carries the point and gains nothing from it.
 - Mithril and Starmetal ask 1 and 2 less strength of their families (`strengthRelief`, never below 0) and halve a spell-skill penalty toward 0 (`casterFriendly`, `Math.trunc`: −5 → −2, −15 → −7); Adamant neither.
 - The legacy ids (`LEGACY_ALIASES`).
 

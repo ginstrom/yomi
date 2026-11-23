@@ -217,7 +217,8 @@ describe('tiers 3 to 5 (long-campaign stage 10)', () => {
     expect(stats('mithril_longsword')).toEqual({ damage: { count: 1, sides: 8, bonus: 7 }, attackApCost: 5, armorPierce: 1, toHit: 5 })
     expect(stats('adamant_longsword')).toEqual({ damage: { count: 1, sides: 8, bonus: 9 }, attackApCost: 5, armorPierce: 2, toHit: 5 })
     expect(stats('starmetal_longsword')).toEqual({ damage: { count: 1, sides: 8, bonus: 11 }, attackApCost: 5, armorPierce: 2, toHit: 10 })
-    // A weapon that pierced nothing pierces 1 from tier 4; range, AP and two hands never move.
+    // A weapon that pierced nothing pierces 1 from tier 4; range, AP and two hands never move. The bow carries the point
+    // but gains nothing from it: a shot pierces only with rangedPierce (deriveCombatStats), so it tells in melee and the crossbow only.
     expect(stats('adamant_dagger')).toEqual({ damage: { count: 1, sides: 4, bonus: 6 }, attackApCost: 3, toHit: 5, armorPierce: 1 })
     expect(stats('heartwood_bow')).toEqual({ damage: { count: 1, sides: 6, bonus: 8 }, attackApCost: 4, attackRange: 5, twoHanded: true, toHit: 10, armorPierce: 1 })
     // The war hammer's −5 to hit is made up at tier 3.
