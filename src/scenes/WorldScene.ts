@@ -40,6 +40,7 @@ import { pauseMusic, playCue, playCues, resumeMusic, startMusic, stopMusic } fro
 import { WORLD_SOUND_GAP_MS, buttonCue, reportEvents, worldSounds } from './sounds.ts'
 import { WORLD_LAYOUT, boardHexAt, boardHexCenter, boardPixelSize, type Point } from './boardGeometry.ts'
 import { CURSORS } from './cursors.ts'
+import { blightTiles, type BlightTile } from './blightTiles.ts'
 import { clampOrigin, mapOrigin, pannedOrigin, pressMoved, rectContains, type Rect } from './mapScroll.ts'
 import { PartyColumn } from './PartyColumn.ts'
 import { PartyListView } from './PartyListView.ts'
@@ -49,6 +50,7 @@ import { heroLook, SPRITE_ATLAS, spriteAnim, spriteFrame } from './unitLook.ts'
 import { FRAME_ACTIVE_COLOR, HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
 import { ROAD_COLORS, roadSegments, silenceShown, type RoadSegment } from './roadsView.ts'
 import { advanceMessage, describeDays, describeOthers, describeStanding, describeWalk, describeWorldEvent, describeWorldEvents, yieldSummary } from './worldEvents.ts'
+import { headerLines, measureCharWidth } from './headerLines.ts'
 import { improveLabel } from './improveButton.ts'
 import { hexInfo } from './hexInfo.ts'
 import { tellStory, type StoryAnchors } from './StoryScene.ts'
@@ -76,7 +78,13 @@ const LOCATION_SPRITES: Record<LocationKind, string> = {
   partner: 'map_partner_village',
 }
 /** Each trade partner's own sprite; a partner without one uses `LOCATION_SPRITES.partner`. */
-const PARTNER_SPRITES: Record<string, string> = { millbrook: 'map_partner_village', saltmere: 'map_partner_port' }
+const PARTNER_SPRITES: Record<string, string> = {
+  millbrook: 'map_partner_village',
+  saltmere: 'map_partner_port',
+  stonehollow: 'map_partner_hold',
+  elder_glade: 'map_partner_glade',
+  emberwatch: 'map_partner_pass',
+}
 /** A silent partner's sprite and label, greyed. */
 const SILENT_TINT = 0x9e9e9e
 const SILENT_LABEL = '#9e9e9e'
@@ -152,7 +160,7 @@ const SOURCE_SCALE = 3
 /** The bars behind the header and the buttons: the map shows through them, dimmed. */
 const BAR_COLOR = 0x1d1d1d
 const BAR_ALPHA = 0.8
-/** The stock panel's font, and the smaller one its three lines take where they would reach the hint. */
+/** The stock panel's font, and the smaller one it takes where its lines would reach the hint (`fitStatus`). */
 const STATUS_FONT = '13px'
 const STATUS_FONT_SMALL = '11px'
 /** The outcome screen's buttons. */
@@ -266,7 +274,10 @@ export class WorldScene extends Phaser.Scene {
    * worked out again every frame.
    */
   private blightMarks!: Phaser.GameObjects.Graphics
-  private blightLayer!: Phaser.GameObjects.RenderTexture
+  /** The blight layer: render textures tiling the map, each no larger than `BLIGHT_TILE_PX` a side. */
+  private blightLayer: { tile: BlightTile; texture: Phaser.GameObjects.RenderTexture; key: { value: string } }[] = []
+  /** How long the last `refreshBlight` took, in ms, for the probe. */
+  private blightRefreshMs = 0
   /** The growths on corrupted land as the player knows it, rebuilt with `blightLayer`. */
   private blightSprites!: Phaser.GameObjects.Container
   /** The locations' sprites, under the party, and their names and badges, over it; the sprites are rebuilt when a location comes or goes. */
@@ -287,6 +298,10 @@ export class WorldScene extends Phaser.Scene {
   private visible = new Set<number>()
   /** The share of the land blighted, the blight's growth and the stock, at the header's right. */
   private statusText!: Phaser.GameObjects.Text
+  /** The status text's lines before they are wrapped to the header (`fitStatus`). */
+  private statusLines: string[] = []
+  /** A character's width in the status text's font, by font size (the font is monospace). */
+  private statusCharWidths = new Map<string, number>()
   /** The screen over the map when the game is won or lost, and its buttons: End and Continue, or Main Menu. */
   private outcomeShade!: Phaser.GameObjects.Rectangle
   private outcomeText!: Phaser.GameObjects.Text
@@ -328,10 +343,12 @@ export class WorldScene extends Phaser.Scene {
     this.active = Math.max(0, this.selectedMembers().findIndex(canAdvance))
 
     this.mapLayer = this.add.container(0, 0)
-    this.buildTerrain()
     this.blightMarks = this.make.graphics({}, false)
-    const map = boardPixelSize(this.world.board, WORLD_LAYOUT)
-    this.blightLayer = this.add.renderTexture(0, 0, Math.ceil(map.width), Math.ceil(map.height)).setOrigin(0)
+    this.blightLayer = blightTiles(this.world.board, WORLD_LAYOUT).map((tile) => ({
+      tile,
+      texture: this.add.renderTexture(tile.x, tile.y, tile.width, tile.height).setOrigin(0),
+      key: { value: '' },
+    }))
     this.blightSprites = this.add.container(0, 0)
     this.roadMarks = this.add.graphics()
     this.drawnRoads = []
@@ -346,7 +363,7 @@ export class WorldScene extends Phaser.Scene {
     this.selectedMark = this.add.graphics()
     this.partyLayer = this.add.container(0, 0, [this.selectedMark])
     this.figures = new Map()
-    this.mapLayer.add([this.blightLayer, this.blightSprites, this.roadMarks, this.hoverMarks, this.partyMark, this.siteSprites, this.partyLayer, this.siteLabels])
+    this.mapLayer.add([...this.blightLayer.map((t) => t.texture), this.blightSprites, this.roadMarks, this.hoverMarks, this.partyMark, this.siteSprites, this.partyLayer, this.siteLabels])
     this.syncFigures()
 
     this.headerBar = this.add.rectangle(0, 0, 0, 0, BAR_COLOR, BAR_ALPHA).setOrigin(0)
@@ -637,8 +654,15 @@ export class WorldScene extends Phaser.Scene {
         route: route.id,
         shades: this.drawnRoads.filter((s) => s.route === route.id).map((s) => s.shade),
       })),
+      blightTiles: {
+        count: this.blightLayer.length,
+        size: Math.max(...this.blightLayer.map((t) => Math.max(t.tile.width, t.tile.height))),
+        refreshMs: this.blightRefreshMs,
+        growths: this.blightSprites.length,
+      },
       partners: partners(this.world).map((p) => ({
         id: p.id,
+        sprite: PARTNER_SPRITES[p.id] ?? LOCATION_SPRITES.partner,
         contacted: isContacted(this.world, p.id),
         silent: isSilent(this.world, p.id),
         grey: this.partnerGrey(p.id),
@@ -686,18 +710,17 @@ export class WorldScene extends Phaser.Scene {
     return hexCorners(WORLD_LAYOUT.hexSize).map((p) => new Phaser.Math.Vector2(c.x + p.x, c.y + p.y))
   }
 
-  private buildTerrain(): void {
-    const terrain = this.add.graphics()
-    for (const h of this.board.hexes) {
-      // A three-colouring: no two neighbouring hexes share a shade.
-      const shade = (((h.q - h.r) % 3) + 3) % 3
-      const polygon = this.hexPolygon(h)
-      terrain.fillStyle(GRASS_COLORS[shade], 1)
-      terrain.fillPoints(polygon, true)
-      terrain.lineStyle(1, GRASS_EDGE, 0.5)
-      terrain.strokePoints(polygon, true)
-    }
-    this.mapLayer.add(terrain)
+  /**
+   * One hex's grass, under its blight marks in the same tile. Drawn into the tiles rather than kept as one Graphics:
+   * a Graphics is drawn again every frame, which over the 140 × 72 map's 10,080 hexes halved the frame rate.
+   */
+  private drawTerrain(g: Phaser.GameObjects.Graphics, i: number): void {
+    const h = boardHex(this.world.board, i)
+    // A three-colouring: no two neighbouring hexes share a shade.
+    const shade = (((h.q - h.r) % 3) + 3) % 3
+    const polygon = this.hexPolygon(h)
+    g.fillStyle(GRASS_COLORS[shade], 1).fillPoints(polygon, true)
+    g.lineStyle(1, GRASS_EDGE, 0.5).strokePoints(polygon, true)
   }
 
   /**
@@ -850,7 +873,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
-   * The land as the player knows it (`seen`): black where never explored;
+   * The land as the player knows it (`seen`), drawn with its grass into the tiles: black where never explored;
    * elsewhere each hex's tint for its level as last seen, a growth on corrupted
    * land (faded out of sight) and a faint line along every edge between clean land and blighted,
    * under a veil where out of sight.
@@ -859,46 +882,64 @@ export class WorldScene extends Phaser.Scene {
     const { board, seen } = this.world
     const drawn = `${seen.join('')}|${[...this.visible].join()}`
     if (drawn === this.drawnBlight) return
+    const started = performance.now()
     this.drawnBlight = drawn
-    const g = this.blightMarks.clear()
+    const g = this.blightMarks
     this.blightSprites.removeAll(true)
-    const size = WORLD_LAYOUT.hexSize
     for (let i = 0; i < seen.length; i++) {
-      const level = seen[i]
-      const h = boardHex(board, i)
-      const c = boardHexCenter(h, WORLD_LAYOUT)
-      if (level === UNEXPLORED) {
-        g.fillStyle(UNEXPLORED_COLOR, 1).fillPoints(this.hexPolygon(h), true)
-        continue
-      }
-      if (!this.visible.has(i)) g.fillStyle(0x000000, FOG_VEIL_ALPHA).fillPoints(this.hexPolygon(h), true)
-      if (level > 0) {
-        g.fillStyle(BLIGHT_TINTS[level], BLIGHT_ALPHAS[level]).fillPoints(this.hexPolygon(h), true)
-        if (level === MAX_BLIGHT) {
-          const growth = this.add
-            .sprite(c.x, c.y, SPRITE_ATLAS, spriteFrame(BLIGHT_SPRITE, 'base'))
-            .setScale(BLIGHT_SCALE)
-            .play({ key: spriteAnim(BLIGHT_SPRITE, 'idle'), delay: (i * LOCATION_STAGGER_MS) % 1400 })
-          if (!this.visible.has(i)) growth.setAlpha(REMEMBERED_ALPHA)
-          this.blightSprites.add(growth)
-        }
-        continue
-      }
-      // The edge two hexes share is a side's length, square across the line between their centres.
-      g.lineStyle(2, FRONT_COLOR, 0.35)
-      for (const n of hexNeighbors(h)) {
-        if (!this.board.contains(n) || seen[boardIndex(board, n)] <= 0) continue
-        const d = boardHexCenter(n, WORLD_LAYOUT)
-        const mx = (c.x + d.x) / 2
-        const my = (c.y + d.y) / 2
-        const length = Math.hypot(d.x - c.x, d.y - c.y)
-        const px = (-(d.y - c.y) / length) * (size / 2)
-        const py = ((d.x - c.x) / length) * (size / 2)
-        g.lineBetween(mx - px, my - py, mx + px, my + py)
-      }
+      if (seen[i] !== MAX_BLIGHT) continue
+      const c = boardHexCenter(boardHex(board, i), WORLD_LAYOUT)
+      const growth = this.add
+        .sprite(c.x, c.y, SPRITE_ATLAS, spriteFrame(BLIGHT_SPRITE, 'base'))
+        .setScale(BLIGHT_SCALE)
+        .play({ key: spriteAnim(BLIGHT_SPRITE, 'idle'), delay: (i * LOCATION_STAGGER_MS) % 1400 })
+      if (!this.visible.has(i)) growth.setAlpha(REMEMBERED_ALPHA)
+      this.blightSprites.add(growth)
     }
-    this.blightLayer.clear().draw(g).render()
+    // Each tile gets the marks of the hexes that reach it, drawn in map pixels and shifted by the tile's corner.
+    // Only a tile whose hexes changed is drawn again: a step of the party or a day's blight touches one or two.
+    for (const { tile, texture, key } of this.blightLayer) {
+      const now = tile.watch.map((i) => (seen[i] << 1) | (this.visible.has(i) ? 1 : 0)).join()
+      if (now === key.value) continue
+      key.value = now
+      g.clear()
+      // The grass first, all of it, so no hex's grass covers a neighbour's front line.
+      for (const i of tile.hexes) this.drawTerrain(g, i)
+      for (const i of tile.hexes) this.drawHexMarks(g, i)
+      texture.clear().draw(g, -tile.x, -tile.y).render()
+    }
     g.clear()
+    this.blightRefreshMs = performance.now() - started
+  }
+
+  /** One hex's marks: black if unexplored, else the fog veil out of sight, the level's tint, or on clear land the front line along its edges with blighted land. */
+  private drawHexMarks(g: Phaser.GameObjects.Graphics, i: number): void {
+    const { board, seen } = this.world
+    const size = WORLD_LAYOUT.hexSize
+    const level = seen[i]
+    const h = boardHex(board, i)
+    const c = boardHexCenter(h, WORLD_LAYOUT)
+    if (level === UNEXPLORED) {
+      g.fillStyle(UNEXPLORED_COLOR, 1).fillPoints(this.hexPolygon(h), true)
+      return
+    }
+    if (!this.visible.has(i)) g.fillStyle(0x000000, FOG_VEIL_ALPHA).fillPoints(this.hexPolygon(h), true)
+    if (level > 0) {
+      g.fillStyle(BLIGHT_TINTS[level], BLIGHT_ALPHAS[level]).fillPoints(this.hexPolygon(h), true)
+      return
+    }
+    // The edge two hexes share is a side's length, square across the line between their centres.
+    g.lineStyle(2, FRONT_COLOR, 0.35)
+    for (const n of hexNeighbors(h)) {
+      if (!this.board.contains(n) || seen[boardIndex(board, n)] <= 0) continue
+      const d = boardHexCenter(n, WORLD_LAYOUT)
+      const mx = (c.x + d.x) / 2
+      const my = (c.y + d.y) / 2
+      const length = Math.hypot(d.x - c.x, d.y - c.y)
+      const px = (-(d.y - c.y) / length) * (size / 2)
+      const py = ((d.x - c.x) / length) * (size / 2)
+      g.lineBetween(mx - px, my - py, mx + px, my + py)
+    }
   }
 
   /**
@@ -1175,13 +1216,11 @@ export class WorldScene extends Phaser.Scene {
     const stock = Object.entries(world.stock)
       .map(([material, amount]) => `${material} ${amount}`)
       .join(', ')
-    this.statusText.setText(
-      [
-        `Blighted ${Math.round(knownBlightedShare(world) * 100)}% of the land known${growth > 0 ? `, blight +${growth}%` : ''}${world.status === 'endless' ? ' (endless)' : ''}`,
-        `Stock: ${stock || 'nothing yet'}`,
-        ...(this.lastYield ? [this.lastYield] : []),
-      ].join('\n'),
-    )
+    this.statusLines = [
+      `Blighted ${Math.round(knownBlightedShare(world) * 100)}% of the land known${growth > 0 ? `, blight +${growth}%` : ''}${world.status === 'endless' ? ' (endless)' : ''}`,
+      `Stock: ${stock || 'nothing yet'}`,
+      ...(this.lastYield ? [this.lastYield] : []),
+    ]
     this.fitStatus()
     this.column.refresh(this.active)
     this.partyList.refresh(this.listedParties(), this.selectedParty)
@@ -1266,15 +1305,44 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
-   * Places the stock panel at the header's right. Three lines (with the last yield) start higher, to clear the hint under the
-   * turn's number, and are set smaller when they would still reach it (a narrow window, a long hint).
+   * Places the stock panel at the header's right, wrapped to the room between the turn's number and the window's edge
+   * (`headerLines`), in the first of these that stays clear of the hint under the turn's number and inside the header:
+   * the usual font level with the turn, the usual font from the header's top, the smaller font from its top; and failing
+   * all three (a narrow window, a long stock and a last yield), the smaller font with the stock shortened to fit.
    */
   private fitStatus(): void {
-    this.statusText.setFontSize(STATUS_FONT).setLineSpacing(0).setPosition(this.scale.width - 20, this.lastYield ? 3 : 16)
-    if (!this.lastYield) return
-    const [a, b] = [this.statusText.getBounds(), this.hintText.getBounds()]
-    // Set small and close, from the header's top edge, the three lines end above the hint's row.
-    if (a.x < b.right && b.x < a.right && a.y < b.bottom && b.y < a.bottom) this.statusText.setFontSize(STATUS_FONT_SMALL).setLineSpacing(-2).setY(1)
+    const right = this.scale.width - 20
+    const room = right - this.turnText.getBounds().right - 24
+    const hint = this.hintText.getBounds()
+    const clear = () => {
+      const a = this.statusText.getBounds()
+      const meets = a.x < hint.right && hint.x < a.right && a.y < hint.bottom && hint.y < a.bottom
+      return !meets && a.bottom <= HEADER_BOTTOM
+    }
+    const place = (font: string, spacing: number, y: number, maxLines = Infinity) => {
+      this.statusText.setFontSize(font).setLineSpacing(spacing)
+      const chars = Math.max(20, Math.floor((room - 4) / this.statusCharWidth(font)))
+      this.statusText.setText(headerLines(this.statusLines, chars, maxLines).join('\n')).setPosition(right, y)
+    }
+    for (const [font, spacing, y] of [[STATUS_FONT, 0, 16], [STATUS_FONT, 0, 3], [STATUS_FONT_SMALL, -2, 1]] as const) {
+      place(font, spacing, y)
+      if (clear()) return
+    }
+    for (let lines = this.statusText.text.split('\n').length - 1; lines > this.statusLines.length - 1; lines--) {
+      place(STATUS_FONT_SMALL, -2, 1, lines)
+      if (clear()) return
+    }
+  }
+
+  /** A character's width in the status text at `font`, measured once. */
+  private statusCharWidth(font: string): number {
+    let width = this.statusCharWidths.get(font)
+    if (width === undefined) {
+      this.statusText.setFontSize(font)
+      width = measureCharWidth(this.statusText)
+      this.statusCharWidths.set(font, width)
+    }
+    return width
   }
 
   /** The header's hint: what the selected party may do where it stands, or whom a click on the hovered hex sends it to meet. */

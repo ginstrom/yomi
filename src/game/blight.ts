@@ -26,8 +26,10 @@ import { ENCAMPMENT_ID, threatAt, type MonsterLocation, type WorldState } from '
 export const MAX_BLIGHT = 3
 export const BLIGHT_NAMES = ['clean', 'tainted', 'blighted', 'corrupted'] as const
 
-/** A monster location pushes with this times its threat... */
+/** A monster location pushes with this times its threat, up to `BLIGHT_THREAT_CAP`... */
 export const BLIGHT_PER_THREAT = 2
+/** The threat above which a nest pushes no harder: the outer rings' nests push as a threat-5 nest does. */
+export const BLIGHT_THREAT_CAP = 5
 /** ...and the Source with this. */
 export const SOURCE_STRENGTH = 20
 /** What each corrupted neighbour adds to a hex's blight. */
@@ -55,13 +57,14 @@ export const BLIGHT_GROWTH = 0.1
 export const GROWTH_DAYS = 30
 export const MAX_BLIGHT_GROWTH = 0.5
 
-/** Each day spawn pressure grows by the corrupted hexes over this, times the growth... */
-export const SPAWN_DIVISOR = 200
+/** Each day spawn pressure grows by the corrupted hexes over this, times the growth: 200 × (140 × 72) / (60 × 40), stage 8's pressure per hex on today's board... */
+export const SPAWN_DIVISOR = 840
 /** ...and a monster location appears when it reaches this. */
 export const SPAWN_COST = 30
 /** A spawn keeps this many hexes from every party, other monster locations, held sites and watchtowers. */
 export const SPAWN_CLEARANCE = 4
-export const MAX_MONSTER_LOCATIONS = 24
+/** No spawn while this many monster locations stand on the map. */
+export const MAX_MONSTER_LOCATIONS = 60
 /** The chance a spawned location guards an item. */
 export const SPAWN_LOOT_CHANCE = 0.5
 
@@ -129,7 +132,7 @@ export function partyStrength(levels: readonly number[]): number {
 }
 
 export function monsterStrength(location: MonsterLocation): number {
-  return location.source ? SOURCE_STRENGTH : BLIGHT_PER_THREAT * location.threat
+  return location.source ? SOURCE_STRENGTH : BLIGHT_PER_THREAT * Math.min(location.threat, BLIGHT_THREAT_CAP)
 }
 
 /** What a held site pushes with: the encampment with its shrine, a resource with its improvement. */
@@ -162,7 +165,8 @@ function geometry(board: BoardSize): Geometry {
 
 /** The influence of everything but the parties and creeping corruption, at every hex: what changes only when a location or a held site does. */
 interface Fields {
-  key: string
+  /** The sources they were worked out from: the memo holds while these are unchanged. */
+  sources: Sources
   /** Before growth. */
   blight: Float64Array
   clean: Float64Array
@@ -171,7 +175,9 @@ interface Fields {
 /** A memo, not state: a world's fields are worked out again whenever its sources change. */
 const fieldMemo = new WeakMap<WorldState, Fields>()
 
-function sources(world: WorldState): { blight: Array<[Hex, number]>; clean: Array<[Hex, number]> } {
+type Sources = { blight: Array<[Hex, number]>; clean: Array<[Hex, number]> }
+
+function sources(world: WorldState): Sources {
   const blight: Array<[Hex, number]> = []
   const clean: Array<[Hex, number]> = []
   for (const location of world.locations) {
@@ -191,29 +197,57 @@ function addSource(field: Float64Array, hexes: readonly Hex[], at: Hex, strength
   }
 }
 
+const sameList = (a: ReadonlyArray<[Hex, number]>, b: ReadonlyArray<[Hex, number]>): boolean =>
+  a.length === b.length && a.every(([h, strength], i) => h.q === b[i][0].q && h.r === b[i][0].r && strength === b[i][1])
+
 function fields(world: WorldState): Fields {
   const { blight, clean } = sources(world)
-  const key = JSON.stringify([blight, clean])
   const memo = fieldMemo.get(world)
-  if (memo?.key === key) return memo
+  if (memo && sameList(memo.sources.blight, blight) && sameList(memo.sources.clean, clean)) return memo
   const { hexes } = geometry(world.board)
-  const made: Fields = { key, blight: new Float64Array(hexes.length), clean: new Float64Array(hexes.length) }
+  // Copies, not the world's own hexes, so a position changed in place still misses the memo.
+  const copy = (list: Array<[Hex, number]>): Array<[Hex, number]> => list.map(([h, strength]) => [{ q: h.q, r: h.r }, strength])
+  const made: Fields = { sources: { blight: copy(blight), clean: copy(clean) }, blight: new Float64Array(hexes.length), clean: new Float64Array(hexes.length) }
   for (const [at, strength] of blight) addSource(made.blight, hexes, at, strength)
   for (const [at, strength] of clean) addSource(made.clean, hexes, at, strength)
   fieldMemo.set(world, made)
   return made
 }
 
-/** The indices of the hexes monsters stand on: they are pinned at blighted or worse, and influence cannot lower them. */
-function monsterHexes(world: WorldState): Set<number> {
-  return new Set(
-    world.locations.filter((l) => l.kind === 'monsters').map((l) => boardIndex(world.board, l.position)),
-  )
+/** 1 at the board index of each hex monsters stand on: they are pinned at blighted or worse, and influence cannot lower them. */
+function monsterHexes(world: WorldState): Uint8Array {
+  const pinned = new Uint8Array(world.board.cols * world.board.rows)
+  for (const l of world.locations) if (l.kind === 'monsters') pinned[boardIndex(world.board, l.position)] = 1
+  return pinned
 }
 
-/** The board indices of the hexes the parties stand on, which are neutral ground. */
-function neutralHexes(world: WorldState, presences: readonly PartyPresence[]): Set<number> {
-  return new Set(presences.map((p) => boardIndex(world.board, p.position)))
+/** 1 at the board index of each hex a party stands on, which is neutral ground. */
+function neutralHexes(world: WorldState, presences: readonly PartyPresence[]): Uint8Array {
+  const neutral = new Uint8Array(world.board.cols * world.board.rows)
+  for (const p of presences) neutral[boardIndex(world.board, p.position)] = 1
+  return neutral
+}
+
+/** What a day's contest reads at every hex, worked out once a day. */
+interface Day {
+  geometry: Geometry
+  field: Fields
+  presences: readonly PartyPresence[]
+  /** `partyStrength` of each presence, in list order. */
+  strengths: readonly number[]
+  neutral: Uint8Array
+  growth: number
+}
+
+function dayOf(world: WorldState, presences: readonly PartyPresence[]): Day {
+  return {
+    geometry: geometry(world.board),
+    field: fields(world),
+    presences,
+    strengths: presences.map((p) => partyStrength(p.levels)),
+    neutral: neutralHexes(world, presences),
+    growth: blightGrowth(world.turn),
+  }
 }
 
 /**
@@ -223,27 +257,21 @@ function neutralHexes(world: WorldState, presences: readonly PartyPresence[]): S
  * (`neutral`), so no blight rises on it and none creeps from it, though the
  * parties' influence still lowers it.
  */
-function netAt(
-  world: WorldState,
-  presences: readonly PartyPresence[],
-  i: number,
-  levels: readonly number[],
-  field: Fields,
-  neutral: ReadonlySet<number>,
-): number {
-  const { hexes, neighbours } = geometry(world.board)
+function netAt(day: Day, i: number, levels: readonly number[]): number {
+  const { hexes, neighbours } = day.geometry
+  const { field, presences, strengths, neutral } = day
   let clean = field.clean[i]
-  for (const p of presences) clean += Math.max(0, partyStrength(p.levels) - hexDistance(p.position, hexes[i]))
-  if (neutral.has(i)) return -clean
+  for (let p = 0; p < presences.length; p++) clean += Math.max(0, strengths[p] - hexDistance(presences[p].position, hexes[i]))
+  if (neutral[i]) return -clean
   let creep = 0
-  for (const n of neighbours[i]) if (levels[n] >= MAX_BLIGHT && !neutral.has(n)) creep += CREEP
-  return (field.blight[i] + creep) * blightGrowth(world.turn) - clean
+  for (const n of neighbours[i]) if (levels[n] >= MAX_BLIGHT && !neutral[n]) creep += CREEP
+  return (field.blight[i] + creep) * day.growth - clean
 }
 
 /** Today's net influence at `h`, blight less clean: above 0 the blight is gaining there. */
 export function netInfluence(world: WorldState, presences: readonly PartyPresence[], h: Hex): number {
   const i = boardIndex(world.board, h)
-  return netAt(world, presences, i, world.blight, fields(world), neutralHexes(world, presences))
+  return netAt(dayOf(world, presences), i, world.blight)
 }
 
 /** The levels a new world starts with: what its sources make of land already tainted. Monsters' hexes are at least blighted. */
@@ -254,7 +282,7 @@ export function seedBlight(world: WorldState): void {
   world.blight = hexes.map((_, i) => {
     const net = INITIAL_TAINT + field.blight[i] - field.clean[i]
     const level = net >= INITIAL_CORRUPTED ? 3 : net >= INITIAL_BLIGHTED ? 2 : net >= 1 ? 1 : 0
-    return pinned.has(i) ? Math.max(2, level) : level
+    return pinned[i] ? Math.max(2, level) : level
   })
   world.shift = hexes.map(() => 0)
 }
@@ -266,18 +294,17 @@ export function seedBlight(world: WorldState): void {
  */
 export function advanceDay(world: WorldState, presences: readonly PartyPresence[]): WorldEvent[] {
   const events: WorldEvent[] = []
-  const field = fields(world)
-  const { hexes } = geometry(world.board)
+  const day = dayOf(world, presences)
+  const { hexes } = day.geometry
   const pinned = monsterHexes(world)
-  const neutral = neutralHexes(world, presences)
   const before = world.blight.slice()
   for (let i = 0; i < hexes.length; i++) {
-    if (pinned.has(i)) {
+    if (pinned[i]) {
       world.blight[i] = Math.max(2, before[i])
       world.shift[i] = 0
       continue
     }
-    let shift = world.shift[i] + netAt(world, presences, i, before, field, neutral)
+    let shift = world.shift[i] + netAt(day, i, before)
     let level = before[i]
     if (shift >= SHIFT_COST) {
       shift = 0
@@ -294,27 +321,37 @@ export function advanceDay(world: WorldState, presences: readonly PartyPresence[
       events.push({ type: 'level_changed', at: hexes[i], from: before[i], to: level })
     }
   }
-  const spawned = spawn(world, presences, pinned, neutral)
+  const spawned = spawn(world, presences, pinned, day.neutral)
   if (spawned) events.push(spawned)
   return events
 }
 
-/** What corrupted land spawns: a nest that fights one of these encounters, by its name, where the encounter's band holds the threat. */
-export const SPAWN_KINDS: ReadonlyArray<{ encounter: EncounterId; name: string }> = [
+/**
+ * What corrupted land spawns: a nest that fights one of these encounters, by
+ * its name, where the encounter's band holds the threat and the threat is
+ * `fromThreat` or more (the outer rings' kinds, from 7, so the home rings
+ * spawn as they did before stage 9). New kinds go after these, keeping the
+ * draws of the threats they do not reach.
+ */
+export const SPAWN_KINDS: ReadonlyArray<{ encounter: EncounterId; name: string; fromThreat?: number }> = [
   { encounter: 'goblin_raid', name: 'Goblin Brood' },
   { encounter: 'kobold_scouts', name: 'Kobold Nest' },
   { encounter: 'bandit_camp', name: 'Bandit Gang' },
+  { encounter: 'spider_nest', name: 'Spider Brood', fromThreat: 7 },
+  { encounter: 'salamander_pool', name: 'Salamander Spring', fromThreat: 7 },
+  { encounter: 'bandit_company', name: 'Bandit Troop', fromThreat: 7 },
+  { encounter: 'freebooter_host', name: 'Freebooter Band', fromThreat: 7 },
 ]
 
 function spawn(
   world: WorldState,
   presences: readonly PartyPresence[],
-  pinned: Set<number>,
-  neutral: ReadonlySet<number>,
+  pinned: Uint8Array,
+  neutral: Uint8Array,
 ): WorldEvent | null {
   const { hexes } = geometry(world.board)
   const corrupted: number[] = []
-  for (let i = 0; i < hexes.length; i++) if (world.blight[i] >= MAX_BLIGHT && !pinned.has(i) && !neutral.has(i)) corrupted.push(i)
+  for (let i = 0; i < hexes.length; i++) if (world.blight[i] >= MAX_BLIGHT && !pinned[i] && !neutral[i]) corrupted.push(i)
   world.spawnPressure += (corrupted.length / SPAWN_DIVISOR) * blightGrowth(world.turn)
   if (world.spawnPressure < SPAWN_COST) return null
   // Pressure waits, but no more than one spawn's worth, for room on the map.
@@ -335,9 +372,11 @@ function spawn(
   const at = hexes[candidates[Math.floor(rng() * candidates.length)]]
   // By distance, never by the blight or the date: home's nests stay ones a weak party can beat.
   const threat = threatAt(at)
-  const eligible = SPAWN_KINDS.filter((k) => threat >= ENCOUNTER_BANDS[k.encounter].min && threat <= ENCOUNTER_BANDS[k.encounter].max)
+  const eligible = SPAWN_KINDS.filter(
+    (k) => threat >= (k.fromThreat ?? 1) && threat >= ENCOUNTER_BANDS[k.encounter].min && threat <= ENCOUNTER_BANDS[k.encounter].max,
+  )
   // No kind for this threat: no spawn, the world RNG left as it was and the pressure kept for another day.
-  // Unreachable on today's map, as threatAt stops at MAX_THREAT, inside the goblins' and kobolds' bands (1 to 5).
+  // Unreachable on today's map, as every threat of THREAT_RINGS has a kind (blight.test.ts checks it); a guard for a ring added without one.
   if (eligible.length === 0) return null
   const kind = eligible[Math.floor(rng() * eligible.length)]
   const loot: Item[] = rng() < SPAWN_LOOT_CHANCE ? [MAGIC_ITEMS[Math.floor(rng() * MAGIC_ITEMS.length)]] : []
@@ -363,7 +402,7 @@ export function cleanse(world: WorldState, at: Hex, threat: number): void {
   const { hexes } = geometry(world.board)
   const pinned = monsterHexes(world)
   for (let i = 0; i < hexes.length; i++) {
-    if (pinned.has(i) || hexDistance(at, hexes[i]) > 1 + threat) continue
+    if (pinned[i] || hexDistance(at, hexes[i]) > 1 + threat) continue
     world.blight[i] = Math.max(0, world.blight[i] - CLEANSE_LEVELS)
     world.shift[i] = 0
   }

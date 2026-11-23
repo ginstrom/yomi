@@ -90,6 +90,7 @@ import { CHEST_POINT, SPRITE_ATLAS, heroLook, pointFromAnchor, spriteAnim, sprit
 import { AUTO_DRAG_ON_LINE, DEFAULT_ENCOUNTER, autoResolvedLine, battleSeed, chooseBattle, foundNames } from './battleSetup.ts'
 import { battleCost, costLines } from './battleCost.ts'
 import { HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
+import { plateNames } from './plateNames.ts'
 import { showStory, type StoryAnchors } from './StoryScene.ts'
 import { storyFor, type StoryItem } from '../story/story.ts'
 import { eventSounds, levelUpDelayMs, type SoundContext } from './sounds.ts'
@@ -216,6 +217,9 @@ const OPPORTUNITY_PAUSE_MS = 450
 const APPROACH_PAUSE_MS = 120
 /** Nameplate rows, in pixels below a unit's feet: name, HP bar, then AP pips or a foe's hit chance. */
 const PLATE_NAME_Y = -3
+/** Plate text, outlined so that it stays legible over the floor, highlights and other units; and the name's. */
+const PLATE_TEXT_STYLE = { fontFamily: 'monospace', color: '#ffffff', stroke: '#000000', strokeThickness: 3 }
+const PLATE_NAME_STYLE = { ...PLATE_TEXT_STYLE, fontSize: '12px' }
 const PLATE_BAR_Y = 11
 const PLATE_BAR_W = 52
 const PLATE_BAR_H = 10
@@ -431,7 +435,8 @@ export class BattleScene extends Phaser.Scene {
     this.unitLayer = this.add.container(0, 0)
     this.plateLayer = this.add.container(0, 0)
     this.markLayer = this.add.container(0, 0)
-    this.units = new Map(fielded.map((u, i) => [u.id, this.createUnit(u.name, kinds[u.id], i * IDLE_STAGGER_MS)]))
+    const shown = this.plateNames(fielded)
+    this.units = new Map(fielded.map((u, i) => [u.id, this.createUnit(shown.get(u.id)!, kinds[u.id], i * IDLE_STAGGER_MS)]))
     this.refreshGear()
     this.labelLayer = this.add.container(0, 0)
     this.hoverLabels = this.add.container(0, 0)
@@ -867,15 +872,22 @@ export class BattleScene extends Phaser.Scene {
     for (const [id, member] of this.heroes) this.units.get(id)?.figure.setLook(heroLook(member.equipment))
   }
 
+  /** The names the plates show where the battle starts: shortened where two side by side would run together (`plateNames.ts`). */
+  private plateNames(fielded: readonly { id: string; name: string; position: Hex }[]): Map<string, string> {
+    const measure = this.add.text(0, 0, '', { ...PLATE_NAME_STYLE })
+    const widthOf = (name: string) => measure.setText(name).width
+    const shown = plateNames(fielded.map((u) => ({ id: u.id, name: u.name, ...boardHexCenter(u.position) })), widthOf)
+    measure.destroy()
+    return shown
+  }
+
   private createUnit(name: string, kind: UnitKind, idleDelayMs: number): Unit {
     const figure = new UnitFigure(this, kind, UNIT_SCALE).play('idle', idleDelayMs)
     const shadow = this.add.ellipse(0, 0, UNIT_HEIGHT * 0.55, UNIT_HEIGHT * 0.18, 0x000000, 0.35)
     const container = this.add.container(0, 0, [shadow, figure])
     this.unitLayer.add(container)
 
-    // An outline keeps plate text legible over the floor, highlights and other units.
-    const outlined = { fontFamily: 'monospace', color: '#ffffff', stroke: '#000000', strokeThickness: 3 }
-    const nameText = this.add.text(0, PLATE_NAME_Y, name, { ...outlined, fontSize: '12px' }).setOrigin(0.5, 0)
+    const nameText = this.add.text(0, PLATE_NAME_Y, name, { ...PLATE_NAME_STYLE }).setOrigin(0.5, 0)
     const hpBarBg = this.add
       .rectangle(0, PLATE_BAR_Y, PLATE_BAR_W, PLATE_BAR_H, 0x212121)
       .setOrigin(0.5, 0)
@@ -884,7 +896,7 @@ export class BattleScene extends Phaser.Scene {
       .rectangle(-PLATE_BAR_W / 2, PLATE_BAR_Y, PLATE_BAR_W, PLATE_BAR_H, 0x43a047)
       .setOrigin(0, 0)
     const hpText = this.add
-      .text(0, PLATE_BAR_Y + PLATE_BAR_H / 2, '', { ...outlined, fontSize: '10px', strokeThickness: 2 })
+      .text(0, PLATE_BAR_Y + PLATE_BAR_H / 2, '', { ...PLATE_TEXT_STYLE, fontSize: '10px', strokeThickness: 2 })
       .setOrigin(0.5)
     // Drawn pointing east and rotated to the unit's facing.
     const facingArrow = this.add

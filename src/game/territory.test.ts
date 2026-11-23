@@ -118,6 +118,31 @@ describe('yields', () => {
   })
 })
 
+describe('the outer rings\' sites (stage 9)', () => {
+  const OUTER: Record<string, Material> = {
+    ironwood_grove: 'ironwood', mithril_lode: 'mithril', elder_grove: 'elderwood', adamant_deep: 'adamant',
+    wyrmwood_thicket: 'wyrmwood', fallen_star: 'starmetal', heartwood: 'heartwood',
+  }
+
+  it('are not held at the start: their land is blighted', () => {
+    const { world } = solo(1)
+    for (const id of Object.keys(OUTER)) expect(world.held, id).not.toContain(id)
+  })
+
+  it('each yield 2 of their material on a yield day while held on clean land', () => {
+    for (const [id, material] of Object.entries(OUTER)) {
+      const { game, world } = solo(1)
+      const far = site(world, id)
+      world.held = [ENCAMPMENT_ID, id]
+      setLevel(world, far, 0)
+      world.turn = YIELD_DAYS
+      const events = updateTerritory(world, presences(game.parties)).filter((e) => e.type === 'yield' && e.site === id)
+      expect(events, id).toEqual([{ type: 'yield', site: id, name: far.name, material, amount: 2 }])
+      expect(world.stock[material], id).toBe(2)
+    }
+  })
+})
+
 /** Today's days to fall, pinned before the world's rules took a list of parties (stage 5 step 02). Only `pinned` may change. */
 describe('the days to fall with one party, pinned', () => {
   const members = [{ level: 3 }, { level: 4 }, { level: 5 }]
@@ -277,6 +302,8 @@ describe('improvements (economy A1)', () => {
     const materials: Record<string, Material> = {
       iron_vein: 'iron', gold_seam: 'gold', timber_stand: 'timber', peat_bog: 'peat', silver_lode: 'silver',
       old_quarry: 'stone', salt_flats: 'salt', copper_pit: 'copper', crystal_cave: 'crystal',
+      ironwood_grove: 'ironwood', mithril_lode: 'mithril', elder_grove: 'elderwood', adamant_deep: 'adamant',
+      wyrmwood_thicket: 'wyrmwood', fallen_star: 'starmetal', heartwood: 'heartwood',
     }
     const resources = sites(world).filter((l) => l.kind === 'resource')
     expect(resources.map((l) => l.id).sort()).toEqual(Object.keys(materials).sort())
@@ -288,6 +315,8 @@ describe('improvements (economy A1)', () => {
     expect(WORKS_NAMES).toEqual({
       iron: 'Mine', gold: 'Mine', silver: 'Mine', copper: 'Mine', crystal: 'Mine',
       timber: 'Lumber Camp', stone: 'Quarry', salt: 'Saltworks', peat: 'Peat Cuttings',
+      mithril: 'Mine', adamant: 'Mine', starmetal: 'Mine',
+      ironwood: 'Lumber Camp', elderwood: 'Lumber Camp', wyrmwood: 'Lumber Camp', heartwood: 'Lumber Camp',
     })
   })
 

@@ -16,6 +16,7 @@ import { addPanelButton } from './panelButton.ts'
 import { tellStory } from './StoryScene.ts'
 import { SPRITE_ATLAS, spriteAnim, spriteFrame } from './unitLook.ts'
 import { overlayScale } from './overlayScale.ts'
+import { headerLines, measureCharWidth } from './headerLines.ts'
 
 interface EncampmentData {
   game: GameState
@@ -32,6 +33,8 @@ const CENTRE_X = FRAME_W / 2
 const TITLE_Y = 34
 /** The picture of the encampment: grass, a clearing, a palisade behind and the facilities on their plots. */
 const PICTURE: Rect = { x: CENTRE_X, y: 214, width: FRAME_W - 40, height: 260 }
+/** The most lines the stock under the title takes: a third would run behind the picture. */
+const STOCK_LINES = 2
 const PICTURE_TOP = PICTURE.y - PICTURE.height / 2
 const BUILDING_SCALE = 2
 const BUILDING_SIZE = 48 * BUILDING_SCALE
@@ -80,6 +83,8 @@ export class EncampmentScene extends Phaser.Scene {
   private message = ''
   private bg!: Phaser.GameObjects.Rectangle
   private frame!: Phaser.GameObjects.Container
+  /** Whom the encampment acts for and the stock, under the title. */
+  private stockText!: Phaser.GameObjects.Text
   /** The text of the details drawn, line by line, and their font size, for the probe. */
   private detailLines: string[] = []
   private detailSize = 0
@@ -148,6 +153,9 @@ export class EncampmentScene extends Phaser.Scene {
         }
       }),
       buttons: { improve: control('improve'), open: control('open'), leave: control('leave') },
+      stock: this.stockText.text,
+      stockRect: (({ x, y, width, height }) => ({ x, y, width, height }))(this.stockText.getBounds()),
+      pictureTop: onScreen({ x: PICTURE.x, y: PICTURE.y - PICTURE.height / 2 }).y,
     }
   }
 
@@ -172,17 +180,14 @@ export class EncampmentScene extends Phaser.Scene {
     this.frame.add([
       this.add.rectangle(CENTRE_X, FRAME_H / 2, FRAME_W, FRAME_H, 0x241d15, 0.98).setStrokeStyle(3, 0xc9a227),
       this.add.text(CENTRE_X, TITLE_Y, encampmentName(world), { fontFamily: FONT, fontSize: '28px', color: GOLD, fontStyle: 'bold' }).setOrigin(0.5),
-      // Every material held may not fit one line: it wraps onto a second, above the picture.
-      this.add
-        .text(CENTRE_X, TITLE_Y + 18, `${actingFor(this.gameState, this.expedition) || 'Your encampment.  '}Stock: ${stock || 'nothing'}`, {
-          fontFamily: FONT,
-          fontSize: '12px',
-          color: DIM,
-          align: 'center',
-          wordWrap: { width: FRAME_W - 40 },
-        })
-        .setOrigin(0.5, 0),
     ])
+    // Every material held may not fit one line: it wraps between entries onto a second, above the picture, and past two
+    // lines the stock ends "+N more" (`headerLines`).
+    this.stockText = this.add.text(CENTRE_X, TITLE_Y + 18, '', { fontFamily: FONT, fontSize: '12px', color: DIM, align: 'center' }).setOrigin(0.5, 0)
+    const charWidth = measureCharWidth(this.stockText)
+    const line = `${actingFor(this.gameState, this.expedition) || 'Your encampment.  '}Stock: ${stock || 'nothing'}`
+    this.stockText.setText(headerLines([line], Math.floor((FRAME_W - 40) / charWidth), STOCK_LINES, 0).join('\n'))
+    this.frame.add(this.stockText)
     this.drawGrounds()
     const all = facilities(this.gameState, this.expedition)
     all.forEach((facility, index) => this.drawFacility(facility, index))

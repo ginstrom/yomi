@@ -1,0 +1,43 @@
+# A trade partner on the world map: Emberwatch, a fortified pass. A pale stone
+# gatehouse closes the gap between two dark rock shoulders; a brazier burns on
+# the tower.
+canvas = "map"
+outline = "auto"
+
+[frames.base.runs]
+# the beacon
+1 = [[12, "F"]]
+2 = [[11, "FYF"]]
+3 = [[10, "FYYYF"]]
+4 = [[10, "FYYYF"]]
+5 = [[10, "ddddd"]]
+6 = [[11, "DDD"]]
+# the tower, between the shoulders
+7 = [[10, "wwwww"], [19, "aa"]]
+8 = [[3, "aa"], [10, "wllld"], [18, "aamm"]]
+9 = [[2, "aamm"], [10, "wllld"], [17, "aammm"]]
+10 = [[1, "aammMm"], [8, "w"], [10, "wllld"], [16, "w"], [17, "aammmM"]]
+# the wall, the gate and the shoulders
+11 = [[1, "aammmmM"], [8, "wwwlllldd"], [17, "aammmM"]]
+12 = [[1, "aammmmM"], [8, "wllllllld"], [17, "ammmmM"]]
+13 = [[1, "ammmmmM"], [8, "wlllMllld"], [17, "aammmM"]]
+14 = [[1, "aammmmM"], [8, "wll"], [11, "DDD"], [14, "lld"], [17, "ammmmM"]]
+15 = [[1, "ammmmmM"], [8, "wlM"], [11, "DdD"], [14, "Mld"], [17, "aammmM"]]
+16 = [[1, "aammmmM"], [8, "wll"], [11, "DdD"], [14, "lld"], [17, "ammmmM"]]
+17 = [[1, "ammmmmM"], [8, "wlM"], [11, "DdD"], [14, "Mld"], [17, "aammmM"]]
+18 = [[1, "aammmmM"], [8, "wll"], [11, "DdD"], [14, "lld"], [17, "ammmmM"]]
+19 = [[1, "ammmmmM"], [8, "wlM"], [11, "DdD"], [14, "Mld"], [17, "aammmM"]]
+20 = [[1, "mmmMmmmmMmmmmMmmmmMmmm"]]
+
+# The beacon's flame leans and flickers.
+[frames.flicker]
+from = "base"
+
+[frames.flicker.runs]
+1 = [[11, "F"], [12, "."]]
+2 = [[11, "FYY"]]
+3 = [[10, "FYYFF"]]
+
+[anim.idle]
+frames = ["base", "flicker"]
+ms = 400

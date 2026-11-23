@@ -1,6 +1,7 @@
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
 import { afterAll, afterEach, beforeAll, expect, inject } from 'vitest'
-import { hexDistance, offsetToHex, type Hex } from '../src/grid/hex.ts'
+import { hexDistance, type Hex } from '../src/grid/hex.ts'
+import { earlyHex } from '../src/game/worldMap.ts'
 import { BATTLE_LAYOUT, WORLD_LAYOUT, boardHexOnScreen, type Point } from '../src/scenes/boardGeometry.ts'
 import type { BattleProbe, MenuProbe, PartyProbe, Probes, WorldProbe } from '../src/testHook.ts'
 
@@ -12,7 +13,7 @@ const SPEED = 10
 const WAIT_MS = 20_000
 
 /** The Goblin Raiders, four hexes from where a new game's party starts. */
-export const RAIDERS = { id: 'goblin_raiders', position: offsetToHex(13, 18) }
+export const RAIDERS = { id: 'goblin_raiders', position: earlyHex(13, 18) }
 
 /**
  * Launches a browser for a test file and hands out games in it. After each

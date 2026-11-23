@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { CreationStep } from '../src/testHook.ts'
-import { WORLD_SIZE } from '../src/game/worldMap.ts'
+import { WORLD_SIZE, earlyHex } from '../src/game/worldMap.ts'
 import { hexDistance, hexNeighbors, hexToOffset, offsetToHex, type Hex } from '../src/grid/hex.ts'
 import { RAIDERS, battleHexOnScreen, worldHexOnScreen, useGames, type Game } from './driver.ts'
 
@@ -68,7 +68,7 @@ describe('the manual’s screenshots', () => {
     await shot(game, 'world-start')
 
     // A walk cut short keeps its order: the line says where the party is going.
-    await game.click(worldHexOnScreen(world, offsetToHex(19, 19)))
+    await game.click(worldHexOnScreen(world, earlyHex(19, 19)))
     const cut = await game.waitFor('World', (w) => !w.walking && w.world.turn > world.world.turn)
     // The seed cuts this walk short; if a change of rules lets it arrive, pick another hex, or the image goes stale.
     expect(cut.parties[0].order).toMatch(/^Travelling/)
@@ -438,6 +438,47 @@ describe('the manual’s screenshots', () => {
     await shot(game, 'world-road')
   })
 
+  it('the outer rings: a far partner and its nest, and the Routes tab’s second page', async () => {
+    const game = await games.open()
+    await game.newGame()
+    await game.page.evaluate(() => {
+      const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
+      saved.game.world.contacted = ['millbrook', 'saltmere', 'stonehollow', 'elder_glade', 'emberwatch']
+      saved.game.world.tradingPost = 5
+      saved.game.world.stock = { gold: 300, timber: 40 }
+      localStorage.setItem('yomi.save.1', JSON.stringify(saved))
+    })
+    await game.click((await game.reload()).buttons.continue)
+    await game.waitForScenes(['World'])
+    // Out among the far rings: the console reveals the map and stands the party beside Stonehollow.
+    await game.press('Shift+Backquote')
+    for (const line of ['reveal', 'goto 56 13']) {
+      await game.page.locator('#yomi-debug input').fill(line)
+      await game.press('Enter')
+    }
+    await game.press('Escape')
+    await game.settled('World', (w) => w.world.seen.every((level) => level !== -1))
+    await game.hover({ x: 0, y: 0 })
+    await shot(game, 'world-outer-rings')
+
+    await game.press('Shift+Backquote')
+    await game.page.locator('#yomi-debug input').fill('goto encampment')
+    await game.press('Enter')
+    await game.press('Escape')
+    await game.click((await game.settled('World')).buttons.enterEncampment)
+    await game.waitForScenes(['Encampment'], ['World'])
+    const camp = await game.settled('Encampment')
+    await game.click(camp.facilities.find((f) => f.id === 'trading_post')!)
+    await game.click((await game.settled('Encampment', (c) => c.selected === 'trading_post')).buttons.open)
+    await game.waitForScenes(['TradingPost'], ['World'])
+    await game.click((await game.settled('TradingPost')).buttons.routesTab)
+    const first = await game.settled('TradingPost', (p) => p.tab === 'routes' && p.routes.length === 4)
+    await game.click(first.buttons.next)
+    await game.settled('TradingPost', (p) => p.tab === 'routes' && p.routes.length === 1)
+    await game.hover({ x: 0, y: 0 })
+    await shot(game, 'trading-post-routes-page2')
+  })
+
   it('a company of two parties: the guild hall’s columns, the exchange and the party bar', async () => {
     const game = await games.open()
     await game.newGame()
@@ -496,7 +537,7 @@ describe('the manual’s screenshots', () => {
     await game.click(back.parties.find((p) => p.id === 'party_2')!)
     await game.settled('World', (w) => w.selectedParty === 'party_2')
     try {
-      await game.travelTo(offsetToHex(8, 17))
+      await game.travelTo(earlyHex(8, 17))
     } catch {
       // Stopped short by a sighting: the view is as good from there.
     }

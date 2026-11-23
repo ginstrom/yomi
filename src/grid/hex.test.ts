@@ -18,8 +18,10 @@ import {
   offsetToHex,
   pixelToHex,
   reachableHexes,
+  shortestPath,
   type Hex,
 } from './hex.ts'
+import { mulberry32 } from '../combat/rng.ts'
 
 describe('hex geometry', () => {
   it('lists the six neighbours with opposite directions three apart', () => {
@@ -90,6 +92,27 @@ describe('offset coordinates and boards', () => {
     expect(board.contains(offsetToHex(8, 0))).toBe(false)
     expect(board.contains(offsetToHex(0, 5))).toBe(false)
     expect(board.contains(hex(-1, 0))).toBe(false)
+  })
+})
+
+describe('shortestPath', () => {
+  it("gives the path reachableHexes gives, on boards with random walls", () => {
+    const board = new HexBoard({ cols: 18, rows: 12 })
+    for (let seed = 1; seed <= 300; seed++) {
+      const rng = mulberry32(seed)
+      const wall = new Set(board.hexes.filter(() => rng() < 0.3).map(hexKey))
+      const start = board.hexes[Math.floor(rng() * board.hexes.length)]
+      const goal = board.hexes[Math.floor(rng() * board.hexes.length)]
+      const passable = (h: Hex) => board.contains(h) && (hexEquals(h, goal) || !wall.has(hexKey(h)))
+      const expected = reachableHexes(start, board.hexes.length, passable).get(hexKey(goal)) ?? null
+      expect(shortestPath(start, goal, passable)).toEqual(expected)
+    }
+  })
+
+  it('is null at the start itself and for a goal walled off', () => {
+    expect(shortestPath(hex(0, 0), hex(0, 0), () => true)).toBeNull()
+    const board = new HexBoard({ cols: 5, rows: 5 })
+    expect(shortestPath(offsetToHex(0, 0), offsetToHex(4, 4), (h) => board.contains(h) && hexToOffset(h).col !== 2)).toBeNull()
   })
 })
 

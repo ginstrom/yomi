@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { HexBoard, hexAdd, hexDistance, hexEquals, hexKey, hexNeighbors, offsetToHex, type Hex } from '../grid/hex.ts'
+import { HexBoard, hexAdd, hexDistance, hexEquals, hexKey, hexNeighbors, type Hex } from '../grid/hex.ts'
 import { MAX_BLIGHT, boardIndex } from './blight.ts'
 import type { PartyPresence } from './expedition.ts'
 import { newGame, type GameState } from './gameState.ts'
@@ -31,7 +31,7 @@ import {
   tradeDay,
   type TradeRoute,
 } from './trade.ts'
-import { ENCAMPMENT_ID, encampment, isNotable, newWorld, passTurn, type MonsterLocation, type WorldState } from './worldMap.ts'
+import { earlyHex, ENCAMPMENT_ID, encampment, isNotable, newWorld, passTurn, type MonsterLocation, type WorldState } from './worldMap.ts'
 
 const at = (world: WorldState, id: string): PartyPresence => ({ position: { ...partnerById(world, id)!.position }, levels: [1, 1, 1] })
 const setLevel = (world: WorldState, id: string, level: number) => (world.blight[boardIndex(world.board, partnerById(world, id)!.position)] = level)
@@ -39,7 +39,9 @@ const setLevel = (world: WorldState, id: string, level: number) => (world.blight
 describe('the trade partners', () => {
   it('are read in locations order, by id', () => {
     const world = newWorld(1)
-    expect(partners(world).map((p) => [p.id, p.good])).toEqual([['millbrook', 'timber'], ['saltmere', 'salt']])
+    expect(partners(world).map((p) => [p.id, p.good])).toEqual([
+      ['millbrook', 'timber'], ['saltmere', 'salt'], ['stonehollow', 'mithril'], ['elder_glade', 'elderwood'], ['emberwatch', 'adamant'],
+    ])
     expect(partnerById(world, 'saltmere')?.name).toBe('Saltmere')
     expect(partnerById(world, 'iron_vein')).toBeNull()
     expect(partnerById(world, 'nowhere')).toBeNull()
@@ -169,19 +171,33 @@ function trading(): { game: GameState; world: WorldState; party: GameState['part
 }
 
 /** A stand-in route to `partner`, with a road of its own. */
-const fakeRoute = (partner: string, road: Hex[] = [offsetToHex(1, 1)]): TradeRoute => ({ id: `route_${partner}`, partner, road, opened: 1, raidedDays: 0, raided: false })
+const fakeRoute = (partner: string, road: Hex[] = [earlyHex(1, 1)]): TradeRoute => ({ id: `route_${partner}`, partner, road, opened: 1, raidedDays: 0, raided: false })
 
 /** The row of `lane`. */
 const LANE = 36
 
 /** A straight road of `length` hexes eastward along row `LANE` from column 2, away from home and every nest. */
 function lane(world: WorldState, length: number): Hex[] {
-  const road = Array.from({ length }, (_, i) => offsetToHex(2 + i, LANE))
+  const road = Array.from({ length }, (_, i) => earlyHex(2 + i, LANE))
   for (const h of road) setHex(world, h, 0)
   return road
 }
 
 describe('the road (economy A5, decision 6)', () => {
+  it('reaches each of the five partners on a fresh world under the strict rule, with no raiders', () => {
+    const world = newWorld(1)
+    const lengths: Record<string, number> = {}
+    for (const p of partners(world)) {
+      contactPartner(world, p.id)
+      const road = roadTo(world, p.id)
+      expect(road, p.id).not.toBeNull()
+      expect(raiders(world, road!), p.id).toEqual([])
+      lengths[p.id] = road!.length
+    }
+    // The lengths on world 1, recorded in stage 9's plan log (step 05).
+    expect(lengths).toEqual({ millbrook: 14, saltmere: 30, stonehollow: 61, elder_glade: 88, emberwatch: 100 })
+  })
+
   it('is the same for the same world: twice, and for two worlds of one seed', () => {
     const a = newWorld(7)
     const b = newWorld(7)
@@ -224,7 +240,7 @@ describe('the road (economy A5, decision 6)', () => {
     const millbrook = partnerById(world, 'millbrook')!.position
     const before = roadTo(world, 'millbrook')!
     // Two hexes from Millbrook and one from the road it took: the road must bend, but can stay clear.
-    const spot = offsetToHex(18, 28)
+    const spot = earlyHex(18, 28)
     expect(hexDistance(spot, millbrook)).toBe(RAID_RADIUS)
     expect(before.some((h) => hexEquals(h, spot))).toBe(false)
     expect(Math.min(...before.map((h) => hexDistance(h, spot)))).toBe(1)
@@ -309,7 +325,7 @@ describe('opening a route (economy A5)', () => {
       expect(openRouteRefusal(it.game, it.party, partner)).toBe(words)
       expect(it.game).toEqual(before)
     }
-    it('away from the encampment', refused(({ party }) => ((party.position = offsetToHex(7, 17)), 'millbrook'), 'Routes are opened at Oakvale.'))
+    it('away from the encampment', refused(({ party }) => ((party.position = earlyHex(7, 17)), 'millbrook'), 'Routes are opened at Oakvale.'))
     it('confronting monsters at home', refused(({ party }) => ((party.confronting = 'goblin_raiders'), 'millbrook'), 'Routes are opened at Oakvale.'))
     it('for no partner', refused(() => 'iron_vein', 'No partner "iron_vein".'))
     it('to a partner not contacted', refused(() => 'saltmere', 'Saltmere has not been contacted: walk there first.'))
@@ -371,22 +387,22 @@ describe('security and income (economy A6, company A8)', () => {
     const [tainted, blighted] = lane(world, 2)
     setHex(world, tainted, 1)
     setHex(world, blighted, 2)
-    const near = offsetToHex(3, LANE - GUARD_RADIUS)
+    const near = earlyHex(3, LANE - GUARD_RADIUS)
     expect(hexDistance(near, tainted)).toBeGreaterThanOrEqual(GUARD_RADIUS)
     expect(hexDistance(near, blighted)).toBe(GUARD_RADIUS)
     world.towers = [{ id: 'tower_1', position: near }]
     expect(guarded(world, blighted, [])).toBe(true)
     expect(hexSecurity(world, blighted, [])).toBe(1)
-    world.towers = [{ id: 'tower_1', position: offsetToHex(3, LANE - GUARD_RADIUS - 1) }]
+    world.towers = [{ id: 'tower_1', position: earlyHex(3, LANE - GUARD_RADIUS - 1) }]
     expect(hexDistance(world.towers[0].position, blighted)).toBe(GUARD_RADIUS + 1)
     expect(guarded(world, blighted, [])).toBe(false)
     expect(hexSecurity(world, blighted, [])).toBe(0)
     // The tainted hex the same way: safe with the tower 3 away, half safe with it 4 away.
-    world.towers = [{ id: 'tower_1', position: offsetToHex(2, LANE - GUARD_RADIUS) }]
+    world.towers = [{ id: 'tower_1', position: earlyHex(2, LANE - GUARD_RADIUS) }]
     expect(hexDistance(world.towers[0].position, tainted)).toBe(GUARD_RADIUS)
     expect(guarded(world, tainted, [])).toBe(true)
     expect(hexSecurity(world, tainted, [])).toBe(1)
-    world.towers = [{ id: 'tower_1', position: offsetToHex(2, LANE - GUARD_RADIUS - 1) }]
+    world.towers = [{ id: 'tower_1', position: earlyHex(2, LANE - GUARD_RADIUS - 1) }]
     expect(hexDistance(world.towers[0].position, tainted)).toBe(GUARD_RADIUS + 1)
     expect(guarded(world, tainted, [])).toBe(false)
     expect(hexSecurity(world, tainted, [])).toBe(0.5)
@@ -399,7 +415,7 @@ describe('security and income (economy A6, company A8)', () => {
     // The first hex tainted, the rest blighted.
     setHex(world, road[0], 1)
     expect(routeSecurity(world, road, [])).toBe(0.5 / road.length)
-    const party: PartyPresence = { position: offsetToHex(2, LANE - GUARD_RADIUS), levels: [1, 1, 1] }
+    const party: PartyPresence = { position: earlyHex(2, LANE - GUARD_RADIUS), levels: [1, 1, 1] }
     expect(hexDistance(party.position, road[0])).toBe(GUARD_RADIUS)
     expect(guarded(world, road[0], [party])).toBe(true)
     expect(hexSecurity(world, road[0], [party])).toBe(1)
@@ -414,7 +430,7 @@ describe('security and income (economy A6, company A8)', () => {
     const [clean, corrupted] = lane(world, 2)
     setHex(world, corrupted, MAX_BLIGHT)
     const party: PartyPresence = { position: corrupted, levels: [1, 1, 1] }
-    world.towers = [{ id: 'tower_1', position: offsetToHex(2, LANE - 1) }]
+    world.towers = [{ id: 'tower_1', position: earlyHex(2, LANE - 1) }]
     expect(guarded(world, clean, [party])).toBe(false)
     expect(guarded(world, corrupted, [party])).toBe(false)
     expect(hexSecurity(world, corrupted, [party])).toBe(0)
@@ -432,24 +448,24 @@ describe('raids (economy A6)', () => {
   it('come from a nest within RAID_RADIUS of a road hex, not one further', () => {
     const { world, road } = laneRoute()
     expect(raidCause(world, { partner: 'millbrook', road })).toBeNull()
-    const far = nest(world, offsetToHex(6, LANE - RAID_RADIUS - 1))
+    const far = nest(world, earlyHex(6, LANE - RAID_RADIUS - 1))
     expect(raiders(world, road)).toEqual([])
     world.locations = world.locations.filter((l) => l !== far)
-    const near = nest(world, offsetToHex(6, LANE - RAID_RADIUS))
+    const near = nest(world, earlyHex(6, LANE - RAID_RADIUS))
     expect(raidCause(world, { partner: 'millbrook', road })).toEqual({ cause: 'raiders', raider: near })
   })
 
   it('name the nearest raider first, ties in locations order', () => {
     const { world, road } = laneRoute()
-    const first = nest(world, offsetToHex(3, LANE - 2), 'first')
-    const nearest = nest(world, offsetToHex(8, LANE - 1), 'nearest')
-    const tied = nest(world, offsetToHex(6, LANE - 2), 'tied')
+    const first = nest(world, earlyHex(3, LANE - 2), 'first')
+    const nearest = nest(world, earlyHex(8, LANE - 1), 'nearest')
+    const tied = nest(world, earlyHex(6, LANE - 2), 'tied')
     expect(raiders(world, road).map((l) => l.id)).toEqual([nearest.id, first.id, tied.id])
   })
 
   it('by silence beat corruption, which beats raiders', () => {
     const { world, road } = laneRoute()
-    nest(world, offsetToHex(5, LANE - 1))
+    nest(world, earlyHex(5, LANE - 1))
     expect(raidCause(world, { partner: 'millbrook', road })?.cause).toBe('raiders')
     setHex(world, road[3], MAX_BLIGHT)
     expect(raidCause(world, { partner: 'millbrook', road })).toEqual({ cause: 'corrupted' })
@@ -509,7 +525,7 @@ describe('the routes\' yield day (economy A6)', () => {
 
   it('pays nothing raided, counting the run on yield days; the notice comes once, the day it starts', () => {
     const { world, route } = open()
-    const raider = nest(world, offsetToHex(5, LANE - 1), 'raider')
+    const raider = nest(world, earlyHex(5, LANE - 1), 'raider')
     // A raid that starts on a yield day: the notice (days 0), then the yield day's count.
     const first = day(world, 5)
     expect(first).toEqual([{ ...raidedBy, days: 0 }, { ...raidedBy, days: 1 }])
@@ -531,7 +547,7 @@ describe('the routes\' yield day (economy A6)', () => {
   it('tells a raid the day the road turns red, between yield days, and its end the day it clears (verification round 2)', () => {
     const { world, route } = open()
     expect(day(world, 2)).toEqual([])
-    const raider = nest(world, offsetToHex(5, LANE - 1), 'raider')
+    const raider = nest(world, earlyHex(5, LANE - 1), 'raider')
     const told = day(world, 3)
     expect(told).toEqual([{ ...raidedBy, days: 0 }])
     expect(isNotable(world, told[0], [])).toBe(true)
@@ -551,7 +567,7 @@ describe('the routes\' yield day (economy A6)', () => {
     expect(day(world, 10)).toEqual([goldYield, timberYield])
     expect(route.raidedDays).toBe(0)
     // A raid that starts and ends between yield days is told and its end told, and never counted.
-    const again = nest(world, offsetToHex(5, LANE - 1), 'raider')
+    const again = nest(world, earlyHex(5, LANE - 1), 'raider')
     expect(day(world, 11)).toEqual([{ ...raidedBy, days: 0 }])
     world.locations = world.locations.filter((l) => l !== again)
     expect(day(world, 12)).toEqual([{ type: 'route_restored', ...named }])
@@ -560,13 +576,13 @@ describe('the routes\' yield day (economy A6)', () => {
 
   it('starts the count afresh once the road is told safe: no abandonment from an older run (verification round 3, the user\'s decision)', () => {
     const { world, route } = open()
-    nest(world, offsetToHex(5, LANE - 1), 'raider')
+    nest(world, earlyHex(5, LANE - 1), 'raider')
     for (const turn of [5, 10, 15, 20, 25]) day(world, turn)
     expect(route.raidedDays).toBe(5)
     world.locations = world.locations.filter((l) => l.id !== 'raider')
     expect(day(world, 26)).toEqual([{ type: 'route_restored', ...named }])
     expect(route.raidedDays).toBe(0)
-    nest(world, offsetToHex(5, LANE - 1), 'raider')
+    nest(world, earlyHex(5, LANE - 1), 'raider')
     expect(day(world, 29)).toEqual([{ ...raidedBy, days: 0 }])
     const thirty = day(world, 30)
     expect(thirty).toEqual([{ ...raidedBy, days: 1 }])

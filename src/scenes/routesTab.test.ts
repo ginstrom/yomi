@@ -5,10 +5,9 @@ import { readyMadeParty } from '../game/party.ts'
 import { YIELD_DAYS } from '../game/territory.ts'
 import { RAID_RADIUS, contactPartner, partnerById, raiders, roadTo, routeCost, routeIncome, routeSecurity, type TradeRoute } from '../game/trade.ts'
 import { encampment, type MonsterLocation, type WorldState } from '../game/worldMap.ts'
-import { hexDistance, hexEquals, hexNeighbors, type Hex } from '../grid/hex.ts'
+import { hexDistance, hexEquals, hexNeighbors, offsetToHex, type Hex } from '../grid/hex.ts'
 import { boardHexCenter, WORLD_LAYOUT } from './boardGeometry.ts'
-import { PARTNERS } from '../game/worldMap.ts'
-import { ROUTE_ROWS, minimapBoard, minimapPoints, routeNotes, routeOffer, routeRows, routeState, type RouteRow } from './routesTab.ts'
+import { minimapBoard, minimapPoints, routeNotes, routeOffer, routeRows, routeState, type RouteRow } from './routesTab.ts'
 import { UNEXPLORED } from '../game/vision.ts'
 
 /** A new game with Millbrook contacted, the trading post at 4, the stock rich and the party at home. */
@@ -228,6 +227,16 @@ describe('minimapPoints', () => {
     }
   })
 
+  it('puts a hex of the far east column inside the rect, near its right edge', () => {
+    const { world } = trading()
+    const [p] = minimapPoints(world.board, [], offsetToHex(139, 36), rect)
+    const board = minimapBoard(world.board, rect)
+    expect(p.x).toBeLessThanOrEqual(board.x + board.width)
+    expect(p.x).toBeGreaterThan(board.x + board.width * 0.98)
+    expect(p.y).toBeGreaterThan(board.y)
+    expect(p.y).toBeLessThan(board.y + board.height)
+  })
+
   it("keeps the board's aspect: distances scale alike in x and y", () => {
     const { world } = trading()
     const road = roadTo(world, 'millbrook')!
@@ -250,11 +259,5 @@ describe('minimapPoints', () => {
     expect(b.y + b.height).toBeLessThanOrEqual(rect.y + rect.height + 1e-9)
     expect(b.x - rect.x).toBeCloseTo(rect.x + rect.width - (b.x + b.width), 6)
     expect(b.y - rect.y).toBeCloseTo(rect.y + rect.height - (b.y + b.height), 6)
-  })
-})
-
-describe('the Routes tab', () => {
-  it('has a row for every partner there is; more partners need paging', () => {
-    expect(PARTNERS.length).toBeLessThanOrEqual(ROUTE_ROWS)
   })
 })

@@ -119,8 +119,8 @@ describe('a save', () => {
     expect(parsed.game.parties[0].baggage.length).toBeGreaterThan(0)
   })
 
-  it('is version 29, whose world holds the trade partners, contacts, silence and routes with their raided flag', () => {
-    expect(SAVE_VERSION).toBe(29)
+  it('is version 30, the 140 × 72 board of stage 9, whose world holds the trade partners, contacts, silence and routes with their raided flag', () => {
+    expect(SAVE_VERSION).toBe(30)
   })
 
   it('round-trips a hero\'s perk points', () => {
@@ -150,10 +150,10 @@ describe('a save', () => {
     expect(parseSave(broken((hero) => (hero.perkPicks = 2)))).toBeNull()
   })
 
-  it('reads a save of any version but 29 as unreadable: there is no migration (stage 8 decision 15)', () => {
+  it('reads a save of any version but 30 as unreadable: there is no migration (stage 8 decision 15, stage 9)', () => {
     const saved = JSON.parse(serializeSave({ game: gameUnderWay(), battle: null, savedAt: 5 }))
     expect(parseSave(JSON.stringify(saved))).not.toBeNull()
-    for (const version of [17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 30]) {
+    for (const version of [17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31]) {
       expect(parseSave(JSON.stringify({ ...saved, version })), `${version}`).toBeNull()
     }
   })
@@ -483,14 +483,14 @@ describe('the older fixtures (stage 8 decision 15: no migration)', () => {
   })
 })
 
-describe('a version-29 save', () => {
+describe('a version-30 save', () => {
   /** A game with Millbrook contacted, Saltmere silent and a hand-made route to Millbrook. */
   function trading(): GameState {
     const game = gameUnderWay()
     const { world } = game
     world.contacted = ['millbrook', 'saltmere']
     world.silent = ['saltmere']
-    world.routes = [{ id: 'route_millbrook', partner: 'millbrook', road: [{ q: 10, r: 15 }, { ...PARTNERS[0].position }], opened: 12, raidedDays: 2, raided: true }]
+    world.routes = [{ id: 'route_millbrook', partner: 'millbrook', road: [{ q: 1, r: 32 }, { ...PARTNERS[0].position }], opened: 12, raidedDays: 2, raided: true }]
     world.routesOpened = 1
     return game
   }
@@ -500,9 +500,9 @@ describe('a version-29 save', () => {
     return JSON.stringify(saved)
   }
 
-  it('starts a new game with both partners, as copies, and round-trips contacts, silence and routes', () => {
+  it('starts a new game with the five partners, as copies, and round-trips contacts, silence and routes', () => {
     const game = trading()
-    expect(partnersOf(game).map((p) => p.id)).toEqual(['millbrook', 'saltmere'])
+    expect(partnersOf(game).map((p) => p.id)).toEqual(['millbrook', 'saltmere', 'stonehollow', 'elder_glade', 'emberwatch'])
     const parsed = parseSave(serializeSave({ game, battle: null, savedAt: 5 }))!
     expect(parsed).toEqual({ game, battle: null, savedAt: 5 })
   })
@@ -510,7 +510,9 @@ describe('a version-29 save', () => {
   it('reads a bad partner, contact, silence, route or count as unreadable', () => {
     expect(parseSave(edited(() => {}))).not.toBeNull()
     const millbrook = (w: any) => w.locations.find((l: any) => l.id === 'millbrook')
-    expect(parseSave(edited((w) => (millbrook(w).good = 'mithril')))).toBeNull()
+    // A good of the outer rings' (stage 9) is a material; one that is none is refused.
+    expect(parseSave(edited((w) => (millbrook(w).good = 'mithril')))).not.toBeNull()
+    expect(parseSave(edited((w) => (millbrook(w).good = 'unobtainium')))).toBeNull()
     expect(parseSave(edited((w) => delete millbrook(w).good))).toBeNull()
     expect(parseSave(edited((w) => (millbrook(w).good = ['timber'])))).toBeNull()
     expect(parseSave(edited((w) => (w.contacted = ['iron_vein'])))).toBeNull()

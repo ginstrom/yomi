@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { offsetToHex } from '../src/grid/hex.ts'
+import { earlyHex } from '../src/game/worldMap.ts'
 import { RAIDERS, battleHexOnScreen, useGames, type Game } from './driver.ts'
 
 /** From a game on the world map: Esc, New, the ready-made party and Begin, which is a second game in a slot of its own. */
@@ -41,7 +42,7 @@ describe('save slots', () => {
     // Nothing is saved yet, so there is nothing to continue.
     expect((await game.waitFor('Menu')).buttons.continue.enabled).toBe(false)
     await game.newGame()
-    const to = offsetToHex(12, 19)
+    const to = earlyHex(12, 19)
     const before = await game.travelTo(to)
     expect(before.world.turn).toBe(4)
 
@@ -54,7 +55,7 @@ describe('save slots', () => {
     expect(after.partyAt).toEqual(before.partyAt)
     expect(after.party).toEqual(before.party)
     // And it plays on.
-    expect((await game.travelTo(offsetToHex(11, 19))).world.turn).toBe(5)
+    expect((await game.travelTo(earlyHex(11, 19))).world.turn).toBe(5)
   })
 
   it('opens a game saved in battle in that battle, as it stood when the player’s turn began', async () => {
@@ -90,10 +91,10 @@ describe('save slots', () => {
   it('lists the three slots under Load, loads the one picked, and continues the one written last', async () => {
     const game = await games.open()
     await game.newGame()
-    await game.travelTo(offsetToHex(12, 19))
+    await game.travelTo(earlyHex(12, 19))
     // A second game takes the first empty slot without asking.
     await anotherGame(game)
-    await game.travelTo(offsetToHex(10, 19))
+    await game.travelTo(earlyHex(10, 19))
 
     await game.reload()
     const load = await openLoad(game)
@@ -117,7 +118,7 @@ describe('save slots', () => {
     await game.click((await openLoad(game)).slots[0])
     await game.waitForScenes(['World'])
     const first = await game.waitFor('World')
-    expect(first).toMatchObject({ world: { turn: 4 }, partyAt: offsetToHex(12, 19) })
+    expect(first).toMatchObject({ world: { turn: 4 }, partyAt: earlyHex(12, 19) })
   })
 
   it('reads a damaged slot as unreadable, which neither loads nor enables Continue', async () => {
@@ -138,7 +139,7 @@ describe('save slots', () => {
   it('asks which slot to overwrite when all three are full', async () => {
     const game = await games.open()
     await game.newGame()
-    await game.travelTo(offsetToHex(12, 19))
+    await game.travelTo(earlyHex(12, 19))
     await game.page.evaluate(() => {
       for (const slot of [2, 3]) localStorage.setItem(`yomi.save.${slot}`, localStorage.getItem('yomi.save.1')!)
     })

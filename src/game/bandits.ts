@@ -171,10 +171,12 @@ export function banditStats(role: BanditRole, level: number, gear: BanditGear): 
  * (today's map's last ring; plain below 5 until skill trees step 24, when a
  * party of the threat's level won the camp 495 times in 500 at threats 3 and
  * 4), plain iron and oak at threat 4 (skill trees step 30: under perk points a
- * level-4 party holds a node fewer and won it 364 times in 500 in Fine), and
- * Fine steel and ironwood (tier 2, grade 2) from threat 6, which the outer
- * rings bring.
+ * level-4 party holds a node fewer and won it 364 times in 500 in Fine), Fine
+ * steel and ironwood (tier 2, grade 2) at threats 6 and 7, and Masterwork
+ * steel and ironwood (tier 2, grade 3) from threat 8, the far rings
+ * (long-campaign stage 9: their proper tiers wait for stage 10).
  */
 export function banditGear(threat: number): BanditGear {
+  if (threat >= 8) return { tier: 2, grade: 3 }
   return threat >= 6 ? { tier: 2, grade: 2 } : threat === 4 ? { tier: 1, grade: 1 } : { tier: 1, grade: 2 }
 }

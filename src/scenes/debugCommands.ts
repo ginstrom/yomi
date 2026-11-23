@@ -5,7 +5,7 @@ import { advanceRefusal, passDay, setOrder } from '../game/company.ts'
 import { MAX_BLIGHT, SPAWN_KINDS, boardIndex, type WorldEvent } from '../game/blight.ts'
 import { facilities, setFacilityLevel, type FacilityId } from '../game/encampment.ts'
 import { presences, type Expedition, type Order } from '../game/expedition.ts'
-import { ENCOUNTERS, type EncounterId } from '../game/encounters.ts'
+import { ENCOUNTERS, ENCOUNTER_BANDS, type EncounterId } from '../game/encounters.ts'
 import { selectedParty, type GameState } from '../game/gameState.ts'
 import type { Material } from '../game/territory.ts'
 import { contactPartner, partners } from '../game/trade.ts'
@@ -66,6 +66,7 @@ interface Command {
 /** Every material a stock may hold, for `stock`'s help and checks. */
 const MATERIALS = Object.keys({
   gold: 0, iron: 0, timber: 0, silver: 0, stone: 0, salt: 0, copper: 0, crystal: 0, peat: 0,
+  ironwood: 0, mithril: 0, elderwood: 0, adamant: 0, wyrmwood: 0, starmetal: 0, heartwood: 0,
 } satisfies Record<Material, number>) as Material[]
 
 class DebugError extends Error {}
@@ -397,9 +398,9 @@ const COMMANDS: Record<string, Command> = {
     },
   },
   spawn: {
-    usage: 'spawn <goblin_raid|kobold_scouts|bandit_camp> <location id | col row>',
+    usage: `spawn <${SPAWN_KINDS.map((k) => k.encounter).join('|')}> <location id | col row>`,
     summary:
-      "Place a nest of a kind at a named hex (a location's, or a column and row) at that hex's threat, with no RNG drawn and no pressure spent; its hex goes to blight 3 and the nest is sighted. A hex where a location or a party stands is refused. Place one within 2 hexes of a road to raid it.",
+      "Place a nest of a kind at a named hex (a location's, or a column and row) at that hex's threat, with no RNG drawn and no pressure spent; its hex goes to blight 3 and the nest is sighted. A hex where a location or a party stands is refused, and so is one whose threat is outside the kind's band (or below its first threat). Place one within 2 hexes of a road to raid it.",
     changes: true,
     run([kind, ...where], context) {
       const { world } = gameOf(context)
@@ -411,8 +412,14 @@ const COMMANDS: Record<string, Command> = {
       if (there) throw new DebugError(`${theName(there.name)} already stands at ${offset({ position: at })}.`)
       const { parties } = gameOf(context)
       if (parties.some((party) => party.position.q === at.q && party.position.r === at.r)) throw new DebugError(`A party stands at ${offset({ position: at })}: move it, or name another hex.`)
+      const threat = threatAt(at)
+      const band = ENCOUNTER_BANDS[spawnKind.encounter]
+      const from = Math.max(band.min, spawnKind.fromThreat ?? 1)
+      if (threat < from || threat > band.max) {
+        throw new DebugError(`${spawnKind.encounter} is fought at threats ${band.min} to ${band.max}${spawnKind.fromThreat === undefined ? '' : ` and spawns from ${spawnKind.fromThreat}`}; ${offset({ position: at })} is threat ${threat}.`)
+      }
       world.spawns += 1
-      const nest: MonsterLocation = { id: `spawn_${world.spawns}`, kind: 'monsters', name: spawnKind.name, position: at, encounter: spawnKind.encounter, threat: threatAt(at), loot: [] }
+      const nest: MonsterLocation = { id: `spawn_${world.spawns}`, kind: 'monsters', name: spawnKind.name, position: at, encounter: spawnKind.encounter, threat, loot: [] }
       world.locations.push(nest)
       world.blight[boardIndex(world.board, at)] = MAX_BLIGHT
       world.sighted.push(nest.id)

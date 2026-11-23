@@ -1,8 +1,10 @@
+import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import { mulberry32 } from '../combat/rng.ts'
 import { RUNE_IDS } from '../inventory/runes.ts'
 import { FAVOURED_CHANCE, lootRng, rollRunes, takeRunes } from './loot.ts'
 import { newGame } from './gameState.ts'
+import { SOURCE_THREAT } from './worldMap.ts'
 
 const scripted = (values: number[]) => () => values.shift() ?? 0
 const seeds = Array.from({ length: 2000 }, (_, i) => i + 1)
@@ -30,8 +32,8 @@ describe('rune loot', () => {
     }
   })
 
-  it('yields one rune of rank 1 or 2 from threat 4, rank 1 about 70%', () => {
-    for (const threat of [4, 5, 7, 9]) {
+  it('yields one rune of rank 1 or 2 at threats 4 to 8, rank 1 about 70%', () => {
+    for (const threat of [4, 5, 7, 8]) {
       const all = rolls(threat, 'goblin_raid')
       expect(all.every((r) => r.length === 1 && /[12]$/.test(r[0]))).toBe(true)
       const one = share(all.filter((r) => r[0].endsWith('1')).length)
@@ -58,6 +60,71 @@ describe('rune loot', () => {
     expect(rollRunes(2, 'goblin_raid', scripted([0.1, 0.0]))).toEqual(['ember1'])
     expect(rollRunes(4, 'salamander_pool', scripted([0.2, 0.5]))).toEqual(['ember1'])
     expect(rollRunes(4, 'salamander_pool', scripted([0.9, 0.35, 0.8]))).toEqual(['venom2'])
+  })
+
+  it('draws exactly as before stage 9 at threats up to 8 (recorded before the far rows came)', () => {
+    const recorded: Record<number, string> = {
+      1: '324cfd6a02f8f3ccdef32c1e967c83cdb11385dc4626435278e2b620e59b5659',
+      3: '324cfd6a02f8f3ccdef32c1e967c83cdb11385dc4626435278e2b620e59b5659',
+      4: 'c170ff0af75ee6e4d8390e9806a83bddf9996cc59c6b963df920a30201f61a62',
+      5: 'c170ff0af75ee6e4d8390e9806a83bddf9996cc59c6b963df920a30201f61a62',
+      7: 'c170ff0af75ee6e4d8390e9806a83bddf9996cc59c6b963df920a30201f61a62',
+      8: 'c170ff0af75ee6e4d8390e9806a83bddf9996cc59c6b963df920a30201f61a62',
+    }
+    for (const [threat, hash] of Object.entries(recorded)) {
+      const out: string[] = []
+      for (const encounter of ['goblin_raid', 'spider_nest', 'salamander_pool'] as const) {
+        for (let s = 1; s <= 500; s++) {
+          const base = lootRng(s)
+          let draws = 0
+          const rng = () => (draws++, base())
+          out.push(`${encounter} ${s}: ${rollRunes(Number(threat), encounter, rng).join(',')} after ${draws}`)
+        }
+      }
+      expect(createHash('sha256').update(out.join('\n')).digest('hex'), `threat ${threat}`).toBe(hash)
+    }
+  })
+
+  it('yields one rune and a second at 50% at threats 9 to 13, each rank 2 at 60%, else 3', () => {
+    for (const threat of [9, 13]) {
+      // the second's chance first, then each rune's kind and rank
+      expect(rollRunes(threat, 'goblin_raid', scripted([0.6, 0.35, 0.59]))).toEqual(['venom2'])
+      expect(rollRunes(threat, 'goblin_raid', scripted([0.49, 0.35, 0.6, 0.0, 0.1]))).toEqual(['venom3', 'ember2'])
+      const all = rolls(threat, 'goblin_raid')
+      expect(all.every((r) => (r.length === 1 || r.length === 2) && r.every((k) => /[23]$/.test(k)))).toBe(true)
+      expect(share(all.filter((r) => r.length === 2).length)).toBeGreaterThan(0.45)
+      expect(share(all.filter((r) => r.length === 2).length)).toBeLessThan(0.55)
+    }
+  })
+
+  it('yields two runes at threats 14 to 19, each rank 4 at 15%, 3 at 60%, else 2', () => {
+    for (const threat of [14, 19]) {
+      expect(rollRunes(threat, 'goblin_raid', scripted([0.35, 0.14, 0.0, 0.15]))).toEqual(['venom4', 'ember3'])
+      expect(rollRunes(threat, 'goblin_raid', scripted([0.35, 0.74, 0.0, 0.75]))).toEqual(['venom3', 'ember2'])
+      const ranks = rolls(threat, 'goblin_raid').flatMap((r) => (expect(r).toHaveLength(2), r.map((k) => k.slice(-1))))
+      const of = (rank: string) => ranks.filter((k) => k === rank).length / ranks.length
+      expect(of('4')).toBeGreaterThan(0.12)
+      expect(of('4')).toBeLessThan(0.18)
+      expect(of('3')).toBeGreaterThan(0.56)
+      expect(of('3')).toBeLessThan(0.64)
+    }
+  })
+
+  it('yields three runes at the Source\'s threat and above, each rank 3 at 50%, else 4', () => {
+    for (const threat of [SOURCE_THREAT, SOURCE_THREAT + 1]) {
+      expect(rollRunes(threat, 'source_guardians', scripted([0.35, 0.49, 0.0, 0.5, 0.95, 0.2]))).toEqual(['venom3', 'ember4', 'dawn3'])
+      expect(rolls(threat, 'source_guardians').every((r) => r.length === 3 && r.every((k) => /[34]$/.test(k)))).toBe(true)
+    }
+  })
+
+  it('favours a nest leader\'s element in the far rows too', () => {
+    for (const threat of [9, 14, SOURCE_THREAT]) {
+      const all = rolls(threat, 'spider_nest').flat()
+      const venom = all.filter((k) => k.startsWith('venom')).length / all.length
+      expect(venom).toBeGreaterThan(0.5)
+      expect(venom).toBeLessThan(0.6)
+    }
+    expect(rollRunes(14, 'salamander_pool', scripted([0.2, 0.5, 0.9, 0.35, 0.5]))).toEqual(['ember3', 'venom3'])
   })
 
   it('puts the runes in the pouch on top of what it held', () => {

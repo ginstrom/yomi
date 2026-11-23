@@ -119,6 +119,7 @@ The party's power is its levels only, so a new party of three at level 1 pushes 
 - **A spawn:** at `SPAWN_COST` (30) a monster location appears on a corrupted hex, chosen by the world RNG. The hex must be at least `SPAWN_CLEARANCE` (4) hexes from the party, other monster locations and held sites.
 - **What appears:** a random encounter at `threatAt(position)`, with a small loot draw.
 - **Cap:** `MAX_MONSTER_LOCATIONS` (24).
+  - *Stage 9 (140 × 72 board):* `SPAWN_DIVISOR` 840 and `MAX_MONSTER_LOCATIONS` 60 (stage 8's values scaled by the board's area), and a nest's push is `BLIGHT_PER_THREAT` times its threat capped at `BLIGHT_THREAT_CAP` (5), so the outer rings' nests push no harder than threat 5's. New kinds spawn only from `fromThreat` 7.
 
 ### 4.4a Staying home, and the soft lock
 
@@ -189,7 +190,7 @@ Monster locations stay put for now. Later, a location will be able to move along
 
 ### 4.10 The Source and endless mode
 
-- **The Source** is a monster location in the far east corner at threat `MAX_THREAT`. It has a boss encounter of its own, still to be designed, and is the strongest blight source.
+- **The Source** is a monster location in the far east corner at threat `MAX_THREAT` (stage 9: `SOURCE_THREAT`, 20, 122 hexes from home). It has a boss encounter of its own, still to be designed, and is the strongest blight source.
 - **Beating it** brings a victory screen with two choices:
   - **End:** back to the menu, with the save kept as a finished game.
   - **Continue (endless):** the remaining nests keep pushing and spawns go on.

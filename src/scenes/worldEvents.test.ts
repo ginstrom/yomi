@@ -101,7 +101,7 @@ describe('describeDays', () => {
     expect(describeDays([report], game, 30)).toMatch(/^You come upon the /)
     expect(describeDays([{ ...report, partyEvents: [arrived] }], game, 30)).toBe('The party arrives.')
     const source = world.locations.find((l) => l.id === 'blight_source')!
-    expect(describePartyEvent({ ...confronting, location: source.id }, game)).toBe('You come upon the Blight Source (threat 5).')
+    expect(describePartyEvent({ ...confronting, location: source.id }, game)).toBe('You come upon the Blight Source (threat 20).')
     expect(describePartyEvent({ type: 'met', party: 'party_1', other: 'party_2' }, game)).toBe('The parties meet.')
   })
 

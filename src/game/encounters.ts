@@ -101,9 +101,6 @@ export interface Encounter {
   threat: number
 }
 
-/** The highest threat on today's map, and `threatAt`'s cap until the map grows. */
-export const MAX_THREAT = 5
-
 /** The threats an encounter is fought at, from `min` to `max`; any threat outside is fought as the nearest in it. */
 export interface ThreatBand {
   min: number
@@ -184,6 +181,8 @@ interface EncounterDef {
    * changes. One count for each threat of the band.
    */
   counts: readonly number[]
+  /** The highest level its foes are raised to, if lower than the threat's (the Source's provisional block, stage 9). */
+  maxFoeLevel?: number
 }
 
 /**
@@ -193,7 +192,7 @@ interface EncounterDef {
  * a foe at that level (`foeStats`). The numbers behind the counts were
  * chosen with the simulator; see `.claude/skills/yomi-balance/levers.md`.
  */
-function encounter(party: readonly Fighter[], { slots, band, counts }: EncounterDef, threat: number): Encounter {
+function encounter(party: readonly Fighter[], { slots, band, counts, maxFoeLevel = Infinity }: EncounterDef, threat: number): Encounter {
   if (counts.length !== band.max - band.min + 1) throw new Error('An encounter needs a foe count for each threat of its band')
   const level = Math.min(Math.max(Math.floor(threat), band.min), band.max)
   const foes = slots.filter((slot) => (slot.fromThreat ?? 1) <= level).slice(0, counts[level - band.min])
@@ -205,7 +204,7 @@ function encounter(party: readonly Fighter[], { slots, band, counts }: Encounter
         ...foes.map(({ id, kind, name, at }): UnitSetup => ({
           id,
           side: 'enemy',
-          stats: { ...foeStats(kind, level), name },
+          stats: { ...foeStats(kind, Math.min(level, maxFoeLevel)), name },
           position: offsetToHex(...at),
         })),
       ],
@@ -253,8 +252,8 @@ const TROLL_LAIR_SLOTS: readonly FoeSlot[] = [
   { id: 'whelp', kind: 'troll', name: 'Troll Whelp', at: [9, 6] },
 ]
 
-// The Spider first, the Sneak beside it, and two more Spiders: all four at threat 5, the only threat it is fought at
-// (the fourth, the Nest Spider, added in skill trees step 24, when a party of level 5 won three foes 500 times in 500).
+// The Spider first, the Sneak beside it, and two more Spiders: three at threat 4 and all four from threat 5 (the fourth,
+// the Nest Spider, added in skill trees step 24, when a party of level 5 won three foes 500 times in 500).
 const SPIDER_NEST_SLOTS: readonly FoeSlot[] = [
   { id: 'spider', kind: 'giant_spider', name: 'Giant Spider', at: [8, 4] },
   { id: 'sneak', kind: 'kobold', name: 'Kobold Sneak', at: [9, 2] },
@@ -269,7 +268,7 @@ const SALAMANDER_POOL_SLOTS: readonly FoeSlot[] = [
   { id: 'kobold2', kind: 'kobold', name: 'Kobold Warden', at: [8, 6] },
 ]
 
-// The Horror first, so it takes the field at any threat; the Source is fought at the top.
+// The Horror first, so it takes the field at any threat; all five from threat 6, as at the Source's threat in the far ring.
 const SOURCE_GUARDIANS_SLOTS: readonly FoeSlot[] = [
   { id: 'horror', kind: 'horror', name: 'Blight Horror', at: [8, 4] },
   { id: 'brute', kind: 'goblin', name: 'Goblin Brute', at: [8, 2] },
@@ -291,6 +290,24 @@ const BANDIT_CAMP_SLOTS: readonly FoeSlot[] = [
   { id: 'cutthroat', kind: 'bandit_cutthroat', name: 'Cutthroat', at: [8, 6] },
 ]
 
+// The Bandit Company of the far rings (threats 8 to 13): a Sergeant in the Captain's place (a Brute, axe and breastplate),
+// and four of the camp's shooters and blades; four take the field, so the Cutthroat waits.
+const BANDIT_COMPANY_SLOTS: readonly FoeSlot[] = [
+  { id: 'sergeant', kind: 'bandit_brute', name: 'Bandit Sergeant', at: [8, 4] },
+  { id: 'crossbowman', kind: 'bandit_crossbowman', name: 'Company Crossbowman', at: [9, 2] },
+  { id: 'mage', kind: 'bandit_mage', name: 'Company Hedge-Mage', at: [9, 4] },
+  { id: 'archer', kind: 'bandit_archer', name: 'Company Archer', at: [9, 6] },
+  { id: 'cutthroat', kind: 'bandit_cutthroat', name: 'Company Cutthroat', at: [8, 6] },
+]
+// The Freebooter Host of the farthest rings (threats 14 to 20): a Freebooter Captain leading a Brute, a Crossbowman and a
+// Hedge-Mage, and from threat 17 an Archer behind them.
+const FREEBOOTER_HOST_SLOTS: readonly FoeSlot[] = [
+  { id: 'captain', kind: 'bandit_captain', name: 'Freebooter Captain', at: [8, 4] },
+  { id: 'brute', kind: 'bandit_brute', name: 'Freebooter Brute', at: [8, 2] },
+  { id: 'crossbowman', kind: 'bandit_crossbowman', name: 'Freebooter Crossbowman', at: [9, 2] },
+  { id: 'mage', kind: 'bandit_mage', name: 'Freebooter Hedge-Mage', at: [9, 4] },
+  { id: 'archer', kind: 'bandit_archer', name: 'Freebooter Archer', at: [9, 6] },
+]
 /** Today's encounters are fought at threats 1 to 5, with these many foes at each. */
 const TODAY = { band: { min: 1, max: 5 }, counts: [2, 3, 3, 3, 4] } as const satisfies Omit<EncounterDef, 'slots'>
 
@@ -298,20 +315,42 @@ const GOBLIN_RAID: EncounterDef = { slots: GOBLIN_RAID_SLOTS, ...TODAY }
 const KOBOLD_SCOUTS: EncounterDef = { slots: KOBOLD_SCOUTS_SLOTS, ...TODAY }
 const HOBGOBLIN_WARBAND: EncounterDef = { slots: HOBGOBLIN_WARBAND_SLOTS, ...TODAY }
 const TROLL_LAIR: EncounterDef = { slots: TROLL_LAIR_SLOTS, ...TODAY }
-const SOURCE_GUARDIANS: EncounterDef = { slots: SOURCE_GUARDIANS_SLOTS, ...TODAY }
 /**
- * The Giant Spider's nest, fought at threat 5 only (the user's choice at stage 2: at threat 4 its two foes were
- * won 500 times in 500, and only a third foe moved that, which would have fielded as many at the band's bottom as at its top).
+ * The level the Source's guardians are raised to at most (stage 9 step 09, the user's decision: the Source made
+ * winnable). Raised from native level 1 to 20 they were barely hit (hit rate about 0.28; AC 105 to 115 against a
+ * level-18 party's to-hit of about 100); at 6 a ready-made level-18 party wins 28 battles of 500 and the long campaign 8 of 50 (7 and above:
+ * no `sg20-18` win). It is at least 5, so the Source near home (threats 1 to 5) fights as before.
  */
-const SPIDER_NEST: EncounterDef = { slots: SPIDER_NEST_SLOTS, band: { min: 5, max: 5 }, counts: [4] }
-/** The Salamander's pool, fought at threat 5 only. */
-const SALAMANDER_POOL: EncounterDef = { slots: SALAMANDER_POOL_SLOTS, band: { min: 5, max: 5 }, counts: [3] }
+export const SOURCE_FOE_LEVEL = 6
+/**
+ * The Source's guardians: today's counts at threats 1 to 5, where the Source near home is fought, and all five from
+ * 6 to 20, where it stands in the far ring (`SOURCE_THREAT`), raised to `SOURCE_FOE_LEVEL` at most. The block past 5
+ * is provisional (long-campaign stage 9; stage 11 replaces it).
+ */
+const SOURCE_GUARDIANS: EncounterDef = {
+  slots: SOURCE_GUARDIANS_SLOTS,
+  band: { min: 1, max: 20 },
+  counts: [...TODAY.counts, ...Array<number>(15).fill(5)],
+  maxFoeLevel: SOURCE_FOE_LEVEL,
+}
+/**
+ * The Giant Spider's nest, fought at threats 4 to 9: three at 4 and all four from 5 (long-campaign stage 9; at stage
+ * 2 the user kept it to threat 5, when at threat 4 its two foes were won 500 times in 500). The counts past 5 are
+ * first values, for the simulator to judge.
+ */
+const SPIDER_NEST: EncounterDef = { slots: SPIDER_NEST_SLOTS, band: { min: 4, max: 9 }, counts: [3, 4, 4, 4, 4, 4] }
+/** The Salamander's pool, fought at threats 5 to 9, three at each (the range from long-campaign stage 9). */
+const SALAMANDER_POOL: EncounterDef = { slots: SALAMANDER_POOL_SLOTS, band: { min: 5, max: 9 }, counts: [3, 3, 3, 3, 3] }
 /**
  * Bandits are fought from threat 3. Two at threats 3 to 5, tuned by the simulator (a third made the camp a wall:
  * a party of the threat's level won about 2 in 5 at threat 3 and 1 in 3 at 4); the counts past 5 are the first guess, for the
  * stage that grows the map to tune.
  */
 const BANDIT_CAMP: EncounterDef = { slots: BANDIT_CAMP_SLOTS, band: { min: 3, max: 7 }, counts: [2, 2, 2, 4, 4] }
+/** The Bandit Company, four at each of threats 8 to 13 (long-campaign stage 9; first values, for the simulator to judge). */
+const BANDIT_COMPANY: EncounterDef = { slots: BANDIT_COMPANY_SLOTS, band: { min: 8, max: 13 }, counts: [4, 4, 4, 4, 4, 4] }
+/** The Freebooter Host, four at threats 14 to 16 and five from 17 to 20 (long-campaign stage 9; first values). */
+const FREEBOOTER_HOST: EncounterDef = { slots: FREEBOOTER_HOST_SLOTS, band: { min: 14, max: 20 }, counts: [4, 4, 4, 5, 5, 5, 5] }
 
 /**
  * A Goblin and a Kobold across the board from the party; where the threat is
@@ -342,7 +381,8 @@ export function trollLair(party: readonly Fighter[], threat = 1): Encounter {
 
 /**
  * Giant Spiders that web a hero from range, then close and bite twice, the
- * second bite poisoning: three of them, with a Kobold Sneak.
+ * second bite poisoning: two of them with a Kobold Sneak at threat 4, and
+ * three from threat 5 to 9.
  */
 export function spiderNest(party: readonly Fighter[], threat = 5): Encounter {
   return encounter(party, SPIDER_NEST, threat)
@@ -350,7 +390,7 @@ export function spiderNest(party: readonly Fighter[], threat = 5): Encounter {
 
 /**
  * A Salamander, warded against fire, spitting a cone of fire that burns its
- * own two Kobolds as well as the party.
+ * own two Kobolds as well as the party; fought at threats 5 to 9.
  */
 export function salamanderPool(party: readonly Fighter[], threat = 5): Encounter {
   return encounter(party, SALAMANDER_POOL, threat)
@@ -358,8 +398,10 @@ export function salamanderPool(party: readonly Fighter[], threat = 5): Encounter
 
 /**
  * What guards the blight's Source: the Blight Horror, with a Goblin Brute
- * beside it and, at the threat the Source is fought at, a shaman and a
- * Kobold Sneak behind.
+ * beside it and, at threat 5, where the Source near home is fought, a shaman
+ * and a Kobold Sneak behind; from threat 6 a Goblin Cutter too, so the Source
+ * in the far ring (threat 20) fields all five at the threat's level,
+ * SOURCE_FOE_LEVEL (6) at most.
  */
 export function sourceGuardians(party: readonly Fighter[], threat = 1): Encounter {
   return encounter(party, SOURCE_GUARDIANS, threat)
@@ -370,11 +412,30 @@ export function sourceGuardians(party: readonly Fighter[], threat = 1): Encounte
  * and breastplate, and a Brute with an axe and breastplate at threat 3; at
  * threat 4 a Hedge-Mage in the Brute's place, and at threat 5 an Archer, their
  * gear Fine iron. From threat 6 four fight, the Captain, Archer, Hedge-Mage and
- * Crossbowman, in Fine steel and ironwood; the Brute and the Cutthroat take the
- * field only once a later stage raises a count to 5 (stage 9).
+ * Crossbowman, in Fine steel and ironwood; the Brute and the Cutthroat wait
+ * for a count of 5, which the camp does not reach (the far rings have the
+ * Bandit Company and the Freebooter Host instead).
  */
 export function banditCamp(party: readonly Fighter[], threat = 3): Encounter {
   return encounter(party, BANDIT_CAMP, threat)
+}
+
+/**
+ * Bandits of the far rings, threats 8 to 13, in Masterwork steel and
+ * ironwood: a Bandit Sergeant with axe and breastplate, a Crossbowman, a
+ * Hedge-Mage and an Archer.
+ */
+export function banditCompany(party: readonly Fighter[], threat = 8): Encounter {
+  return encounter(party, BANDIT_COMPANY, threat)
+}
+
+/**
+ * Bandits of the farthest rings, threats 14 to 20, in Masterwork steel and
+ * ironwood: a Freebooter Captain with sword, shield and breastplate, a Brute,
+ * a Crossbowman and a Hedge-Mage, and from threat 17 an Archer.
+ */
+export function freebooterHost(party: readonly Fighter[], threat = 14): Encounter {
+  return encounter(party, FREEBOOTER_HOST, threat)
 }
 
 /**
@@ -398,6 +459,8 @@ export const ENCOUNTERS = {
   bandit_camp: banditCamp,
   spider_nest: spiderNest,
   salamander_pool: salamanderPool,
+  bandit_company: banditCompany,
+  freebooter_host: freebooterHost,
 } satisfies Record<string, (party: readonly Fighter[], threat?: number) => Encounter>
 
 export type EncounterId = keyof typeof ENCOUNTERS
@@ -412,6 +475,8 @@ export const ENCOUNTER_BANDS: Record<EncounterId, ThreatBand> = {
   bandit_camp: BANDIT_CAMP.band,
   spider_nest: SPIDER_NEST.band,
   salamander_pool: SALAMANDER_POOL.band,
+  bandit_company: BANDIT_COMPANY.band,
+  freebooter_host: FREEBOOTER_HOST.band,
 }
 
 /** How many foes each encounter fields at each threat of its band, from `band.min` up, from its definition. */
@@ -424,6 +489,8 @@ export const ENCOUNTER_COUNTS: Record<EncounterId, readonly number[]> = {
   bandit_camp: BANDIT_CAMP.counts,
   spider_nest: SPIDER_NEST.counts,
   salamander_pool: SALAMANDER_POOL.counts,
+  bandit_company: BANDIT_COMPANY.counts,
+  freebooter_host: FREEBOOTER_HOST.counts,
 }
 
 /** The encounters whose band holds `threat`, in `ENCOUNTERS` order. */

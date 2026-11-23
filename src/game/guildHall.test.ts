@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { maxHp, maxMana } from '../character/character.ts'
 import { canAdvance, levelUp } from '../character/progression.ts'
-import { offsetToHex } from '../grid/hex.ts'
 import { newExpedition } from './expedition.ts'
 import { newGame, type GameState } from './gameState.ts'
 import {
@@ -26,6 +25,7 @@ import {
   upgradeGuildHall,
 } from './guildHall.ts'
 import { PREROLLS } from './party.ts'
+import { earlyHex } from './worldMap.ts'
 
 const GARRICK = PREROLLS[3].draft
 
@@ -40,7 +40,7 @@ describe('the guild hall', () => {
   it('is open only at Oakvale, while the game goes on', () => {
     const game = atHome()
     expect(atGuildHall(game.world, game.parties[0])).toBe(true)
-    game.parties[0].position = offsetToHex(11, 19)
+    game.parties[0].position = earlyHex(11, 19)
     expect(atGuildHall(game.world, game.parties[0])).toBe(false)
     expect(upgradeGuildHall(game, game.parties[0])).toMatch(/Oakvale/)
     expect(recruit(game, game.parties[0], GARRICK)).toMatch(/Oakvale/)
@@ -178,9 +178,9 @@ describe('the parties at home', () => {
     expect(homeParties(game).map((p) => p.id)).toEqual(['party_1', 'party_2'])
     expect(homeParty(game, 'party_2')).toBe(second)
     expect(homeParty(game)).toBe(game.parties[0])
-    second.position = offsetToHex(11, 19)
+    second.position = earlyHex(11, 19)
     expect(homeParty(game, 'party_2')).toBe(game.parties[0])
-    game.parties[0].position = offsetToHex(11, 19)
+    game.parties[0].position = earlyHex(11, 19)
     expect(homeParty(game, 'party_1')).toBeNull()
     expect(homeParties(game)).toEqual([])
   })

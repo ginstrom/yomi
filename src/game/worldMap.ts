@@ -1,5 +1,5 @@
 import { randomSeed } from '../combat/rng.ts'
-import { HexBoard, hexDistance, hexEquals, hexKey, offsetToHex, reachableHexes, type BoardSize, type Hex } from '../grid/hex.ts'
+import { HexBoard, hexAdd, hexDistance, hexEquals, hexKey, offsetToHex, shortestPath, type BoardSize, type Hex } from '../grid/hex.ts'
 import {
   AMULET_FOCUS,
   EMBERBLADE,
@@ -14,7 +14,7 @@ import {
 } from '../inventory/inventory.ts'
 import { advanceDay, cleanse, seedBlight, type WorldEvent } from './blight.ts'
 import { act, advance, setOrder, startTravel, worldInterrupt, type DayReport, type OrderRequest } from './company.ts'
-import { MAX_THREAT, type EncounterId } from './encounters.ts'
+import type { EncounterId } from './encounters.ts'
 import { presences, type Expedition, type PartyPresence } from './expedition.ts'
 import type { GameState } from './gameState.ts'
 import { initialHeld, updateTerritory, type ImprovementLevel, type Material, type Stock } from './territory.ts'
@@ -40,7 +40,7 @@ interface LocationBase {
 export interface MonsterLocation extends LocationBase {
   kind: 'monsters'
   encounter: EncounterId
-  /** How dangerous they are, from 1: set by how far from home they lie (`threatAt`). */
+  /** How dangerous they are, from 1: set by the ring of `THREAT_RINGS` they lie in (`threatAt`). */
   threat: number
   /** What the party finds when it has beaten them (`takeLoot` in gameState.ts): better the further out. */
   loot: Item[]
@@ -144,79 +144,128 @@ export type Lingering = 'scout' | 'wait'
  * The map is far larger than a window shows, so the party sees only what lies
  * around it and the rest comes into view as it travels.
  */
-export const WORLD_SIZE: BoardSize = { cols: 60, rows: 40 }
+export const WORLD_SIZE: BoardSize = { cols: 140, rows: 72 }
 
-/** Where a new game's party stands: the encampment, in the west. */
-const HOME: Hex = offsetToHex(9, 19)
+/**
+ * Stage 8's map (60 × 40) stands inside today's moved by this axial
+ * translation, so every distance among its locations is kept (an odd-r board:
+ * adding rows alone would not be a translation). A location on an odd stage-8
+ * row keeps its column, one on an even row moves a column west; every row
+ * gains 17.
+ */
+export const EARLY_SHIFT: Hex = { q: -9, r: 17 }
+
+/** Where stage 8's offset (`col`, `row`) stands on today's board (`EARLY_SHIFT`). */
+export function earlyHex(col: number, row: number): Hex {
+  return hexAdd(offsetToHex(col, row), EARLY_SHIFT)
+}
+
+/** Where a new game's party stands: the encampment, in the west; offset (9, 36). */
+const HOME: Hex = earlyHex(9, 19)
 export const ENCAMPMENT_ID = 'encampment'
 /** What the encampment is called unless the player names it otherwise. */
 export const DEFAULT_ENCAMPMENT_NAME = 'Oakvale'
 /** The longest name the encampment may have. */
 export const MAX_ENCAMPMENT_NAME_LENGTH = 16
 export const SOURCE_ID = 'blight_source'
+/** The threat the Source is fought at once it stands in the far ring (long-campaign stage 9; the map places it there from step 04), and the threat of rune loot's Source row. */
+export const SOURCE_THREAT = 20
+
+/** Where the Source stands and the threat it is fought at. */
+export interface SourcePlace {
+  position: Hex
+  threat: number
+}
+/** The Source's place on the map: in the far east, 122 hexes from home, in the last ring, fought at `SOURCE_THREAT`. */
+export const SOURCE_PLACE: SourcePlace = { position: offsetToHex(131, 36), threat: SOURCE_THREAT }
 
 /** How far from the party a spawn must be to stop it travelling or camping. */
 export const NOTICE_RADIUS = 8
 
 /**
- * How many hexes from home each step of threat is. The first band holds the
- * party's home country, and the map's far corners reach the top threat.
+ * The rings of threat around home: a hex up to `upTo` hexes from home (and
+ * beyond the last ring's) has the first ring's threat that reaches it. The
+ * home country's five rings are 11 hexes wide, as stage 8's bands were; the
+ * outer rings are wider and step faster, out to the Source's at 122.
  */
-export const THREAT_BAND = 11
+export const THREAT_RINGS: readonly { upTo: number; threat: number }[] = [
+  { upTo: 10, threat: 1 },
+  { upTo: 21, threat: 2 },
+  { upTo: 32, threat: 3 },
+  { upTo: 43, threat: 4 },
+  { upTo: 54, threat: 5 },
+  { upTo: 67, threat: 7 },
+  { upTo: 80, threat: 9 },
+  { upTo: 94, threat: 12 },
+  { upTo: 108, threat: 15 },
+  { upTo: 122, threat: 18 },
+]
 
-/** How dangerous the monsters at `position` are: 1 around home, and one more for every `THREAT_BAND` hexes out, up to `MAX_THREAT`. */
+/** How dangerous the monsters at `position` are: the threat of its ring of `THREAT_RINGS` by its distance from home, the last ring's beyond it. */
 export function threatAt(position: Hex): number {
-  return Math.min(MAX_THREAT, 1 + Math.floor(hexDistance(HOME, position) / THREAT_BAND))
+  const distance = hexDistance(HOME, position)
+  return (THREAT_RINGS.find((ring) => distance <= ring.upTo) ?? THREAT_RINGS[THREAT_RINGS.length - 1]).threat
 }
 
-const resource = (id: string, name: string, col: number, row: number): WorldLocation => ({
-  id,
-  kind: 'resource',
-  name,
-  position: offsetToHex(col, row),
-})
-const monsters = (
-  id: string,
-  name: string,
-  col: number,
-  row: number,
-  encounter: EncounterId,
-  loot: Item[],
-): WorldLocation => ({
+/** A resource at `position`. */
+const resourceAt = (id: string, name: string, position: Hex): WorldLocation => ({ id, kind: 'resource', name, position })
+/** A resource at stage 8's offset (`earlyHex`). */
+const resource = (id: string, name: string, col: number, row: number): WorldLocation => resourceAt(id, name, earlyHex(col, row))
+/** A resource of the outer rings, at today's offset. */
+const farResource = (id: string, name: string, col: number, row: number): WorldLocation => resourceAt(id, name, offsetToHex(col, row))
+/** Monsters at `position`, at the threat of its ring. */
+const monstersAt = (id: string, name: string, position: Hex, encounter: EncounterId, loot: Item[]): WorldLocation => ({
   id,
   kind: 'monsters',
   name,
-  position: offsetToHex(col, row),
+  position,
   encounter,
-  threat: threatAt(offsetToHex(col, row)),
+  threat: threatAt(position),
   loot,
 })
+/** Monsters at stage 8's offset (`earlyHex`), at the threat of their ring. */
+const monsters = (id: string, name: string, col: number, row: number, encounter: EncounterId, loot: Item[]): WorldLocation =>
+  monstersAt(id, name, earlyHex(col, row), encounter, loot)
+/** Monsters of the outer rings, at today's offset, at the threat of their ring. */
+const farMonsters = (id: string, name: string, col: number, row: number, encounter: EncounterId, loot: Item[]): WorldLocation =>
+  monstersAt(id, name, offsetToHex(col, row), encounter, loot)
 
 /**
- * The trade partners on today's map: Millbrook in the threat 2 ring, Saltmere
- * on the south edge in the threat 3 ring. A world holds copies (`newWorld`).
+ * The trade partners: Millbrook in the threat 2 ring and Saltmere in the
+ * threat 3 ring, each at stage 8's place (`earlyHex`); then the far partners
+ * (stage 9), Stonehollow, a mountain hold in the threat 7 ring, Elder Glade, a
+ * forest people in the threat 12 ring, and Emberwatch, a fortified pass in the
+ * threat 15 ring. A world holds copies (`newWorld`).
  */
 export const PARTNERS: readonly PartnerLocation[] = [
-  { id: 'millbrook', kind: 'partner', name: 'Millbrook', position: offsetToHex(18, 30), good: 'timber' },
-  { id: 'saltmere', kind: 'partner', name: 'Saltmere', position: offsetToHex(30, 38), good: 'salt' },
+  { id: 'millbrook', kind: 'partner', name: 'Millbrook', position: earlyHex(18, 30), good: 'timber' },
+  { id: 'saltmere', kind: 'partner', name: 'Saltmere', position: earlyHex(30, 38), good: 'salt' },
+  { id: 'stonehollow', kind: 'partner', name: 'Stonehollow', position: offsetToHex(58, 13), good: 'mithril' },
+  { id: 'elder_glade', kind: 'partner', name: 'Elder Glade', position: offsetToHex(85, 60), good: 'elderwood' },
+  { id: 'emberwatch', kind: 'partner', name: 'Emberwatch', position: offsetToHex(97, 13), good: 'adamant' },
 ]
 
 /**
  * A new world, the blight seeded from its sources; `seed` is the world RNG's,
  * which only spawns draw from, and `encampmentName` what the player called
  * home. `partners` are placed as copies after the resources and before the
- * monsters (tests may pass none).
+ * monsters (tests may pass none). `source` is where the Source stands and its
+ * threat (the simulator's `--near-source` passes its own).
  */
 export function newWorld(
   seed: number = randomSeed(),
   encampmentName: string = DEFAULT_ENCAMPMENT_NAME,
   partners: readonly PartnerLocation[] = PARTNERS,
+  source: SourcePlace = SOURCE_PLACE,
 ): WorldState {
   const world: WorldState = {
     board: WORLD_SIZE,
     turn: 1,
     // The party's home country first, in the west, then the lands further out,
     // whose monsters are the more dangerous the further they lie (threatAt).
+    // The home country's stand at their stage-8 offsets, moved by EARLY_SHIFT
+    // (earlyHex); the outer rings' (stage 9) at today's offsets, ring by ring,
+    // their nests spread north, east and south; the Source last, at `source`.
     locations: [
       { id: ENCAMPMENT_ID, kind: 'encampment', name: encampmentName.trim() || DEFAULT_ENCAMPMENT_NAME, position: HOME },
       resource('iron_vein', 'Iron Vein', 11, 21),
@@ -231,6 +280,13 @@ export function newWorld(
       resource('salt_flats', 'Salt Flats', 33, 36),
       resource('copper_pit', 'Copper Pit', 41, 10),
       resource('crystal_cave', 'Crystal Cave', 56, 24),
+      farResource('ironwood_grove', 'Ironwood Grove', 65, 44),
+      farResource('mithril_lode', 'Mithril Lode', 70, 10),
+      farResource('elder_grove', 'Elder Grove', 70, 62),
+      farResource('adamant_deep', 'Adamant Deep', 93, 28),
+      farResource('wyrmwood_thicket', 'Wyrmwood Thicket', 107, 44),
+      farResource('fallen_star', 'Fallen Star', 122, 30),
+      farResource('heartwood', 'The Heartwood', 114, 58),
       ...partners.map((p) => ({ ...p, position: { ...p.position } })),
       monsters('goblin_reavers', 'Goblin Reavers', 12, 8, 'goblin_raid', [RING_FORTUNE]),
       monsters('kobold_trappers', 'Kobold Trappers', 8, 30, 'kobold_scouts', [SAGE_CIRCLET]),
@@ -242,7 +298,40 @@ export function newWorld(
       monsters('bandit_hideout', 'Bandit Hideout', 47, 13, 'bandit_camp', [STORM_WAND]),
       monsters('salamander_pool', 'Salamander Pool', 54, 28, 'salamander_pool', [SAGE_CIRCLET]),
       monsters('spider_nest', 'Spider Nest', 57, 10, 'spider_nest', [EMBERBLADE]),
-      { ...(monsters(SOURCE_ID, 'The Blight Source', 58, 19, 'source_guardians', [STORM_WAND]) as MonsterLocation), source: true },
+      // Threat 7 (55 to 67 hexes out).
+      farMonsters('wildland_bandits', 'Wildland Bandits', 55, 6, 'bandit_camp', [RING_FORTUNE]),
+      farMonsters('webwood_nest', 'Webwood Nest', 62, 20, 'spider_nest', [SHADOW_CLOAK]),
+      farMonsters('ashen_pool', 'Ashen Pool', 70, 36, 'salamander_pool', [SPARK_WAND]),
+      farMonsters('moorland_bandits', 'Moorland Bandits', 62, 52, 'bandit_camp', [AMULET_FOCUS]),
+      farMonsters('hollow_spiders', 'Hollow Spiders', 55, 67, 'spider_nest', [HAWK_BOW]),
+      // Threat 9 (68 to 80).
+      farMonsters('ironhold_company', 'Ironhold Company', 67, 4, 'bandit_company', [RING_PROTECTION]),
+      farMonsters('cinder_springs', 'Cinder Springs', 74, 18, 'salamander_pool', [EMBERBLADE]),
+      farMonsters('deepweb_hollow', 'Deepweb Hollow', 83, 36, 'spider_nest', [SAGE_CIRCLET]),
+      farMonsters('grey_company', 'Grey Company', 74, 54, 'bandit_company', [STORM_WAND]),
+      farMonsters('smoking_mere', 'Smoking Mere', 66, 69, 'salamander_pool', [RING_FORTUNE]),
+      // Threat 12 (81 to 94).
+      farMonsters('ravenhill_company', 'Ravenhill Company', 80, 5, 'bandit_company', [SHADOW_CLOAK]),
+      farMonsters('stonegate_company', 'Stonegate Company', 88, 20, 'bandit_company', [HAWK_BOW]),
+      farMonsters('thornwall_company', 'Thornwall Company', 96, 36, 'bandit_company', [AMULET_FOCUS]),
+      farMonsters('marsh_company', 'Marsh Company', 88, 52, 'bandit_company', [EMBERBLADE]),
+      farMonsters('dustroad_company', 'Dustroad Company', 80, 67, 'bandit_company', [SPARK_WAND]),
+      // Threat 15 (95 to 108).
+      farMonsters('red_freebooters', 'The Red Freebooters', 95, 6, 'freebooter_host', [STORM_WAND]),
+      farMonsters('grey_freebooters', 'The Grey Freebooters', 102, 20, 'freebooter_host', [RING_PROTECTION]),
+      farMonsters('wolfhead_host', 'Wolfhead Host', 110, 36, 'freebooter_host', [SAGE_CIRCLET]),
+      farMonsters('saltwind_host', 'Saltwind Host', 102, 52, 'freebooter_host', [HAWK_BOW]),
+      farMonsters('black_banner_host', 'Black Banner Host', 95, 66, 'freebooter_host', [SHADOW_CLOAK]),
+      // Threat 18 (109 to 122), about the Source.
+      farMonsters('iron_freebooters', 'The Iron Freebooters', 110, 8, 'freebooter_host', [EMBERBLADE]),
+      farMonsters('ashen_host', 'The Ashen Host', 117, 22, 'freebooter_host', [STORM_WAND]),
+      farMonsters('last_host', 'The Last Host', 117, 50, 'freebooter_host', [RING_FORTUNE]),
+      farMonsters('blightmarch_freebooters', 'Blightmarch Freebooters', 110, 64, 'freebooter_host', [AMULET_FOCUS]),
+      {
+        ...(monstersAt(SOURCE_ID, 'The Blight Source', { ...source.position }, 'source_guardians', [STORM_WAND]) as MonsterLocation),
+        threat: source.threat,
+        source: true,
+      },
     ],
     blight: [],
     shift: [],
@@ -371,7 +460,7 @@ export function routeTo(world: WorldState, party: Expedition, to: Hex): Hex[] | 
       .map((l) => hexKey(l.position)),
   )
   const passable = (h: Hex) => board.contains(h) && (hexEquals(h, to) || !known.has(hexKey(h)))
-  return reachableHexes(party.position, board.hexes.length, passable).get(hexKey(to)) ?? null
+  return shortestPath(party.position, to, passable)
 }
 
 /** What came of a journey: the hexes walked, what happened on the way, and the event that cut it short if one did. */

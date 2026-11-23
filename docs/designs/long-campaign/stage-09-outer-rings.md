@@ -17,7 +17,7 @@ New ore and wood sites and the far trade partners are placed. The blight's push 
 
 This is the first long campaign, from level 1 to about 20. The monsters of the high rings come in stage 11, and the gear of the high tiers in stage 10. This stage checks the map, the pacing and the company over the long haul.
 
-**Status:** ready for planning.
+**Status:** done (see [Implementation notes](#implementation-notes)).
 
 ## 2. Scope
 
@@ -115,3 +115,44 @@ This is the first long campaign, from level 1 to about 20. The monsters of the h
 - **Pacing:** too few nests per ring for the levels needed. Watch battles to level.
 
 **Done when:** all tests pass, the guard holds, a 100-campaign long run completes in reasonable time with its baseline recorded in the stage's notes, and the play script has been walked.
+
+## Implementation notes
+
+Built as ten steps (`docs/implementation-plans/long-campaign-stage-09/`; every figure below is in its `log.md`, 500 campaigns from seed 1 unless stated, one run at a time).
+
+**The early figures** (`--ready-level 7 --near-source`, the stand-in Source of decision 2; `rl10` and `rl12` with their own levels):
+
+| Run | Baseline (step 01) | Final | Band | Days (final) |
+| --- | --- | --- | --- | --- |
+| `one` (`--parties 1`) | 233 | **288** | 215–250 | **331** (band 243–297) |
+| `company` | 232 | **289** | 220–260 | 334 |
+| `rl10` | 433 | 409 | 370–420, in | 530 |
+| `rl10-one` (report only) | n/a | 409 | n/a | 496 |
+| `rl12` (report only) | n/a | 407 | n/a | 644 |
+
+Heroes dead 1.2 a campaign (band at most 2.0). The standard cells `gr3` to `sg10` and `tl5` equal their "Now" figures. `one`, `company` and `one`'s days are out of band and **accepted by the user until stage 12**, with `SPAWN_DIVISOR` kept at 840. Cause, from 500-campaign diagnostics: mostly the divisor (fewer spawns, so fewer home nests and longer walks; a divisor of 400 gives 244 wins and 303 days, 300 gives 248 and 298), the rest the bigger board. Stage 12 takes them up with the divisor diagnostics.
+
+**The long-campaign baseline for stages 10 to 12** (100 campaigns, `--campaign --battles 100 --seed 1 --log none`, ready level 18, with `SOURCE_FOE_LEVEL` 6):
+- the Source: 15 of 100 beat it, 85 fell; 1272 days, 46.4 battles, 59.8 spawns a campaign; 57% of the land blighted at the end; 8.1 sites captured, 1.5 lost;
+- walking: the vanguard walked 1129.0 days, 171.3 of them home;
+- levels 5, 10, 15 and 20 after 6.8, 28.5, 54.3 and no battles (in 84, 55, 44 and 0 of the campaigns), so no campaign reached level 20 by battles alone;
+- win rate by ring: threat 7 0.956, 9 0.828, 12 0.601, 15 0.868, 18 0.75 (4 fought), 20 0.833 (15 of 18);
+- 5.9 parties wiped a campaign (9.7 before the Source was retuned, against 1.0 for one party); recruits 30.4; deaths cluster at levels 3 and 5 to 8 and again at 15 and 16;
+- home rings in the real long campaign: 8.3 spawns a campaign (measured before the retune), against about 14.5 in the near-Source `one`;
+- runtime: 100 campaigns take about 10 minutes (3 on a quiet machine), peak 360 MB; 500 early campaigns about 8 minutes. A day costs 0.83 ms (`passTurn`) and 0.71 ms (`advanceDay`) on the 140 × 72 board, against 0.67 and 0.63 on stage 8's, after step 08's byte-identical speed-ups (the board is 4.2 times the hexes; 3.2 times the cost before them).
+
+Measured before the retune (the Source then unwinnable, 0 wins each): `long-one` (one party) 1322 days, 0.97 to 1.00 at every threat to 18, 45 of 100 dying at the Source; `long-tp4` 88 fell, 12 out of days, 2469 days.
+
+**The company against one party:** equal at `--ready-level 10` (409 each; stage 6's question answered). On the long campaign the company's replacement parties (level about 5) are sent at threat 9 to 18 nests and wiped; the policy is a simulator matter, not a rule, **deferred to stage 12 (the user's decision)**.
+
+**Routes** (`long-tp4`, carried items 2 and 3): 3.87 routes opened a campaign, 2.57 raided, 2.48 abandoned, 0 flickers (a road told safe and raided again within 30 days) and 0 routes raided six yield days and kept, so the "safe again" reset case does not arise on this map; routes bring 26% of the gold. No rule changed.
+
+**The new cells** (report only, 500 battles): `bc7` 1, `sn7` 99, `sn9` 29, `sp7` 290, `sp9` 73, `bco9` 1, `bco12` 0, `fh15` 0, `fh18` 0, `sg20-18` 28, `sg20` 71. A party at the level of the nest it fights loses nearly all of them; the campaign's levelled and geared parties win threats 7 to 18 at 0.97 to 1.00 alone (`long-one`).
+
+**Where the plan departed from the design, and why** (the plan index's decisions, by number): 1 the +17-row shift is an axial translation, as a row shift changes distances by one; 2 `--near-source` keeps the early figures meaningful, and by the user's decision leaves out the fixed nests above threat 5, since their corruption drew the spawns away from the home country; 3 the Source's count stays 5 at threats 6 to 20, and it is made winnable instead by `SOURCE_FOE_LEVEL` (6), the level its guardians are raised to at most past threat 5 (the user's decision: at level 20 they were barely hit, a party hit rate of about 0.28; counts of 4 and 3 changed nothing; at 6 a level-18 ready-made party wins 28 battles of 500 and 7 and above won none of the levels tried), a provisional block until stage 11; 4 the new spawn kinds spawn only from threat 7; 5 bandits wear Masterwork steel from threat 8 (their proper tiers wait for stage 10); 7 rune loot goes by threat rows, today's below 9; 8 three partner sprites were drawn (`map_partner_hold`, `map_partner_glade`, `map_partner_pass`); 9 the world map's blight layer is tiled (`BLIGHT_TILE_PX` 2048); 11 the refactor guard was re-recorded twice (steps 04 and 05). The user also chose byte-identical speed-ups only after step 08's runtime gate. Open question 1 was answered as recommended (the stand-in Source, decision 2). `SAVE_VERSION` 30, no migration.
+
+**Open for the user (proposed for stage 12):** in the real long campaign most spawns land in the outer rings, which the near-Source early figures do not show. Two measures (step 09's probe, before the Source retune): the home rings (threat 5 or below) got 8.3 spawns a campaign in the long run against about 14.5 in the near-Source run, whose campaigns are 4 to 5 times shorter; and 8.3 of the long run's 60.1 spawns, about 14%, were home spawns. Not decided by the user; the proposal is to take it up in stage 12 with the divisor and the company's replacement policy.
+
+**The play script** was walked in the real game (headless Chromium, the debug console), as recorded in the plan's step 10 record with screenshots. The home country looked and played as before; `reveal` and `locations all` listed the rings at threats 1 to 5, 7, 9, 12, 15 and 18 and the Source at 20 in the far east; a threat-9 Bandit Company fielded a Bandit Sergeant, a Crossbowman, a Hedge-Mage and an Archer, whose hit points match the encounter built at level 9 (their Masterwork steel, `banditGear(9)`, was read from the code, not seen in the game); the route to Stonehollow was opened from the Routes tab (61 hexes, 2 gold every 5 days and 1 mithril every 10, security 41%), its road drawn secure, then tainted, then raided on the map; the Mithril Lode, held after `blight 0` and five days, put 2 mithril in the stock, which the trading post offers for sale. What did not go as scripted: a party raised to level 12 by `xp 50000 all` (the most that command gives) in its starting kit lost the fight, as did the in-browser harness's simple fighting bot at level 19; the real fight was won by auto-resolve with a party planted at level 18 and then given `xp 50000 all`, which made it level 19 (forecast win above 95%).
+
+**Carried forward to a later stage** (from the overall review, no code change in this stage): the battle's Auto-resolve button can stay at "Auto-resolve (…)" for a while. Its estimate costs about 2 s for a party of level 12 or more, worked in 10 ms slices between frames and started afresh on each action, so a player who acts quickly may not see the win chance. The cost predates this stage and is not caused by it; a later stage may cache the estimate per battle state, run fewer playouts at high levels, or keep working it across actions.

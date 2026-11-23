@@ -190,8 +190,10 @@ export interface WorldProbe {
   palisades: number
   /** Each open route's id and the shades of its segments as drawn now, from the encampment out. */
   roads: { route: string; shades: ('secure' | 'tainted' | 'raided')[] }[]
-  /** Each trade partner: whether it is contacted, silent, its sprite on the map now (not hidden by the fog), and `grey`: its drawn sprite is tinted grey and its drawn label grey (a silent partner the player may know of: contacted, or in sight). */
-  partners: { id: string; contacted: boolean; silent: boolean; drawn: boolean; grey: boolean }[]
+  /** The blight layer's render textures: how many, the longest side of any (at most `BLIGHT_TILE_PX`), how long the last redraw took in ms, and how many growth sprites it holds. */
+  blightTiles: { count: number; size: number; refreshMs: number; growths: number }
+  /** Each trade partner: its map sprite, whether it is contacted, silent, its sprite on the map now (not hidden by the fog), and `grey`: its drawn sprite is tinted grey and its drawn label grey (a silent partner the player may know of: contacted, or in sight). */
+  partners: { id: string; sprite: string; contacted: boolean; silent: boolean; drawn: boolean; grey: boolean }[]
   /**
    * Scout, Wait, Attack and Auto-resolve show among monsters, the camp buttons and the time buttons elsewhere (so, with the game still going); `campUntilHealed` is enabled while someone is wounded.
    * `end` and `endless` show on the victory screen, `menu` on the defeat screen.
@@ -274,6 +276,12 @@ export interface EncampmentProbe {
   facilities: Array<ButtonProbe & { id: FacilityId; level: number; frame: string; labelText: string; building: BoxProbe; label: BoxProbe }>
   /** `improve` builds or raises the facility shown, `open` goes into it (the guild hall, trading post or workshop), `leave` goes back to the map. */
   buttons: { improve: ButtonProbe; open: ButtonProbe; leave: ButtonProbe }
+  /** The line or two under the title: whom it acts for and the stock, shortened with "+N more" past two lines. */
+  stock: string
+  /** That text's box on screen (top-left corner and size). */
+  stockRect: { x: number; y: number; width: number; height: number }
+  /** The top of the encampment's picture on screen. */
+  pictureTop: number
 }
 
 export interface TradingPostProbe {

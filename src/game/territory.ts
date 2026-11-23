@@ -24,6 +24,8 @@ import { ENCAMPMENT_ID, encampment, type QuietLocation, type WorldState } from '
 export const TOWER_NAME = 'A watchtower'
 
 export type Material = 'gold' | 'iron' | 'timber' | 'silver' | 'stone' | 'salt' | 'copper' | 'crystal' | 'peat'
+  // The outer rings' ores and woods (stage 9): no use until stage 10; the trading post buys them.
+  | 'ironwood' | 'mithril' | 'elderwood' | 'adamant' | 'wyrmwood' | 'starmetal' | 'heartwood'
 export type Stock = Partial<Record<Material, number>>
 
 /** A held site is lost when its hex reaches this level, a fort's aside (`lossLevel`). */
@@ -47,6 +49,8 @@ export const IMPROVEMENT_YIELD: readonly number[] = [0, 1, 3, 3]
 export const WORKS_NAMES: Record<Material, string> = {
   iron: 'Mine', gold: 'Mine', silver: 'Mine', copper: 'Mine', crystal: 'Mine',
   timber: 'Lumber Camp', stone: 'Quarry', salt: 'Saltworks', peat: 'Peat Cuttings',
+  mithril: 'Mine', adamant: 'Mine', starmetal: 'Mine',
+  ironwood: 'Lumber Camp', elderwood: 'Lumber Camp', wyrmwood: 'Lumber Camp', heartwood: 'Lumber Camp',
 }
 
 /** What each resource yields, by its location's id. */
@@ -60,6 +64,14 @@ const RESOURCE_YIELDS: Record<string, { material: Material; amount: number }> = 
   salt_flats: { material: 'salt', amount: 2 },
   copper_pit: { material: 'copper', amount: 2 },
   crystal_cave: { material: 'crystal', amount: 2 },
+  // The outer rings' (stage 9).
+  ironwood_grove: { material: 'ironwood', amount: 2 },
+  mithril_lode: { material: 'mithril', amount: 2 },
+  elder_grove: { material: 'elderwood', amount: 2 },
+  adamant_deep: { material: 'adamant', amount: 2 },
+  wyrmwood_thicket: { material: 'wyrmwood', amount: 2 },
+  fallen_star: { material: 'starmetal', amount: 2 },
+  heartwood: { material: 'heartwood', amount: 2 },
 }
 
 /** The encampment and the resources: what the party holds and loses (a trade partner is neither). */
