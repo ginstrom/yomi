@@ -400,7 +400,8 @@ export function salamanderPool(party: readonly Fighter[], threat = 5): Encounter
  * What guards the blight's Source: the Blight Horror, with a Goblin Brute
  * beside it and, at threat 5, where the Source near home is fought, a shaman
  * and a Kobold Sneak behind; from threat 6 a Goblin Cutter too, so the Source
- * in the far ring (threat 20) fields all five at level 20.
+ * in the far ring (threat 20) fields all five at the threat's level,
+ * SOURCE_FOE_LEVEL (6) at most.
  */
 export function sourceGuardians(party: readonly Fighter[], threat = 1): Encounter {
   return encounter(party, SOURCE_GUARDIANS, threat)

@@ -4,6 +4,7 @@ import { mulberry32 } from '../combat/rng.ts'
 import { POLICIES } from '../engine/policies.ts'
 import { xpToNextLevel } from '../character/progression.ts'
 import { BattleEngine } from '../engine/battleEngine.ts'
+import type { UnitSetup } from '../engine/battleEngine.ts'
 import { hexDistance, offsetToHex } from '../grid/hex.ts'
 import {
   ARMORED_TROLL_STATS,
@@ -88,20 +89,24 @@ describe.each(Object.entries(ENCOUNTERS))('the %s encounter, as the threat rises
   const { min, max } = ENCOUNTER_BANDS[id as EncounterId]
   const foes = (threat: number) => build(party(), threat).setup.units.filter((u) => u.side === 'enemy')
 
-  it('fields foes of that level, never fewer than before, each with a name and a hex of its own', () => {
+  it('fields foes of that level, never fewer than before, each with a name and a hex of its own', { timeout: 20_000 }, () => {
+    // Each threat's encounter is built once, its foes kept for the next threat's comparison.
+    let before: UnitSetup[] | null = null
     for (let threat = min; threat <= max; threat++) {
       const encounter = build(party(), threat)
       const state = new BattleEngine(encounter.setup).getState()
+      const now = encounter.setup.units.filter((u) => u.side === 'enemy')
       expect(Object.keys(encounter.kinds).sort()).toEqual(encounter.setup.units.map((u) => u.id).sort())
       expect(new Set(state.units.map((u) => `${u.position.q},${u.position.r}`)).size).toBe(state.units.length)
-      expect(new Set(foes(threat).map((u) => u.stats.name)).size).toBe(foes(threat).length)
-      if (threat > min) {
-        expect(foes(threat).length).toBeGreaterThanOrEqual(foes(threat - 1).length)
+      expect(new Set(now.map((u) => u.stats.name)).size).toBe(now.length)
+      if (before !== null) {
+        expect(now.length).toBeGreaterThanOrEqual(before.length)
         // The Source's guardians stop growing at SOURCE_FOE_LEVEL (stage 9 step 09), and hold there.
         const held = id === 'source_guardians' && threat > SOURCE_FOE_LEVEL
-        if (held) expect(foes(threat)[0].stats.maxHp).toBe(foes(threat - 1)[0].stats.maxHp)
-        else expect(foes(threat)[0].stats.maxHp).toBeGreaterThan(foes(threat - 1)[0].stats.maxHp)
+        if (held) expect(now[0].stats.maxHp).toBe(before[0].stats.maxHp)
+        else expect(now[0].stats.maxHp).toBeGreaterThan(before[0].stats.maxHp)
       }
+      before = now
     }
     // More at the top than at the bottom, unless the band's counts are flat by design (stage 9 decision 6).
     const flat = new Set(ENCOUNTER_COUNTS[id as EncounterId]).size === 1

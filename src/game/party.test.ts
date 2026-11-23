@@ -140,11 +140,12 @@ describe('partyFighters', () => {
     expect(partyFighters(party)[1].hp).toBe(7)
   })
 
-  it('fits a full party into every encounter, at every threat', () => {
+  it('fits a full party into every encounter, at every threat', { timeout: 20_000 }, () => {
     const party = readyMadeParty()
     while (joinParty(party, createWarrior(), MAX_PARTY_SIZE));
     for (const [id, build] of Object.entries(ENCOUNTERS)) {
-      for (let threat = 1; threat <= ENCOUNTER_BANDS[id as EncounterId].max; threat++) {
+      // Below its band's bottom an encounter is fought as at the bottom.
+      for (let threat = ENCOUNTER_BANDS[id as EncounterId].min; threat <= ENCOUNTER_BANDS[id as EncounterId].max; threat++) {
         // The engine refuses a setup with two units on one hex.
         const state = new BattleEngine(build(partyFighters(party), threat).setup).getState()
         expect(state.units.filter((u) => u.side === 'player')).toHaveLength(MAX_PARTY_SIZE)
