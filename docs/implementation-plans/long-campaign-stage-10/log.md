@@ -219,3 +219,7 @@ Outcome (step 10): engineer opus, reviewer opus, clean, 1 review round (two reco
 - Map header stock: workshop, market and encampment scenes emit `stock-changed` on each redraw; the paused map redraws its status panel (`refreshStatus`). e2e checks the header while the market is open.
 - "drake=scale": not a defect. The text is "drake-scale" (`encampment.ts`, tested); the screenshot's hyphen is the scaled monospace glyph at the overlay's fractional scale. No change.
 - Sound tween "Cannot set properties of null (setting 'volume')": not seen in this branch's runs of any e2e file here (world, encampment, battle, story, sounds, audio, menu, party, debug, exchange, saves, character). `soundPlayer.ts` and `src/story` have no change since 2059462 (the `stopVoice` fade tween on a sound a scene shutdown destroys is from step 05 of the audio pass), so it predates the branch. Not fixed.
+
+## Pre-PR review (2026-11-24)
+
+pr-reviewer at 801e745: npm test (2739), build, test:browser (192), sprites and sounds checks all pass. Predicted CRISP: no critical, 11 observations; the user chose to fix 8 (sonnet engineer, 557a1e9–c72d798; npm test 2740 and test:browser 192 pass, refactor guard unchanged), 3 dismissed or commented with reasons (review record). Verdict ready at c72d798.

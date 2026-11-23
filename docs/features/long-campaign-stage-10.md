@@ -4,7 +4,7 @@
 
 - Request (user's words):
   > The next thing is stage 10 of the long campaign: forging and the high tiers. Its design is docs/designs/long-campaign/stage-10-forging-and-high-tiers.md and it is marked "ready for planning". [...] As with stages 2–9, the approved stage design goes straight to the planner. Start with the bookkeeping commit, then cut a long-campaign-stage-10 branch off main and run the orchestrator. Early figures, the refactor guard and the 50-campaign check run with --near-source as in stage 9. Balance bands are mine to change: bring any out-of-band figures to me.
-- Slug `long-campaign-stage-10` · Phase 6, done · Next action: a PR when the user asks (pr-reviewer, then pr-creator) · Branch: `long-campaign-stage-10`, off main at 4d51a8b (stage 9 merged as PR #11).
+- Slug `long-campaign-stage-10` · Phase 6, PR · Next action: pr-creator (pr-reviewer ready at c72d798, `.git/pr-review/long-campaign-stage-10.md`) · Branch: `long-campaign-stage-10`, off main at 4d51a8b (stage 9 merged as PR #11).
 - Path: Large, but the stage design is the approved design. Straight to planning, as stages 2–9 did.
 - Links:
   - Stages overview: `docs/designs/long-campaign/index.md`
