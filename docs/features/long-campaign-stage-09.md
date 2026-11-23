@@ -4,7 +4,7 @@
 
 - Request (user's words):
   > The next thing is stage 9 of the long campaign: the outer rings. Its design is docs/designs/long-campaign/stage-09-outer-rings.md and it is marked "ready for planning". [...] As with stages 2–8, the approved stage design goes straight to the planner. Start with the bookkeeping commit, then cut a long-campaign-stage-09 branch off main and run the orchestrator. Balance bands are mine to change: bring any out-of-band figures to me.
-- Slug `long-campaign-stage-09` · Phase 5 · Next action: step 10 review, QA (sonnet) and simulated user (sonnet) running; then the overall review (opus). 01–09 done and reviewed clean · Branch: `long-campaign-stage-09`, off main at 67e5f0d (67e5f0d on main, not pushed).
+- Slug `long-campaign-stage-09` · Phase 5 · Next action: verification fix round 1, then re-check; 01–10 done · Branch: `long-campaign-stage-09`, off main at 67e5f0d (67e5f0d on main, not pushed).
 - Path: Large, but the stage design is the approved design. Straight to planning, as stages 2–8 did.
 - Links:
   - Stages overview: `docs/designs/long-campaign/index.md`
@@ -15,7 +15,7 @@
 - Open questions: for the user at the report: in the real long campaign the home country sees about half the spawns (8.3 a campaign over 1272–1602 days vs 14.5 over 325 near the Source); proposed: defer to stage 12's spawn retune.
 - Tiers (engineer / reviewer): planner opus; 01, 02, 04, 05, 08, 09 opus / opus; 03, 06, 07, 10 sonnet / opus (07 to opus if frame time is poor for an unknown cause). No escalations.
 - Worktrees: 03 and 06 run in their own worktrees and leave index.md and log.md alone; the orchestrator merges them and the next engineer records their status and log lines.
-- Verification: none yet (step verdicts in the plan's log.md). Baseline at 5664289: one 233, company 232, rl10 433; 50-check b50f7b50… (identical through step 02 with `--near-source`).
+- Verification: overall review (opus) at d383d98: clean, ready for a PR (npm test 2622, build, sprites, e2e after reruns, 50-check 57fdea15…). QA (sonnet): pass, 2 minor (header stock overflow, Freebooter labels). Simulated user (sonnet): goals 1, 2, 4 met; 3, 5, 6 partly. Fix round 1 (opus) running. Evidence: `.git/pr-review/long-campaign-stage-09/evidence/`.
 - Carried forward (from stage 8 and earlier, for this plan):
   - The Routes tab shows at most 4 rows, no paging; a test fails once PARTNERS exceeds 4 (stage 9 adds 3).
   - A route whose raid comes and goes between yield days is never abandoned (count resets when told safe); unmeasured.
