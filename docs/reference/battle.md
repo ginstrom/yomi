@@ -101,7 +101,7 @@ A two-handed weapon and an off-hand item cannot be held together, so equipping e
 
 ### Zones of control, free attacks and counters
 
-Stepping from a hex adjacent to a ready foe with a melee weapon, reach included, to one that is not provokes one free attack. A reach weapon's zone is still its neighbouring hexes only; a step to another hex beside it provokes nothing. One free attack per unit per enemy turn, decided in `reactorsAt`, which `reachableHexes` asks about each step; none at all for a mover with the trait `tumble`. Ranged weapons, wands and the crossbow among them, hold no zone of control.
+Stepping from a hex adjacent to a ready foe with a melee weapon, reach included, to one that is not provokes one free attack. A reach weapon's zone is still its neighbouring hexes only; a step to another hex beside it provokes nothing. One free attack per unit per enemy turn, decided in `reactorsAt` (`reachable` reads the same rule, `canReact` and `leavesSideOf`, with the foes that could react found once a search), which `reachableHexes` asks about each step; none at all for a mover with the trait `tumble`. Ranged weapons, wands and the crossbow among them, hold no zone of control.
 
 A unit with the trait `counter` whose free attack is ready, holding a melee weapon with the attacker in reach, answers a melee blow of the side in turn that misses it (an image struck is a hit) with a free attack at once (`AttackEvent.counter`, spending `reactionReady`), before a routine's next strike; a counter that fells the attacker ends its routine.
 
@@ -274,7 +274,7 @@ None of the three draws from the RNG.
 
 ## The `aggressive` policy
 
-`aggressive` (`policies.ts`) gives each unit the first of these that applies:
+`aggressive` (`policies.ts`) gives each unit, in roster order, the first of these that applies, and acts with the first unit that has one. It reads a unit's actions from `legalFor` when given it (`autoPlay` does: the whole `legal` list is then never built, a step listing only the units it weighs) and else from `legal`; the two are the same actions, so its choice is the same.
 
 1. Revive on a fallen ally whenever it is legal (`reviveCast`, kept from no heal reserve).
 2. A heal when an ally is at half its hit points or less.

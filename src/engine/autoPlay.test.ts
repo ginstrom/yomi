@@ -152,3 +152,58 @@ describe('autoPlay', () => {
     }
   })
 })
+
+/**
+ * `playStep` gives policies `legalFor` and lists `legal` only if read (stage 10
+ * step 07): along whole battles of every encounter, one unit's actions are
+ * `legal`'s for it, and `aggressive` chooses the same from either.
+ */
+describe('legalFor', () => {
+  const battles = (Object.keys(ENCOUNTERS) as Array<keyof typeof ENCOUNTERS>).map((id) => ENCOUNTERS[id](partyFighters(readyMadeParty()), 5).setup)
+
+  it("is legalActions' list for one unit, end_turn left out, in order, at every step", () => {
+    let checked = 0
+    for (const [i, setup] of battles.entries()) {
+      const engine = newEngine(setup, 100 + i)
+      const opts = options(AUTO_ROUND_LIMIT, 100 + i)
+      do {
+        const all = engine.legalActions()
+        for (const unit of engine.getState().units) {
+          expect(engine.legalActions(unit.id).filter((a) => a.type !== 'end_turn')).toEqual(
+            all.filter((a) => a.type !== 'end_turn' && a.unit === unit.id),
+          )
+          checked++
+        }
+      } while (playStep(engine, opts))
+    }
+    expect(checked).toBeGreaterThan(500)
+  })
+
+  it('leaves aggressive choosing as it would from legal alone, never listing legal itself', () => {
+    let checked = 0
+    for (const [i, setup] of battles.entries()) {
+      const engine = newEngine(setup, 200 + i)
+      const opts = options(AUTO_ROUND_LIMIT, 200 + i)
+      for (;;) {
+        const state = engine.getState()
+        if (state.phase === 'over' || state.round > AUTO_ROUND_LIMIT) break
+        const fromLegal = POLICIES.aggressive({ state, legal: engine.legalActions(), rng: mulberry32(checked) })
+        let listed = false
+        const fromLegalFor = POLICIES.aggressive({
+          state,
+          get legal() {
+            listed = true
+            return engine.legalActions()
+          },
+          legalFor: (unit) => engine.legalActions(unit).filter((a) => a.type !== 'end_turn'),
+          rng: mulberry32(checked),
+        })
+        expect(fromLegalFor).toEqual(fromLegal)
+        expect(listed).toBe(false)
+        checked++
+        playStep(engine, opts)
+      }
+    }
+    expect(checked).toBeGreaterThan(200)
+  })
+})

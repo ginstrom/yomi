@@ -60,3 +60,62 @@ Step 05 workshop sprites: engineer sonnet, reviewer opus, clean, 1 review round,
 ## Step 04: partners' goods
 
 2026-11-23. 50-campaign check `57fdea1553a35b1af0e33b74a11ea9fe0a0e2f62ef9e5c80972af59276e53e75`, **identical** to step 03. Guard and policy snapshot untouched, green. `npm test`: 105 files, 2,676 tests pass.
+
+Outcome (step 04): engineer sonnet, reviewer opus, clean, 1 review round (cycle comment, one refusal-order test, wording).
+
+06 high levels in the debug console: engineer sonnet, reviewer sonnet, clean, 1 review round; npm test 2674 passed, browser debug 5 passed; no simulation (dev tool, moves no rule).
+
+## Step 07: a faster auto-resolve estimate
+
+2026-11-23, on `6de80da`. The fixture and `scripts/forecastCost.ts` committed first (`2cdd885`), recorded from the code before any change (recorded twice, the same both times). **The machine was loaded throughout** (other sessions' in-browser tests and services: load averages 5 to 45), so every figure below is noisy; old and new were run back to back (old from a detached worktree of `2cdd885`) and the ratio is the steadier figure.
+
+**Identity.** Every change keeps every estimate and every battle byte-identical:
+- the estimate fixture (`forecast.test.ts`, 18 starts: levels 1 to 18 in tier 1 to 5 kits, all ten encounters, four mid-battle snapshots, one where every sample stalls; the exact `Forecast` and a sha256 of every sample's event log) passes unchanged;
+- the policy snapshot and the refactor guard pass, unedited;
+- the 50-campaign check: `57fdea1553a35b1af0e33b74a11ea9fe0a0e2f62ef9e5c80972af59276e53e75`, **identical** to step 04 (taken at the start of the step and again at the end).
+
+**Profile** (`node --cpu-prof`, 40 samples, the level-15 party in tier 4 against freebooter_host 15; total time, of the estimate's):
+
+| | before | after |
+| --- | --- | --- |
+| `legalActions` | 84% | 53% (through `legalFor`) |
+| `canCast` (area spells: each board hex as a centre) | 47% | 3% (`castAimSuits`) |
+| `statsOf` (read twice per hex per area spell) | 25% | 4% |
+| `areaTouches` (a Set of hex-key strings per centre) | 28% | 3% |
+| `reachable` / `reachableHexes` (the pathfinder) | 26% / 22% | 44% / 40% |
+| the `aggressive` policy's own scoring | 8% | about 20% (`bestStrike` 9%, `expectedHarm` 6%) |
+
+Level 6 (tier 2, bandit_company 9) has the same shape: `legalActions` 79%, area abilities (`canAim`) 24%, casts 18%, the pathfinder 36%. What grows with level: the mage's spell list (more area spells, each tried at every hex of the board, `statsOf` read twice for each), and samples last longer (4.4 rounds at level 6, 14.2 at level 15).
+
+**The changes kept** (each checked against the fixture as it was made):
+1. `legalActions` reads the actor's stats once and checks each aim past the pay check (`castAimSuits`, `areaAimSuits`); `canCast` and `canAim` are those plus their own checks. About 2.3×.
+2. `areaTouches` answers a burst by distance (`areaCovers`) instead of a Set of hex keys; cones and lines as before. (New test: the same units as `areaOf`'s hexes for bursts of radius 0 to 3.)
+3. `reachableHexes` keeps a route as a link to the one before (spelled out once per hex kept), shares the provoked set when a step provokes no one new, a subset test without spreading, and numeric keys (`hexIndex`) inside the search; `reachable` finds the blocked hexes and the foes that could react (`canReact`) once a search, `reactorsAt` reading the same rule (`leavesSideOf`).
+4. `PolicyContext.legalFor(unit)`: `autoPlay`'s step lists `legal` only if a policy reads it (a getter), and `aggressive`, which weighs one unit at a time and acts with the first that has a choice, reads `legalFor` (new tests: `legalFor` equals `legal` filtered at every step of ten battles; `aggressive` chooses the same from either and never lists `legal`). The largest gain: about 2.5× on its own.
+
+Tried and dropped: a plain breadth-first path in `reachableHexes` when no foe within reach could react (no measurable gain). Not tried: memoising `reachable` across a step's `legalFor` and `move` (needs an invalidation key the engine does not have), a larger slice, a worker.
+
+**`node scripts/forecastCost.ts`** (40 samples, median of 5; CPU ms an estimate, the steadier figure; wall clock close to it):
+
+| start | before | after | before (heavier load) | after (heavier load) |
+| --- | --- | --- | --- | --- |
+| level 6, tier 2 vs bandit_company 9 | 1111 | 222 | 618 | 390 |
+| level 12, tier 3 vs bandit_company 12 | 1951 | 254 | 871 | 506 |
+| level 15, tier 4 vs freebooter_host 15 | 3038 | 459 | 4097 | 870 |
+| level 18, tier 5 vs freebooter_host 18 | 2810 | 451 | 4387 | 879 |
+| level 15, 6 steps in | 2375 | 416 | 4399 | 871 |
+
+The first measurement, before any change and at load 7 (wall ms only): 856, 1028, 2206, 2436, 2426. In one process, old and new alternated (level 15): 4804 → 891 ms, 5.4×; level 6: 1388 → 332, 4.2×.
+
+**The browser** (a throwaway in-browser test, kept out of the repository and deleted: a new game, the save's kit set to tier 4 Fine (adamant longsword, wyrmwood shield and bow and wand, adamant breastplates), reload and Continue, debug `level 15 all auto`, `heal all`, `fight freebooter_host 15`; timed in the page from the first frame the battle screen has control to the frame its probe's `forecast` is set; then again from End Turn's return of control). Headless Chromium drew 12 to 20 frames a second on this loaded machine (50 to 115 ms a frame, before and after alike), and the estimate works 10 ms a frame, so its wall clock is not a player's: the frames it takes are the measure, about 16.7 ms each at 60 frames a second.
+
+| | before: frames (headless wall) | after: frames (headless wall) |
+| --- | --- | --- |
+| battle start | 466 (47.0 s), 367 (25.3 s), 416 (47.9 s) | 98 (8.4 s), 84 (6.5 s), 50 (2.5 s), 92 (7.6 s) |
+| after End Turn | 239 (19.0 s), 134 (6.7 s), 185 (11.3 s) | 49 (4.2 s), 46 (4.4 s), 40 (3.2 s), 43 (3.5 s) |
+
+At 60 frames a second the after figures are 0.7 to 1.6 s from the battle's start (the quietest run 0.83 s) and 0.7 to 0.8 s after an action, against 6 to 8 s before; a quiet machine's 0.45 s of work is about 45 frames, 0.75 s. The estimate the battle showed was the same before and after (24 wins, 23 heroes lost, of 40). Judged under about 1 s; a stopwatch in a real browser on a quiet machine would confirm it.
+
+**50-campaign check's wall time**, back to back, `--log none`, load 7 to 11: 37.3 s before, 25.3 s after (the campaign's world turns are most of the rest).
+
+Verification: `npx vitest run src/game/forecast.test.ts` 41 pass (before and after every change); `npm test` 105 files, 2,702 tests pass; `npm run test:browser -- -t "Auto|auto-resolve|estimate"` 19 pass.

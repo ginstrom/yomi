@@ -6,7 +6,8 @@
 // bandit_company 12, freebooter_host 15 and freebooter_host 18; and a
 // mid-battle start (a snapshot a few steps into the level-15 battle). Each is
 // run once to warm up, then `--runs` times; it prints the median ms an
-// estimate and a sample, and the rounds a sample lasts on average. It writes
+// estimate takes (wall clock, and the process's CPU time, which another load on
+// the machine disturbs less) and a sample, and the rounds a sample lasts on average. It writes
 // no file. Long-campaign stage 10 step 07 measures it before and after its
 // speed-ups.
 //
@@ -24,7 +25,7 @@ import { itemById, type EquipmentSlot } from '../src/inventory/inventory.ts'
 import { clampHp, maxHp } from '../src/character/character.ts'
 import { parseArgs as parseSimulateArgs, raisedParty } from './simulate.ts'
 
-const { values } = parseArgs({ options: { samples: { type: 'string', default: String(FORECAST_SAMPLES) }, runs: { type: 'string', default: '3' } } })
+const { values } = parseArgs({ options: { samples: { type: 'string', default: String(FORECAST_SAMPLES) }, runs: { type: 'string', default: '5' } } })
 const samples = Number(values.samples)
 const runs = Number(values.runs)
 if (!Number.isInteger(samples) || samples < 1 || !Number.isInteger(runs) || runs < 1) throw new Error('--samples and --runs must be positive integers')
@@ -105,15 +106,19 @@ const cases: Case[] = [
 console.log(`${samples} samples an estimate, median of ${runs} runs after a warm-up`)
 for (const c of cases) {
   const result = forecast(c.start, c.base, samples)
-  const times: number[] = []
+  const wall: number[] = []
+  const cpu: number[] = []
   for (let r = 0; r < runs; r++) {
     const t0 = performance.now()
+    const c0 = process.cpuUsage()
     forecast(c.start, c.base, samples)
-    times.push(performance.now() - t0)
+    const used = process.cpuUsage(c0)
+    wall.push(performance.now() - t0)
+    cpu.push((used.user + used.system) / 1000)
   }
-  const ms = median(times)
+  const ms = median(cpu)
   console.log(
-    `${c.name}: ${ms.toFixed(0)} ms an estimate, ${(ms / samples).toFixed(1)} a sample, ${meanRounds(c).toFixed(1)} rounds a sample; ` +
+    `${c.name}: ${median(wall).toFixed(0)} ms an estimate (CPU ${ms.toFixed(0)}), ${(ms / samples).toFixed(1)} CPU ms a sample, ${meanRounds(c).toFixed(1)} rounds a sample; ` +
       `wins ${result.wins}, heroLost ${result.heroLost}, stalled ${result.stalled}`,
   )
 }

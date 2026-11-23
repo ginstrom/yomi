@@ -1,6 +1,6 @@
 import type { RNG } from '../combat/combat.ts'
-import type { BattleEngine, BattleEvent, Side } from './battleEngine.ts'
-import { POLICIES, type PolicyName } from './policies.ts'
+import type { Action, BattleEngine, BattleEvent, Side } from './battleEngine.ts'
+import { POLICIES, type PolicyContext, type PolicyName } from './policies.ts'
 
 /** The policy the player's side is played by when a battle is auto-resolved. */
 export const AUTO_POLICY: PolicyName = 'aggressive'
@@ -27,7 +27,18 @@ export interface PlayOut {
 function stepOnce(engine: BattleEngine, { policies, rngs, lastRound }: PlayOutOptions): BattleEvent[] | null {
   const state = engine.getState()
   if (state.phase === 'over' || state.round > lastRound) return null
-  return engine.step(POLICIES[policies[state.phase]]({ state, legal: engine.legalActions(), rng: rngs[state.phase] }))
+  // Listing every unit's actions is most of a step's cost, and the aggressive policy
+  // weighs one unit at a time: `legal` is listed only if a policy reads it.
+  let legal: Action[] | null = null
+  const context: PolicyContext = {
+    state,
+    get legal() {
+      return (legal ??= engine.legalActions())
+    },
+    legalFor: (unit) => engine.legalActions(unit).filter((a) => a.type !== 'end_turn'),
+    rng: rngs[state.phase],
+  }
+  return engine.step(POLICIES[policies[state.phase]](context))
 }
 
 /**
