@@ -115,7 +115,7 @@ export interface WorldState {
   lodge: number
   /** The trading post's level at the encampment, 1 to `MAX_TRADING_POST_LEVEL` (tradingPost.ts): the grades it sells. */
   tradingPost: number
-  /** The workshop's level at the encampment, 0 (none) to `MAX_WORKSHOP_LEVEL` (crafting.ts): the modifiers and grades it makes. */
+  /** The workshop's level at the encampment, 0 (none) to `MAX_WORKSHOP_LEVEL` (crafting.ts): the modifiers and grades it makes, and from level 3 tempering, from 4 forging tiers 3 to 5. */
   workshop: number
   /** The infirmary's level at the encampment, 0 (none) to `MAX_INFIRMARY_LEVEL` (infirmary.ts): what a day's camping heals. */
   infirmary: number

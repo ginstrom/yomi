@@ -51,5 +51,8 @@ Outcome (step 02): engineer opus, reviewer opus, clean, 1 review round.
 - 50-campaign check: `57fdea1553a35b1af0e33b74a11ea9fe0a0e2f62ef9e5c80972af59276e53e75`, **identical** to step 02 (about 21 s alone).
 - Refactor guard and policy snapshot: untouched, green.
 - `npm test`: before step 05's merge every test but one passed (`encampmentView.test.ts` asks the atlas for `camp_workshop/level_4`–`6`); after the merge (`dd96b2c`), 105 files, 2,669 tests, all pass.
+- Long campaign, unmeasured: `materialNeeds` now keeps 20 mithril, 20 adamant and 10 starmetal instead of selling them, and the simulator raises the workshop to levels 4 to 6 greedily when the stock affords them (100, 150, 200 gold a level). No forging follows until step 09. Step 10 should read its long figures with that in mind.
+
+Outcome (step 03): engineer opus, reviewer opus, clean, 1 review round.
 
 Step 05 workshop sprites: engineer sonnet, reviewer opus, clean, 1 review round, plus two look passes the orchestrator asked for (level 6 banner moved to the roof with a gold chevron, orange rim on the star-metal glow, level 4 bellows pipe); sprites:check pass, yomi-asset-check pass; no simulation.

@@ -284,3 +284,5 @@ Verification: before step 05's merge, `npm test` 104 of 105 files, 2,668 of 2,66
 Commit: held until step 05 was merged (`dd96b2c`), as the atlas test needs its frames; after the merge `npm test` passes in full (105 files, 2,669 tests) and the step is committed.
 
 For later steps: the long campaign's simulator now keeps 20 mithril, 20 adamant and 10 starmetal (`materialNeeds`) instead of selling them, and raises the workshop greedily (`while (upgradeWorkshop(...) === null)`), so a long campaign holding those ores may now reach workshop 4 to 6 (no forging follows until step 09). No location's loot is tier 3+, so `forgedValue` reaches no simulated sale yet. The long run was not measured here.
+
+**Review round 1 (opus): clean.** Notes acted on in a follow-up commit: the stale `Material` comment in `src/game/territory.ts` (the far ores now forge tiers 3 to 5 and raise the workshop to 4 to 6) and `WorldState.workshop`'s doc comment in `src/game/worldMap.ts` (tempering and forging added); `log.md`'s step 03 entry notes the long campaign's kept ores and workshop gold, unmeasured, for step 10. Comments and records only; `npm test` rerun.

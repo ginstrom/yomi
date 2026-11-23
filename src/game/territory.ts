@@ -24,7 +24,7 @@ import { ENCAMPMENT_ID, encampment, type QuietLocation, type WorldState } from '
 export const TOWER_NAME = 'A watchtower'
 
 export type Material = 'gold' | 'iron' | 'timber' | 'silver' | 'stone' | 'salt' | 'copper' | 'crystal' | 'peat'
-  // The outer rings' ores and woods (stage 9): no use until stage 10; the trading post buys them.
+  // The outer rings' ores and woods (stage 9): they forge tiers 3 to 5 and raise the workshop to levels 4 to 6 (stage 10); the trading post buys them.
   | 'ironwood' | 'mithril' | 'elderwood' | 'adamant' | 'wyrmwood' | 'starmetal' | 'heartwood'
   // Trophies (stage 10): forge the hide tiers; no site yields one (TROPHIES, encounters.ts; partners' goods).
   | 'wolfhide' | 'wyvern_hide' | 'basilisk_scale' | 'drake_scale'
