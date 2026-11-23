@@ -68,6 +68,10 @@ import {
   PREFERRED_MODIFIERS,
   RUNE_ORDER,
   runecraftGear,
+  expectedKit,
+  kitLines,
+  kitNote,
+  kitRole,
   visitGuildHall,
   carryOut,
   decide,
@@ -1241,6 +1245,84 @@ describe('summarizeCampaigns, the runes', () => {
   }, 20_000)
 })
 
+describe('the kit: roles, the expected kit and the record', () => {
+  it('reads a hero\'s kit role from its first tagged skill: the ready-made three are a fighter, an archer and a mage', () => {
+    expect(readyMadeParty().map(kitRole)).toEqual(['fighter', 'archer', 'mage'])
+    const [fighter] = readyMadeParty()
+    expect(kitRole({ ...fighter, tagged: ['magic', 'melee'] })).toBe('mage')
+  })
+
+  it('gives gear §5.8\'s expected kit by level, the same for every role', () => {
+    const row = (tier: number, grades: number[], sockets: number[], ranks: number[]) => ({ tier, grades, sockets, ranks })
+    const rows = [
+      row(1, [1, 2], [0, 0], [1, 1]),
+      row(2, [2, 3], [1, 2], [1, 2]),
+      row(3, [2, 2], [2, 3], [2, 2]),
+      row(4, [2, 3], [3, 4], [2, 3]),
+      row(5, [3, 3], [4, 6], [3, 4]),
+    ]
+    for (const role of ['fighter', 'archer', 'mage'] as const) {
+      expect([1, 5, 9, 13, 17, 20].map((level) => expectedKit(role, level))).toEqual([...rows, rows[4]])
+      expect([4, 8, 12, 16].map((level) => expectedKit(role, level).tier)).toEqual([1, 2, 3, 4])
+    }
+    expect(expectedKit('mage', 0)).toEqual(rows[0])
+    expect(expectedKit('mage', 25)).toEqual(rows[4])
+  })
+
+  it('notes the party\'s kit wherever it notes the battles to a level', () => {
+    const { record } = runCampaign(3, 1, EARLY_ONE, 0)
+    expect(Object.keys(record.battlesToLevel).length).toBeGreaterThan(0)
+    expect(Object.keys(record.kitAtLevel)).toEqual(Object.keys(record.battlesToLevel))
+    for (const notes of Object.values(record.kitAtLevel)) {
+      expect(notes.length).toBeGreaterThan(0)
+      for (const note of notes) {
+        expect(['fighter', 'archer', 'mage']).toContain(note.role)
+        expect(note.tier).toBeGreaterThanOrEqual(1)
+        expect(note.sockets).toBeGreaterThanOrEqual(0)
+      }
+    }
+    expect(record.goldOnForging).toBe(0)
+  }, 20_000)
+
+  it('notes an enchanted or empty main hand as tier 0, and counts the runes across the worn gear', () => {
+    const [fighter, , mage] = readyMadeParty()
+    fighter.equipment.mainHand = itemById('steel_longsword@3#ember1')!
+    fighter.equipment.armor = itemById('iron_breastplate@3#stone1')!
+    expect(kitNote(fighter)).toEqual({ role: 'fighter', tier: 2, sockets: 2 })
+    delete mage.equipment.mainHand
+    expect(kitNote(mage)).toEqual({ role: 'mage', tier: 0, sockets: 0 })
+    mage.equipment.mainHand = itemById('emberblade')!
+    expect(kitNote(mage).tier).toBe(0)
+  })
+
+  it('averages the kit by mark and role and the forging gold, and prints a Kit line against the expected kit', () => {
+    const base = { ...runCampaign(3, 1, EARLY_ONE, 0).record }
+    const records = [
+      {
+        ...base,
+        goldOnForging: 60,
+        kitAtLevel: {
+          5: [{ role: 'fighter' as const, tier: 2, sockets: 1 }, { role: 'archer' as const, tier: 1, sockets: 0 }],
+          10: [{ role: 'fighter' as const, tier: 3, sockets: 3 }],
+        },
+      },
+      { ...base, goldOnForging: 0, kitAtLevel: { 5: [{ role: 'fighter' as const, tier: 1, sockets: 0 }, { role: 'mage' as const, tier: 1, sockets: 2 }] } },
+    ]
+    const summary = summarizeCampaigns([], records)
+    expect(summary.avgGoldOnForging).toBe(30)
+    expect(summary.kit).toEqual([
+      { level: 5, campaigns: 2, roles: { fighter: { tier: 1.5, sockets: 0.5 }, archer: { tier: 1, sockets: 0 }, mage: { tier: 1, sockets: 2 } } },
+      { level: 10, campaigns: 1, roles: { fighter: { tier: 3, sockets: 3 } } },
+      { level: 15, campaigns: 0, roles: {} },
+      { level: 20, campaigns: 0, roles: {} },
+    ])
+    expect(kitLines(summary)).toEqual([
+      'Kit at 5 (2 campaigns): fighter tier 1.5, 0.5 runes; archer tier 1.0, 0.0 runes; mage tier 1.0, 2.0 runes; expected tier 2, 1–2 runes',
+      'Kit at 10 (1 campaigns): fighter tier 3.0, 3.0 runes; expected tier 3, 2–3 runes',
+    ])
+  }, 20_000)
+})
+
 describe('summarizeCampaigns, the improvements and income', () => {
   it('averages improvements by level, the Lodge, gold by source and both incomes, and says whether waiting earns less', () => {
     const base = { ...runCampaign(3, 1, EARLY_ONE, 0).record }
@@ -1506,11 +1588,11 @@ describe('runes in a campaign', () => {
  * Source, fallen, with 0.49 to 0.71 of the land blighted.)
  */
 const GUARD_RECORDS: CampaignRecord[] = [
-  { outcome: "source", days: 417, battles: 19, spawns: 52, captured: 3, lost: 0, blighted: 0.37430555555555556, healedHp: 108, campDays: 28, towersBuilt: 3, towersLost: 0, deaths: 2, recruits: 3, hallLevel: 3, shrineLevel: 1, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 56, tierTwoBought: 0, crafted: 7, fieldCraftDays: 2, runesFound: 17, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 20, finalLevels: [8, 8, 8, 7], callings: { heavy_knight: 2, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [2, 7], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 19, wipes: 0, finalLevels: [[8, 8, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkDays: 383, vanguardWalkHomeDays: 106, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [5, 0, 0, 0], lodgeLevel: 1, goldBySource: { sites: 332, market: 0, routes: 0, sales: 56 }, partnersContacted: 1, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 1.2973621103117505, waitingIncomePerDay: 0 },
-  { outcome: "source", days: 414, battles: 24, spawns: 50, captured: 4, lost: 0, blighted: 0.3554563492063492, healedHp: 288, campDays: 43, towersBuilt: 3, towersLost: 0, deaths: 0, recruits: 2, hallLevel: 3, shrineLevel: 0, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 6, fieldCraftDays: 3, runesFound: 19, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [9, 9, 9, 8, 7], callings: { heavy_knight: 3, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 24, wipes: 0, finalLevels: [[9, 9, 9, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkDays: 364, vanguardWalkHomeDays: 77, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [6, 0, 0, 0], lodgeLevel: 1, goldBySource: { sites: 328, market: 0, routes: 0, sales: 0 }, partnersContacted: 1, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 1.3792270531400965, waitingIncomePerDay: 0 },
-  { outcome: "source", days: 351, battles: 19, spawns: 34, captured: 3, lost: 0, blighted: 0.27420634920634923, healedHp: 243, campDays: 23, towersBuilt: 3, towersLost: 0, deaths: 3, recruits: 3, hallLevel: 3, shrineLevel: 2, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 51, tierTwoBought: 0, crafted: 4, fieldCraftDays: 4, runesFound: 13, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 7], callings: { ranger: 1, evoker: 1, heavy_knight: 1 }, capstones: {  }, deathsAtLevel: [2, 8, 7], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 19, wipes: 0, finalLevels: [[8, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkDays: 319, vanguardWalkHomeDays: 69, guardBattles: 0, improvementsBuilt: [1, 0, 0], improvementLevels: [4, 1, 0, 0], lodgeLevel: 0, goldBySource: { sites: 280, market: 0, routes: 0, sales: 51 }, partnersContacted: 1, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 1.2905982905982907, waitingIncomePerDay: 0 },
-  { outcome: "fallen", days: 362, battles: 22, spawns: 36, captured: 5, lost: 0, blighted: 0.29851190476190476, healedHp: 254, campDays: 48, towersBuilt: 1, towersLost: 0, deaths: 1, recruits: 3, hallLevel: 3, shrineLevel: 1, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 66, tierTwoBought: 0, crafted: 6, fieldCraftDays: 4, runesFound: 17, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 20, finalLevels: [8, 8, 8, 8, 7], callings: { heavy_knight: 3, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [3], battlesToLevel: { 5: 9 }, roles: { vanguard: { battles: 22, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkDays: 308, vanguardWalkHomeDays: 85, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [7, 0, 0, 0], lodgeLevel: 1, goldBySource: { sites: 288, market: 0, routes: 0, sales: 66 }, partnersContacted: 0, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 1.4116022099447514, waitingIncomePerDay: 0 },
-  { outcome: "fallen", days: 29, battles: 4, spawns: 0, captured: 0, lost: 0, blighted: 0.1177579365079365, healedHp: 1, campDays: 1, towersBuilt: 0, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 1, fieldCraftDays: 1, runesFound: 2, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [3, 3, 3], callings: { swordmaster: 1, heavy_knight: 1, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [], battlesToLevel: {  }, roles: { vanguard: { battles: 4, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkDays: 26, vanguardWalkHomeDays: 0, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [2, 0, 0, 0], lodgeLevel: 0, goldBySource: { sites: 20, market: 0, routes: 0, sales: 0 }, partnersContacted: 0, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 0.8620689655172413, waitingIncomePerDay: 0 },
+  { outcome: "source", days: 417, battles: 19, spawns: 52, captured: 3, lost: 0, blighted: 0.37430555555555556, healedHp: 108, campDays: 28, towersBuilt: 3, towersLost: 0, deaths: 2, recruits: 3, hallLevel: 3, shrineLevel: 1, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 56, tierTwoBought: 0, crafted: 7, fieldCraftDays: 2, runesFound: 17, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 20, finalLevels: [8, 8, 8, 7], callings: { heavy_knight: 2, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [2, 7], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 19, wipes: 0, finalLevels: [[8, 8, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkDays: 383, vanguardWalkHomeDays: 106, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [5, 0, 0, 0], lodgeLevel: 1, goldBySource: { sites: 332, market: 0, routes: 0, sales: 56 }, partnersContacted: 1, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 1.2973621103117505, waitingIncomePerDay: 0, goldOnForging: 0, kitAtLevel: { 5: [{ role: "fighter", tier: 1, sockets: 0 }, { role: "archer", tier: 1, sockets: 0 }, { role: "mage", tier: 1, sockets: 0 }] } },
+  { outcome: "source", days: 414, battles: 24, spawns: 50, captured: 4, lost: 0, blighted: 0.3554563492063492, healedHp: 288, campDays: 43, towersBuilt: 3, towersLost: 0, deaths: 0, recruits: 2, hallLevel: 3, shrineLevel: 0, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 6, fieldCraftDays: 3, runesFound: 19, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [9, 9, 9, 8, 7], callings: { heavy_knight: 3, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 24, wipes: 0, finalLevels: [[9, 9, 9, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkDays: 364, vanguardWalkHomeDays: 77, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [6, 0, 0, 0], lodgeLevel: 1, goldBySource: { sites: 328, market: 0, routes: 0, sales: 0 }, partnersContacted: 1, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 1.3792270531400965, waitingIncomePerDay: 0, goldOnForging: 0, kitAtLevel: { 5: [{ role: "fighter", tier: 1, sockets: 0 }, { role: "archer", tier: 1, sockets: 0 }, { role: "mage", tier: 1, sockets: 0 }] } },
+  { outcome: "source", days: 351, battles: 19, spawns: 34, captured: 3, lost: 0, blighted: 0.27420634920634923, healedHp: 243, campDays: 23, towersBuilt: 3, towersLost: 0, deaths: 3, recruits: 3, hallLevel: 3, shrineLevel: 2, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 51, tierTwoBought: 0, crafted: 4, fieldCraftDays: 4, runesFound: 13, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 7], callings: { ranger: 1, evoker: 1, heavy_knight: 1 }, capstones: {  }, deathsAtLevel: [2, 8, 7], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 19, wipes: 0, finalLevels: [[8, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkDays: 319, vanguardWalkHomeDays: 69, guardBattles: 0, improvementsBuilt: [1, 0, 0], improvementLevels: [4, 1, 0, 0], lodgeLevel: 0, goldBySource: { sites: 280, market: 0, routes: 0, sales: 51 }, partnersContacted: 1, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 1.2905982905982907, waitingIncomePerDay: 0, goldOnForging: 0, kitAtLevel: { 5: [{ role: "fighter", tier: 1, sockets: 0 }, { role: "archer", tier: 1, sockets: 0 }, { role: "mage", tier: 1, sockets: 0 }] } },
+  { outcome: "fallen", days: 362, battles: 22, spawns: 36, captured: 5, lost: 0, blighted: 0.29851190476190476, healedHp: 254, campDays: 48, towersBuilt: 1, towersLost: 0, deaths: 1, recruits: 3, hallLevel: 3, shrineLevel: 1, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 66, tierTwoBought: 0, crafted: 6, fieldCraftDays: 4, runesFound: 17, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 20, finalLevels: [8, 8, 8, 8, 7], callings: { heavy_knight: 3, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [3], battlesToLevel: { 5: 9 }, roles: { vanguard: { battles: 22, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkDays: 308, vanguardWalkHomeDays: 85, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [7, 0, 0, 0], lodgeLevel: 1, goldBySource: { sites: 288, market: 0, routes: 0, sales: 66 }, partnersContacted: 0, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 1.4116022099447514, waitingIncomePerDay: 0, goldOnForging: 0, kitAtLevel: { 5: [{ role: "fighter", tier: 1, sockets: 0 }, { role: "archer", tier: 1, sockets: 0 }, { role: "mage", tier: 1, sockets: 0 }, { role: "fighter", tier: 1, sockets: 0 }] } },
+  { outcome: "fallen", days: 29, battles: 4, spawns: 0, captured: 0, lost: 0, blighted: 0.1177579365079365, healedHp: 1, campDays: 1, towersBuilt: 0, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 1, fieldCraftDays: 1, runesFound: 2, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [3, 3, 3], callings: { swordmaster: 1, heavy_knight: 1, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [], battlesToLevel: {  }, roles: { vanguard: { battles: 4, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkDays: 26, vanguardWalkHomeDays: 0, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [2, 0, 0, 0], lodgeLevel: 0, goldBySource: { sites: 20, market: 0, routes: 0, sales: 0 }, partnersContacted: 0, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 0.8620689655172413, waitingIncomePerDay: 0, goldOnForging: 0, kitAtLevel: {} },
 ]
 const GUARD_EVENTS_SHA256 = 'e4dd3391cd473d66b35d9070815f49e7c84fb913268c20894506e03e0cfb6394'
 
