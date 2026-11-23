@@ -207,7 +207,7 @@ export const TEMPER_LEVEL = 3
 const isHighTier = (tier: number | undefined): tier is HighTier => tier !== undefined && tier >= 3
 const isHeavy = (family: FamilyDef): boolean => family.stats.twoHanded === true || family.id === 'plate'
 
-/** What forging `family` in the tier-3+ catalog `material` costs: the tier's gold and stock material, doubled for a two-handed family or plate. */
+/** What forging `family` in the tier-3+ catalog `material` costs (assumes a tier-3+ material: callers check `forgeRefusal` first): the tier's gold and stock material, doubled for a two-handed family or plate. */
 export function forgeCost(family: FamilyId, material: string): Stock {
   const def = materialDef(material)!
   const tier = def.tier as HighTier
@@ -261,7 +261,7 @@ export function forge(game: GameState, party: Expedition, family: FamilyId, mate
   return null
 }
 
-/** What tempering the tier-3+ `item` to `grade` costs: gold tier × 10 × grade and 4 × grade of its tier's stock material. */
+/** What tempering the tier-3+ `item` to `grade` costs (assumes a tier-3+ item: callers check `temperRefusal` first): gold tier × 10 × grade and 4 × grade of its tier's stock material. */
 export function temperCost(item: Item, grade: Grade): Stock {
   const def = materialDef(item.material)!
   return { gold: def.tier * 10 * grade, [stockOf(def)]: 4 * grade }
