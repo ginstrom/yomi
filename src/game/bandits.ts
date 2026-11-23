@@ -98,21 +98,24 @@ export function banditDraft(role: BanditRole): CharacterDraft {
   return { ...draft, attributes: { ...draft.attributes }, raises: { ...draft.raises }, perks: [...draft.perks] }
 }
 
-/** The ids of one item of a role's gear at each tier, by catalog family: iron or oak and yew at tier 1, steel and ironwood at tier 2. */
-type GearIds = readonly [tier1: string, tier2: string]
+/** The ids of one item of a role's gear at each tier, one catalog family in each tier's material (iron or oak and yew at tier 1, steel and ironwood at 2, mithril and elderwood at 3, adamant and wyrmwood at 4, starmetal and heartwood at 5). */
+type GearIds = readonly [tier1: string, tier2: string, tier3: string, tier4: string, tier5: string]
 
 /** What each role wears and holds; nothing else (no starting breastplate or shield of its own). */
 const GEAR: Record<BanditRole, { mainHand: GearIds; offHand?: GearIds; armor?: GearIds }> = {
-  cutthroat: { mainHand: ['iron_dagger', 'steel_dagger'] },
-  archer: { mainHand: ['yew_bow', 'ironwood_bow'] },
-  brute: { mainHand: ['iron_battle_axe', 'steel_battle_axe'], armor: ['iron_breastplate', 'steel_breastplate'] },
-  mage: { mainHand: ['spark_wand', 'ironwood_wand'] },
-  captain: {
-    mainHand: ['iron_sword', 'steel_longsword'],
-    offHand: ['oak_shield', 'ironwood_shield'],
-    armor: ['iron_breastplate', 'steel_breastplate'],
+  cutthroat: { mainHand: ['iron_dagger', 'steel_dagger', 'mithril_dagger', 'adamant_dagger', 'starmetal_dagger'] },
+  archer: { mainHand: ['yew_bow', 'ironwood_bow', 'elderwood_bow', 'wyrmwood_bow', 'heartwood_bow'] },
+  brute: {
+    mainHand: ['iron_battle_axe', 'steel_battle_axe', 'mithril_battle_axe', 'adamant_battle_axe', 'starmetal_battle_axe'],
+    armor: ['iron_breastplate', 'steel_breastplate', 'mithril_breastplate', 'adamant_breastplate', 'starmetal_breastplate'],
   },
-  crossbowman: { mainHand: ['yew_crossbow', 'ironwood_crossbow'] },
+  mage: { mainHand: ['spark_wand', 'ironwood_wand', 'elderwood_wand', 'wyrmwood_wand', 'heartwood_wand'] },
+  captain: {
+    mainHand: ['iron_sword', 'steel_longsword', 'mithril_longsword', 'adamant_longsword', 'starmetal_longsword'],
+    offHand: ['oak_shield', 'ironwood_shield', 'elderwood_shield', 'wyrmwood_shield', 'heartwood_shield'],
+    armor: ['iron_breastplate', 'steel_breastplate', 'mithril_breastplate', 'adamant_breastplate', 'starmetal_breastplate'],
+  },
+  crossbowman: { mainHand: ['yew_crossbow', 'ironwood_crossbow', 'elderwood_crossbow', 'wyrmwood_crossbow', 'heartwood_crossbow'] },
 }
 
 /** The tier and grade a bandit's gear is made at. */
@@ -173,10 +176,16 @@ export function banditStats(role: BanditRole, level: number, gear: BanditGear): 
  * 4), plain iron and oak at threat 4 (skill trees step 30: under perk points a
  * level-4 party holds a node fewer and won it 364 times in 500 in Fine), Fine
  * steel and ironwood (tier 2, grade 2) at threats 6 and 7, and Masterwork
- * steel and ironwood (tier 2, grade 3) from threat 8, the far rings
- * (long-campaign stage 9: their proper tiers wait for stage 10).
+ * steel and ironwood (tier 2, grade 3) at threat 8. From threat 9, the far
+ * rings wear the high tiers (long-campaign stage 10, at the grades the
+ * expected kit has at those levels, gear-and-runes §5.8): Fine mithril and
+ * elderwood (tier 3) at 9 to 11, Fine adamant and wyrmwood (tier 4) at 12 to
+ * 17, Masterwork starmetal and heartwood (tier 5) from 18.
  */
 export function banditGear(threat: number): BanditGear {
+  if (threat >= 18) return { tier: 5, grade: 3 }
+  if (threat >= 12) return { tier: 4, grade: 2 }
+  if (threat >= 9) return { tier: 3, grade: 2 }
   if (threat >= 8) return { tier: 2, grade: 3 }
   return threat >= 6 ? { tier: 2, grade: 2 } : threat === 4 ? { tier: 1, grade: 1 } : { tier: 1, grade: 2 }
 }

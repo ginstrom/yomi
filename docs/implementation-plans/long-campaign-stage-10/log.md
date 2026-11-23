@@ -31,3 +31,14 @@ Append-only history for [the plan](index.md) and [the feature record](../../feat
 - Guild hall level 3.7; 30.4 recruits; 5.9 parties wiped; 1.8 guard battles; capstones in 17 campaigns.
 
 Outcome (step 01): engineer sonnet, reviewer sonnet, clean, 1 review round.
+
+## Step 02: tiers 3 to 5 and bandit gear
+
+2026-11-23, on `39a2a01` plus the step's change.
+
+- 50-campaign check: `57fdea1553a35b1af0e33b74a11ea9fe0a0e2f62ef9e5c80972af59276e53e75`, **identical** to step 01.
+- Refactor guard: untouched, green.
+- Tier-1/-2 items: the 56, hashed in order before and after, identical (`bf524dffcf0fedee03d889f3264fe263c2b7300d7c419faa1411406425e2f6e1`, held in `catalog.test.ts`).
+- Policy snapshot re-recorded: 69 (encounter, threat) groups before and after, same order; changed exactly `bandit_company` 9–13 and `freebooter_host` 14–20 (12 groups; 3,153 lines → 2,559); the other 57 groups' 11,683 lines identical, `bandit_company` 8 among them. Total 14,836 → 14,242 lines; hash `639fea308b2473b4c4a24719ff0ad711a6097c6258decd8ba25dcfadc3676f48` → `b9cef6e182080a3fa26d796534ec1b631e6628d6a140c11525ebee8fabb728ac`.
+- Long run, informational (100, `--log none`, seed 1, ~4 min alone, `logs/s10-02-long.txt`): Source 2 of 100 (step 01: 15), fell 96, out of days 2; 1390 days, 41.7 battles; battles to level 5 6.8 (84), 10 28.3 (53), 15 53.6 (18; was 44), 20 none. Threat win rates: 9 0.712 (was 0.828), 12 0.395 (0.601), 15 0.391 (0.868), 18 2/2, 20 2/3. The far bandits' tiers 3–5 with the party still unable to forge (steps 03, 09).
+

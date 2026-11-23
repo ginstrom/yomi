@@ -30,11 +30,11 @@ Nothing forges, tempers or sells these items yet (step 03 forges them; step 04 s
 
 ### Decisions from the index this step applies (unchanged)
 
-1. **Cloth gets tiers 3 to 5** *(for the user, before step 02)*. S10-R1 asks tiers 3 to 5 "in every family", but gear §4.2's ladders are metal, wood and hide only, and stage 3 added a fourth kind, cloth (Linen, Silk), for the robe. Default: **Mithrilweave** (3), **Adamantweave** (4) and **Starweave** (5), forged from the tier's ore (mithril, adamant, starmetal), so the mage's robe follows the staff. Alternative: the robe stops at Silk (tier 2), an exception to R1. Either is a few data rows in C1.
+1. **Cloth gets tiers 3 to 5** *(settled by the user, 2026-11-23: the default)*. S10-R1 asks tiers 3 to 5 "in every family", but gear §4.2's ladders are metal, wood and hide only, and stage 3 added a fourth kind, cloth (Linen, Silk), for the robe. Default: **Mithrilweave** (3), **Adamantweave** (4) and **Starweave** (5), forged from the tier's ore (mithril, adamant, starmetal), so the mage's robe follows the staff. Alternative: the robe stops at Silk (tier 2), an exception to R1. Either is a few data rows in C1.
 2. **Hide materials' catalog ids hold no underscore** (`wyvern`, `basilisk`, `drake`; names "Wyvern-hide", "Basilisk-scale", "Drake-scale", so "Drake-scale Leather"): a plain id splits at its first underscore. `MaterialDef.stock` names the stock material each tier-3+ material spends (`wyvern_hide`, …), keeping `catalog.ts` free of game imports.
-3. **Mithril and Starmetal also halve their families' spell-skill penalties** *(for the user, before step 02)*. The stage lists only "strength relief"; gear §4.2's same bullet adds the halving (`casterFriendly`). Default: both, as the reference says (toward 0: −5 → −2, −15 → −7). Alternative: strength relief only.
+3. **Mithril and Starmetal also halve their families' spell-skill penalties** *(settled by the user, 2026-11-23: the default)*. The stage lists only "strength relief"; gear §4.2's same bullet adds the halving (`casterFriendly`). Default: both, as the reference says (toward 0: −5 → −2, −15 → −7). Alternative: strength relief only.
 4. **Tier bonuses as gear §4.2's table**, read: a small-slot item's "resistance when it has any" goes to a family whose tier-1 stats have resistance (helm, gauntlets, greaves); every weapon's tier-4 and -5 "pierce +1" is `armorPierce` +1 (a tier now touches piercing: the catalog's and the inventory guide's "a tier never changes piercing" are corrected).
-10. **Bandit gear grades by ring** *(for the user, before step 02)*: Mithril **Fine** at threats 9–11, Adamant **Fine** at 12–17, Starmetal **Masterwork** from 18 (the expected kit's grades at those levels, gear §5.8); threat 8 keeps Masterwork steel, below as today. The design gives the tiers and thresholds only.
+10. **Bandit gear grades by ring** *(settled by the user, 2026-11-23: the default)*: Mithril **Fine** at threats 9–11, Adamant **Fine** at 12–17, Starmetal **Masterwork** from 18 (the expected kit's grades at those levels, gear §5.8); threat 8 keeps Masterwork steel, below as today. The design gives the tiers and thresholds only.
 14. **The refactor guard** stays identical through steps 02, 03, 04 and 07 (no tier-3+ item, workshop above 3, good or bandit above threat 8 reaches the early campaign); **step 09 re-records it once** (its new record fields and the policy), with old and new figures; step 10 only for a retune the orchestrator approved. **The policy snapshot** is re-recorded in step 02 (bandits at threats 9 and up), only those lines changing.
 20. **Out of scope:** market income, the simulator's spend order, the company's long-campaign policy skew and home-country spawns (stage 12); the Source's guardians stay at `SOURCE_FOE_LEVEL` 6 (stage 11); trophies from kills and `--player-kit` (stage 11); gear §5.8's step 3 ring-element wards and step 4 unique items by `gearScore`; the trading post selling tier 3+.
 
@@ -130,7 +130,7 @@ Step 03 consumes `MaterialDef.stock` (forge and temper costs), `Tier` and the ti
   - `src/inventory/runes.ts`: `SOCKETS_BY_TIER: Record<Tier, number> = { 1: 0, 2: 1 }`, `MAX_SOCKETS = 3`, `socketsOf`.
   - `src/game/tradingPost.ts`: `sells(world, item)` returns `grade <= min(level, 3)` for anything not tier 2, so **today a tier-3 item would be sold at any level** (and `buyRefusal` would let `mithril_longsword` be bought by id): this step closes it. `TIER_PRICE: Record<Tier, number>`, `buyPrice`, `salePrice`, `wares` (loops tiers 1 and 2).
   - `src/game/bandits.ts`: `GearIds = readonly [tier1, tier2]`; `GEAR` per role; `equipmentFor` picks `ids[tier - 1]`; `banditGear(threat)`; `BanditGear { tier: Tier; grade: Grade }`.
-- No blocker. Decisions 1 and 3 are *(for the user)*: build the defaults unless the orchestrator relays another answer.
+- No blocker. Decisions 1 and 3 were settled by the user on 2026-11-23: the defaults.
 
 ## 4. Scope and guidance
 
@@ -185,10 +185,33 @@ No forging, tempering, workshop level, `Material` or stock change (step 03); no 
 
 ## 6. Completion criteria
 
-- [ ] C1 built: `Tier` 1–5, the twelve materials, `TIER_BONUS`, `SMALL_RESISTANCE`, relief and caster-friendliness in `tierStats`, `SOCKETS_BY_TIER`, 140 plain items, the post refusing tier 3+, bandits by ring.
-- [ ] Tiers 1 and 2 byte-identical to today's, proved in a test.
-- [ ] Policy snapshot re-recorded, only `bandit_company` and `freebooter_host` lines at 9 and up changed (proof and counts in `log.md`); refactor guard untouched and green; 50-campaign check identical (`log.md`).
-- [ ] Docs: `src/inventory/CLAUDE.md` (the `catalog.ts` line: five tiers of each kind and what tiers 2–5 add; "Tier 1 has no sockets, tier 2 one, Masterwork one more" → tiers 3, 4, 5 have 1, 2, 2; the grades line, now that a tier touches piercing at 4 and 5), `docs/reference/characters.md` ("The gear catalog", "Runes and sockets": the materials table, tier bonuses, relief, halving, names), `docs/reference/game.md` (the bandit gear line: tiers 3 to 5 by ring, decision 10, the stand-in sentence removed); the searches of §2 done.
-- [ ] One commit, "Stage 10 step 02: tiers 3 to 5 and bandit gear", files staged by path, no attribution lines; the index's row 02 updated with status and commit.
+- [x] C1 built: `Tier` 1–5, the twelve materials, `TIER_BONUS`, `SMALL_RESISTANCE`, relief and caster-friendliness in `tierStats`, `SOCKETS_BY_TIER`, 140 plain items, the post refusing tier 3+, bandits by ring.
+- [x] Tiers 1 and 2 byte-identical to today's, proved in a test.
+- [x] Policy snapshot re-recorded, only `bandit_company` and `freebooter_host` lines at 9 and up changed (proof and counts in `log.md`); refactor guard untouched and green; 50-campaign check identical (`log.md`).
+- [x] Docs: `src/inventory/CLAUDE.md` (the `catalog.ts` line: five tiers of each kind and what tiers 2–5 add; "Tier 1 has no sockets, tier 2 one, Masterwork one more" → tiers 3, 4, 5 have 1, 2, 2; the grades line, now that a tier touches piercing at 4 and 5), `docs/reference/characters.md` ("The gear catalog", "Runes and sockets": the materials table, tier bonuses, relief, halving, names), `docs/reference/game.md` (the bandit gear line: tiers 3 to 5 by ring, decision 10, the stand-in sentence removed); the searches of §2 done.
+- [x] One commit, "Stage 10 step 02: tiers 3 to 5 and bandit gear", files staged by path, no attribution lines; the index's row 02 updated with status and commit.
 
 ## 7. Execution record
+
+2026-11-23, engineer (opus). Built on `39a2a01`; the user's answers to the plan's six questions relayed by the orchestrator (decisions 1, 3, 10 the defaults: built as written).
+
+**Built (C1, unchanged):** `Tier` 1–5; `MaterialDef.strengthRelief`, `casterFriendly`, `stock`; the twelve materials in C1's order; `TIER_BONUS` tiers 3–5; `SMALL_RESISTANCE`; `tierStats(stats, cls, material)` (bonus, small resistance only for a small family with tier-1 resistance, then relief, then halving with `Math.trunc`); `SOCKETS_BY_TIER` { 1: 0, 2: 1, 3: 1, 4: 2, 5: 2 }; `BASE_ITEMS` 140; the post: `ShopTier = Extract<Tier, 1 | 2>` types `TIER_PRICE`, `buyPrice` null and `sells` false for tier 3+, `buyRefusal` 'The trading post does not sell that; the workshop forges it.' (checked before the generic refusal, for any id whose item is tier 3+); `salePrice` of a tier-3+ item 0 but its runes (comment points at step 03's `forgedValue`); `GEAR` 5-tuples, `banditGear` by ring.
+
+**Proofs.**
+- Tiers 1–2 byte-identical: the 56 tier-1/-2 items of `BASE_ITEMS`, `JSON.stringify`'d in order, hashed before the change (`bf524dff…f6e1`) and after: identical; the hash is a test in `catalog.test.ts`.
+- Policy snapshot: lines dumped before and after (a local, reverted env hook in the test), compared by (encounter, threat) group: 69 groups, same keys in the same order; exactly 12 changed, `bandit_company` 9–13 and `freebooter_host` 14–20; `bandit_company` 8 and every other group identical (11,683 lines). Lines 14,836 → 14,242; hash `639fea30…6f48` → `b9cef6e1…28ac`; title extended.
+- Refactor guard untouched and green (`npm test`).
+- 50-campaign check: `57fdea1553a35b1af0e33b74a11ea9fe0a0e2f62ef9e5c80972af59276e53e75`, **identical** to step 01 (34 s).
+
+**Commands.** `npm test` baseline green (105 files, 2,634 tests); final `npm test` 105 files, 2,646 tests passed. `npm run test:browser -- e2e/encampment.test.ts -t "Lesser runes|embeds, extracts and fuses|crafts in the field|filters the trading post"`: 4 passed. Red runs seen for the trading post (2 failing) and bandit (4 failing) tests before their code; the catalog and socket tests were written after the catalog change (they cannot compile against `Tier = 1 | 2`); the item hash was taken before.
+
+**Deviations.**
+- `src/scenes/runecraftView.ts` (not in the task's file list): `socketSources` read every socketed tier, so the Runes tab's hints would have listed sixteen materials and "tier-2, tier-3, tier-4 or tier-5". Now `materials` are the lowest socketed tier's, and the words say "steel, ironwood, wolfhide and silk gear and anything finer" and "tier-2 and finer or Masterwork gear"; its test and the three e2e strings in `e2e/encampment.test.ts` follow. Step 08 may reword.
+- `encounters.test.ts`'s far-bandit test expected Masterwork steel at every threat: now C1's rows (threat 8 still steel). `encounters.ts`'s `banditCompany`/`freebooterHost` doc comments updated.
+- The manual's bandit and sockets lines (`docs/manual/README.md`) corrected (no screenshot shows them).
+- Decision markers in the other task files and the index marked settled; step 09's task file rewritten for decision 12 as the user settled it (families by role only from tier 3).
+
+**Informational long run** (not required by this step; `--campaign --battles 100 --seed 1 --log none`, ~4 min alone, `logs/s10-02-long.txt`): the far bandits' new gear, with no way yet for heroes to forge, cuts the long campaign hard: Source 15 → **2** of 100 (96 fell, 2 out of days), threat 9 win rate 0.828 → 0.712, 12 0.601 → 0.395, 15 0.868 → 0.391; battles to 15 reached in 18 campaigns (was 44). Expected until steps 03 and 09 give the party forging; step 10 judges it.
+
+**For later steps.** Step 03: `MaterialDef.stock` holds the stock material (`wyvern_hide`, …; the weaves their ore); tier-3+ `salePrice` is 0 until `forgedValue`. Step 08: tier-3+ materials have no tint yet (`iconTint` tints tier 2 only); the Runes tab hint wording above. Step 09/10: the long baseline above is the far bandits' effect alone.
+

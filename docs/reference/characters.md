@@ -156,15 +156,25 @@ The ready-made heroes come to:
 `catalog.ts` is the catalog of plain gear.
 
 - The families (`FAMILIES`, 28): weapons, shields, body armour and the head, gloves and boots slots, each with its slot, material kind, icon and tier-1 stats, among them what it asks of strength (`strength`), what it takes in action points (`apPenalty`), a reach weapon's `reach` and the crossbow's `rangedPierce`, which `deriveCombatStats` derives.
-- The materials (`MATERIALS`), a tier 1 and a tier 2 of each kind: iron and steel, yew and ironwood, leather and wolfhide, linen and silk.
-- What tier 2 adds by gear class (`TIER_BONUS`, `gearClass`: weapon, shield, armour, small).
+- The materials (`MATERIALS`), tiers 1 to 5 of each kind, tiers 1 and 2 first: metal iron, steel, Mithril, Adamant, Starmetal; wood yew, ironwood, Elderwood, Wyrmwood, Heartwood; hide leather, wolfhide, Wyvern-hide, Basilisk-scale, Drake-scale (ids `wyvern`, `basilisk`, `drake`: no material id holds an underscore); cloth linen, silk, Mithrilweave, Adamantweave, Starweave (woven from the metal's ore). A tier-3+ material names the stock material forging spends (`stock`: `mithril`, …, `wyvern_hide`, `basilisk_scale`, `drake_scale`; the weaves their ore).
+- What a tier adds over tier 1 by gear class (`TIER_BONUS`, `gearClass`: weapon, shield, armour, small), folded by `tierStats`:
+
+  | Class | 2 | 3 | 4 | 5 |
+  | --- | --- | --- | --- | --- |
+  | weapon | damage +2 | damage +4, to hit +5 | damage +6, to hit +5, pierce +1 | damage +8, to hit +10, pierce +1 |
+  | shield | AC +2 | AC +4 | AC +6, resistance +1 | AC +8, resistance +1 |
+  | armour | AC +2, resistance +1 | AC +4, resistance +1 | AC +6, resistance +2 | AC +8, resistance +3 |
+  | small | AC +1 | AC +1 | AC +2 | AC +3 |
+
+  A small-slot family with resistance at tier 1 (helm, gauntlets, greaves) also gains `SMALL_RESISTANCE` (1, 1, 2 at tiers 3, 4, 5). A tier never changes attack AP, range, two-handedness or a penalty; piercing only by the weapon's +1 at tiers 4 and 5.
+- Mithril and Starmetal ask 1 and 2 less strength of their families (`strengthRelief`, never below 0) and halve a spell-skill penalty toward 0 (`casterFriendly`, `Math.trunc`: −5 → −2, −15 → −7); Adamant neither.
 - The legacy ids (`LEGACY_ALIASES`).
 
 ## Items
 
 `inventory.ts` has the items:
 
-- `BASE_ITEMS`, the plain items the trading post and crafting work with, generated as every family in each material of its kind, tier 1 first: 56, the Wand of Sparks among them as the wand's tier 1;
+- `BASE_ITEMS`, the plain items the trading post and crafting work with, generated as every family in each material of its kind, in `MATERIALS` order (tiers 1 and 2 first): 140, the Wand of Sparks among them as the wand's tier 1. Names are "<Material> <Family>" ("Mithril Longsword", "Drake-scale Leather", "Starweave Robe"), a family's `tier1` name only at tier 1. The trading post sells tiers 1 and 2 only; tiers 3 to 5 are forged at the workshop;
 - `WEAPONS`, the six plain weapons a new hero carries;
 - `MAGIC_ITEMS`, the enchanted ones won as loot.
 
@@ -180,7 +190,7 @@ Every plain item, graded, modified or runed, carries its `family`, `material` an
 
 A plain item comes in three grades (`grades.ts`) and may carry one modifier (`modifiers.ts`, `MODIFIERS`: the families it fits, the workshop level that unlocks it, its stat change at each grade).
 
-- A grade adds by gear class: damage to a weapon (and at Masterwork, to hit), armour class to a shield or a small-slot item, resistance to body armour. It never changes attack AP, range, piercing, strength or a penalty.
+- A grade adds by gear class: damage to a weapon (and at Masterwork, to hit), armour class to a shield or a small-slot item, resistance to body armour. It never changes attack AP, range, piercing, strength or a penalty (a tier touches piercing at 4 and 5, and strength and spell skill through Mithril's and Starmetal's relief).
 - No tier, grade or modifier touches maximum hit points (a Life rune does).
 - Enchanted items take no grade or modifier.
 
@@ -188,7 +198,7 @@ A plain item comes in three grades (`grades.ts`) and may carry one modifier (`mo
 
 `runes.ts` has the runes: ten kinds (`RUNES`) at four ranks, each doing one thing in a weapon (the main hand), another in armour (every other slot) and another in a shield (`slotClass`), folded into a runed item's stats (`addStats`).
 
-- Sockets (`socketsOf`): 0 at tier 1 and 1 at tier 2, one more at Masterwork, at most 3; a small-slot item at most 1; the Emberblade, the Wand of Storms and the Hawkeye Bow 1 of their own.
+- Sockets (`socketsOf`, `SOCKETS_BY_TIER`): 0 at tier 1, 1 at tiers 2 and 3, 2 at tiers 4 and 5, one more at Masterwork, at most 3; a small-slot item at most 1; the Emberblade, the Wand of Storms and the Hawkeye Bow 1 of their own.
 - Fitting (`runeFits`): Mind goes in a weapon only if it strikes with Magic; Acid only in a melee weapon or the crossbow, whose piercing it adds to. `runeFitsOnly` says where a rune fits, for the refusal.
 - A rune adds the `ItemStats` fields `wards` (by element), `onHit` (a weapon's flat on-hit damage, status or healing; `OnHit` in `combat.ts`) and `maxHp`, besides the older fields. `deriveCombatStats` and `maxHp` derive them: wards summed over everything worn, `onHit` from the main hand only, the worn items' `maxHp` added. The engine resolves them.
 - `runes.ts` also has the pouch's helpers and the one phrasing of on-hit effects (`onHitParts`, long, or short for the character panel's narrow column), which every screen that tells them uses.

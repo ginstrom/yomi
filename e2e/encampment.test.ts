@@ -456,7 +456,7 @@ describe('the encampment', () => {
       'In a weapon: On a hit, +1 fire',
       'In armour: Fire ward 2',
       'In a shield: Fire ward 2',
-      'Set in a socketed item: tier-2 or Masterwork gear.',
+      'Set in a socketed item: tier-2 and finer or Masterwork gear.',
       'Costs 15 gold.',
     ])
     await game.click(ember.buttons.confirm)
@@ -515,7 +515,7 @@ describe('the encampment', () => {
       'In a weapon: On a hit, +1 fire',
       'In armour: Fire ward 2',
       'In a shield: Fire ward 2',
-      'Set in a socketed item: tier-2 or Masterwork gear.',
+      'Set in a socketed item: tier-2 and finer or Masterwork gear.',
     ])
     // No item is selected yet, so Embed is greyed; Fuse needs none.
     expect(runes.pouch[0].embed.enabled).toBe(false)
@@ -688,7 +688,7 @@ describe('the encampment', () => {
     await game.click(opened.buttons.runesTab)
     const runes = await game.settled('Crafting', (c) => c.tab === 'runes')
     expect(runes.items).toEqual([])
-    expect(runes.itemsHint).toMatch(/^Nothing the party has takes a rune\. Sockets come on steel, ironwood, wolfhide and silk gear, on Masterwork gear/)
+    expect(runes.itemsHint).toMatch(/^Nothing the party has takes a rune\. Sockets come on steel, ironwood, wolfhide and silk gear and anything finer, on Masterwork gear/)
     await game.click(runes.buttons.modifyTab)
     const bench = await game.settled('Crafting', (c) => c.tab === 'modify')
     await game.click(bench.items.find((item) => item.id === 'worn:0:mainHand')!)

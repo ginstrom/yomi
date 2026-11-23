@@ -422,7 +422,8 @@ export function banditCamp(party: readonly Fighter[], threat = 3): Encounter {
 
 /**
  * Bandits of the far rings, threats 8 to 13, in Masterwork steel and
- * ironwood: a Bandit Sergeant with axe and breastplate, a Crossbowman, a
+ * ironwood at 8, Fine mithril and elderwood at 9 to 11 and Fine adamant and
+ * wyrmwood at 12 and 13 (`banditGear`): a Bandit Sergeant with axe and breastplate, a Crossbowman, a
  * Hedge-Mage and an Archer.
  */
 export function banditCompany(party: readonly Fighter[], threat = 8): Encounter {
@@ -430,8 +431,9 @@ export function banditCompany(party: readonly Fighter[], threat = 8): Encounter 
 }
 
 /**
- * Bandits of the farthest rings, threats 14 to 20, in Masterwork steel and
- * ironwood: a Freebooter Captain with sword, shield and breastplate, a Brute,
+ * Bandits of the farthest rings, threats 14 to 20, in Fine adamant and
+ * wyrmwood to 17 and Masterwork starmetal and heartwood from 18
+ * (`banditGear`): a Freebooter Captain with sword, shield and breastplate, a Brute,
  * a Crossbowman and a Hedge-Mage, and from threat 17 an Archer.
  */
 export function freebooterHost(party: readonly Fighter[], threat = 14): Encounter {

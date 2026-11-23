@@ -9,7 +9,7 @@
 Teach the simulator's careful party to use the high tiers, and record how far its gear keeps up:
 - `kitRole` and `expectedKit(role, level)` (gear §5.8's table);
 - the record's `goldOnForging` and `kitAtLevel`, averaged and printed as a "Kit:" line against `expectedKit`;
-- the gear policy of gear §5.8 steps 1 and 2 in `visitFacilities`: families by role; buy (tiers 1–2) or forge (3–5) the highest tier affordable, slot by slot; then temper, modify and fill sockets (fusing any rank the workshop allows);
+- the gear policy of gear §5.8 steps 1 and 2 in `visitFacilities`, **from tier 3 only** (decision 12 as the user settled it, 2026-11-23): below tier 3 today's buying is kept unchanged (the dearest of the same family the post sells); from tier 3, families by role, forge (3–5) the highest tier affordable, slot by slot; then temper, modify and fill sockets (fusing any rank the workshop allows);
 - trophies taken after each win (`takeTrophies`; none drop yet);
 - the refactor guard re-recorded once, the 50-campaign check's new hash, and the early-figure gate on `one`.
 
@@ -25,9 +25,9 @@ Teach the simulator's careful party to use the high tiers, and record how far it
 
 ### Decisions from the index this step applies (unchanged)
 
-8. **Trophies this stage are data and a path, with no entries** *(for the user, before step 03)*: no wolf, wyvern, basilisk or dragon exists until stage 11, so `TROPHIES` is empty, and granting is wired (the victory screen, the simulator) and tested with an injected table. Elder Glade sells **wyvern hide** at the Market Hall as the design's stand-in; **basilisk scale and drake scale have no source in play until stage 11** (debug `stock` only), so hide tiers 4 and 5 cannot be forged in play this stage.
-9. **Partners' goods** *(for the user, before step 04)*: from the Market Hall (trading post 5 and up), each **contacted partner not silent** sells its good (and Elder Glade its stand-in) at 3 gold a unit, bought into the stock in any whole amount. The design says only "for sale at the Market Hall"; silence is read as the route's rule (a silent partner pays nothing). The simulator does not buy goods (the spend order is stage 12's).
-12. **The gear policy applies from tier 1, gated** *(for the user's eye, at step 09)*: gear §5.8's families by role (the mage to staff and robe, everyone the small slots) change what the early party buys, so the early figure will probably move. Step 09 builds the policy as designed, then measures `one`; if it moves more than about 5 points from step 01's baseline, it **stops with options**: accept; families by role only from tier 3 (today's buying at tiers 1 and 2); other.
+8. **Trophies this stage are data and a path, with no entries** *(settled by the user, 2026-11-23: the default)*: no wolf, wyvern, basilisk or dragon exists until stage 11, so `TROPHIES` is empty, and granting is wired (the victory screen, the simulator) and tested with an injected table. Elder Glade sells **wyvern hide** at the Market Hall as the design's stand-in; **basilisk scale and drake scale have no source in play until stage 11** (debug `stock` only), so hide tiers 4 and 5 cannot be forged in play this stage.
+9. **Partners' goods** *(settled by the user, 2026-11-23: the default)*: from the Market Hall (trading post 5 and up), each **contacted partner not silent** sells its good (and Elder Glade its stand-in) at 3 gold a unit, bought into the stock in any whole amount. The design says only "for sale at the Market Hall"; silence is read as the route's rule (a silent partner pays nothing). The simulator does not buy goods (the spend order is stage 12's).
+12. **The gear policy applies families by role only from tier 3** *(settled by the user, 2026-11-23, **not** the plan's default "from tier 1, gated")*: below tier 3 the simulator keeps today's policy (in-family buying at tiers 1 and 2), so the early figure should not move. Step 09's gate stays as a check: if `one` still moves more than about 5 points from step 01's baseline, it stops and reports. Step 09's task file says so.
 13. **The policy's details the design leaves open** (step 09; first values, recorded): the fighter switches to the war hammer when the lead foe (the first enemy unit) of the vanguard's next target, built at its threat, has resistance 4 or more; the archer's crossbow from tier 3; "the best body armour their strength allows" is the engineer's documented rule; fusing any rank the workshop allows (gear §5.8 step 3, which "fill sockets" needs at ranks 3–4); tier-3+ ores, woods and trophies are never sold as surplus; trophies are taken (none drop yet); no partner goods.
 14. **The refactor guard** stays identical through steps 02, 03, 04 and 07 (no tier-3+ item, workshop above 3, good or bandit above threat 8 reaches the early campaign); **step 09 re-records it once** (its new record fields and the policy), with old and new figures; step 10 only for a retune the orchestrator approved. **The policy snapshot** is re-recorded in step 02 (bandits at threats 9 and up), only those lines changing.
 20. **Out of scope:** market income, the simulator's spend order, the company's long-campaign policy skew and home-country spawns (stage 12); the Source's guardians stay at `SOURCE_FOE_LEVEL` 6 (stage 11); trophies from kills and `--player-kit` (stage 11); gear §5.8's step 3 ring-element wards and step 4 unique items by `gearScore`; the trading post selling tier 3+.
@@ -208,7 +208,7 @@ export function takeTrophies(game: GameState, kinds: Record<UnitId, UnitKind>, t
 
 Write it as small exported helpers in `scripts/simulate.ts` so the tests can call them on fixed states (names are the engineer's; for example `wantedFamily(hero, slot, world, party)`, `forgeOrBuy(game, party, member, slot)`):
 
-1. **Families by role.**
+1. **Families by role** (from tier 3 only, decision 12 as settled; at tiers 1 and 2 every slot keeps today's buying: the dearest item of the worn family the post sells, dearer than the worn one, and the small slots untouched as today).
    - Fighter: longsword; the war hammer instead when the lead foe (the first enemy unit of the encounter at the vanguard's next target, `nextTarget`, built for the party at the target's threat) has resistance 4 or more. Its off hand: a shield (wood) as today's ready-made fighter carries.
    - Archer: bow at tiers 1 and 2, crossbow from tier 3.
    - Mage: staff and robe.
@@ -216,7 +216,7 @@ Write it as small exported helpers in `scripts/simulate.ts` so the tests can cal
    - Small slots (head, gloves, boots), for everyone: the family of the slot with no shortfall by the same rule (the mage's cap, gloves and boots in hide).
    - A guard party's members follow the same roles.
 2. **On each home visit**, slot by slot in the order main hand, body armour, shield, head, gloves, boots, each member in party order:
-   - the highest tier of the wanted family the party can get now: tiers 1–2 bought at the trading post at the best grade the gold affords (today's rule: dearer than the worn one), tiers 3–5 forged (`forgeRefusal` null) at the workshop; a forged item is plain, so it replaces a worn item only if it is better on the policy's measure (a higher tier, or the same tier at a higher grade after tempering is not reached by forging: compare tier first);
+   - the highest tier of the wanted family the party can get now: tiers 1–2 bought at the trading post as today (the worn family, the best grade the gold affords, dearer than the worn one; decision 12 as settled), tiers 3–5 of the role's family forged (`forgeRefusal` null) at the workshop; a forged item is plain, so it replaces a worn item only if it is better on the policy's measure (a higher tier, or the same tier at a higher grade after tempering is not reached by forging: compare tier first);
    - the replaced item's runes extracted where the workshop can, the old item sold (as today);
    - then **temper** each worn tier-3+ item to the best grade the stock affords (`temperRefusal` null), main hand first;
    - then **modify** (`craftGear`): `PREFERRED_MODIFIERS` kept for today's families; a family it does not name gets none, or first values the engineer documents (decision 13); `eachWantedCraft` walks every slot the policy fills;
@@ -232,7 +232,8 @@ On fixed states built from `newGame` or the ready-made party (deterministic, no 
 - a fighter at home with the workshop at 4, 100 gold and 20 mithril forges a Mithril Longsword and wears it (the old sold), and `goldOnForging` counts 30;
 - the hammer switch: with a next target whose lead foe has resistance 4 or more, the fighter's wanted family is the war hammer; with less, the longsword;
 - the archer wants the bow at tier 2 and the crossbow at tier 3;
-- the mage wants the staff and the robe;
+- the mage wants the staff and the robe (from tier 3);
+- below tier 3 nothing changes: a party whose workshop cannot forge buys at the trading post exactly as today (same family, same items), the mage keeping its worn families (decision 12 as settled);
 - after forging, tempering runs before the sockets (a Masterwork mithril weapon gains its second socket and it is filled);
 - refusal paths: a workshop below 4 forges nothing; too little mithril forges nothing and leaves the stock untouched; tier-3+ materials are not sold as surplus;
 - fusing: three rank-2 runes at a level-4 workshop fuse into a rank 3;
@@ -243,9 +244,9 @@ On fixed states built from `newGame` or the ready-made party (deterministic, no 
 
 1. With the policy in, the refactor guard fails (play moves): **re-record it once**, with the old and new figures (Source wins, days, battles, gold on gear, items bought, sockets filled) in the doc comment above `GUARD_RECORDS`, saying why (the gear policy, decision 12).
 2. The 50-campaign check: new hash and figures (Source wins of 50, days, gold on gear and forging) against the hash before this step, in `log.md` ("Step 09").
-3. **The gate (decision 12):** run `one` (500, seed 1, `--near-source`, via `yomi-measure`, label `s10-09`). Compare with step 01's `one`:
+3. **The gate (decision 12, as settled: families by role only from tier 3):** run `one` (500, seed 1, `--near-source`, via `yomi-measure`, label `s10-09`). Compare with step 01's `one`:
    - within about 5 points: go on and commit; record the figure in `log.md`;
-   - **more than about 5 points either way: stop before committing the re-record**, and report to the orchestrator with the figures, the cause as far as diagnostic 50-campaign runs show it (for example the policy with the small slots off, or with families by role only from tier 3, each changed locally and reverted), and the options: (a) accept; (b) families by role only from tier 3, today's in-family buying at tiers 1 and 2; (c) other. Build the option chosen, then redo 4.5.1–4.5.3.
+   - **more than about 5 points either way: stop before committing the re-record**, and report to the orchestrator with the figures and the cause as far as diagnostic 50-campaign runs show it (with tier 1–2 buying left as today, a move would come from forging, tempering, fusing or the materials kept), with options. Since the policy leaves tiers 1 and 2 as today, the guard and the 50-campaign check may not move at all beyond the new record fields; say so if they do not.
 
 ### 4.6 Exclusions
 
@@ -256,7 +257,7 @@ No change to a rule of the game (`src/`), to the bands, or to the spend order of
 - `npx vitest run scripts/simulate.test.ts`: the new tests pass; then `npm test` (includes the refactor guard as re-recorded and the policy snapshot unchanged).
 - The guard's part 1 (fields only) shown with the event hash unchanged; part 2 re-recorded once with the figures in the doc comment.
 - The 50-campaign check's new hash and figures in `log.md`.
-- `one` (500, `--near-source`) through `yomi-measure`, within about 5 points of step 01's, or the step stopped at the gate with options.
+- `one` (500, `--near-source`) through `yomi-measure`, within about 5 points of step 01's (expected, as tiers 1–2 buying is today's), or the step stopped at the gate and reported.
 - A short smoke run of the long campaign, e.g. `npm run simulate -- --campaign --battles 5 --seed 1 --log none`, prints the Kit line with tiers above 2 where levels 10+ are reached (say what it showed; step 10 measures properly).
 
 ## 6. Completion criteria

@@ -102,9 +102,13 @@ describe('the trading post', () => {
 })
 
 describe('the price list', () => {
-  it('prices every plain item with a finite, positive, whole number', () => {
+  it('prices every plain item of tiers 1 and 2 with a finite, positive, whole number, and none above', () => {
     for (const item of BASE_ITEMS) {
       const price = buyPrice(item)
+      if (item.tier! >= 3) {
+        expect(price, item.id).toBeNull()
+        continue
+      }
       expect(Number.isInteger(price), item.id).toBe(true)
       expect(price!, item.id).toBeGreaterThan(0)
     }
@@ -306,6 +310,24 @@ describe('trading post levels 5 and 6', () => {
       expect(wares(game.world).map((i) => i.id)).toEqual(at4)
       expect(runeWares(game.world)).toEqual(runes4)
     }
+  })
+
+  it('never sell tier 3 and up (long-campaign stage 10: the workshop forges it)', () => {
+    const game = home()
+    game.world.tradingPost = 6
+    game.world.stock.gold = 10_000
+    expect(wares(game.world).every((item) => item.tier! <= 2)).toBe(true)
+    for (const id of ['mithril_longsword', 'adamant_breastplate@2', 'starweave_robe@3', 'drake_leather', 'elderwood_bow']) {
+      const item = itemById(id)!
+      expect(sells(game.world, item), id).toBe(false)
+      expect(buyPrice(item), id).toBeNull()
+      expect(buyRefusal(game, game.parties[0], id), id).toBe('The trading post does not sell that; the workshop forges it.')
+    }
+    expect(buy(game, game.parties[0], 'mithril_longsword')).toBe('The trading post does not sell that; the workshop forges it.')
+    expect(game.world.stock.gold).toBe(10_000)
+    expect(game.parties[0].baggage).toEqual([])
+    // Worth nothing to the post until step 03's forgedValue.
+    expect(salePrice(itemById('mithril_longsword')!)).toBe(0)
   })
 
   it('are named Trading Post, Market, Market Hall and Trading House', () => {

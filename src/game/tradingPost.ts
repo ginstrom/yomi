@@ -16,7 +16,8 @@ import { encampmentName, type WorldState } from './worldMap.ts'
  * stock's materials at a poor rate. From level 4 it is a market, and brings
  * gold every yield day (`MARKET_INCOME`, territory.ts). It also sells runes into the pouch (rank 1
  * from level 2, rank 2 from level 4, six kinds) and buys any from it. It never
- * sells materials, nor a runed item. Built from the
+ * sells materials, nor a runed item, nor anything of tier 3 and up, which the
+ * workshop forges (long-campaign stage 10). Built from the
  * start; each action returns why it was refused, or null when done.
  */
 
@@ -71,8 +72,13 @@ export const PRICES: Readonly<Record<FamilyId, number>> = {
   greaves: 6,
 }
 
+/** The tiers the post sells; tier 3 and up are forged at the workshop. */
+export type ShopTier = Extract<Tier, 1 | 2>
+
 /** What a tier multiplies a plain price by; every price is even, so tier 2's is whole. */
-export const TIER_PRICE: Record<Tier, number> = { 1: 1, 2: 2.5 }
+export const TIER_PRICE: Record<ShopTier, number> = { 1: 1, 2: 2.5 }
+
+const isShopTier = (tier: Tier): tier is ShopTier => tier <= 2
 
 /** What a grade multiplies a plain price by. */
 export const GRADE_PRICE: Record<Grade, number> = { 1: 1, 2: 3, 3: 8 }
@@ -110,24 +116,30 @@ export function raiseTradingPost(game: GameState, party: Expedition): string | n
   return null
 }
 
-/** What the post asks for a plain item at its tier and grade, modifier aside; null for an enchanted one, which it never sells. */
+/** What the post asks for a plain item at its tier and grade, modifier aside; null for an enchanted one or one of tier 3 and up, which it never sells. */
 export function buyPrice(item: Item): number | null {
   const base = baseItem(item)
-  if (!base?.family) return null
-  return PRICES[base.family] * TIER_PRICE[base.tier ?? 1] * GRADE_PRICE[item.grade ?? 1]
+  const tier = base?.tier ?? 1
+  if (!base?.family || !isShopTier(tier)) return null
+  return PRICES[base.family] * TIER_PRICE[tier] * GRADE_PRICE[item.grade ?? 1]
 }
 
-/** What the post pays for an item: half its base-and-grade price, or half an enchanted item's value, plus half of each embedded rune's price, rounded down. A modifier adds nothing. */
+/**
+ * What the post pays for an item: half its base-and-grade price, or half an
+ * enchanted item's value, plus half of each embedded rune's price, rounded
+ * down. A modifier adds nothing. A tier-3+ item has neither price nor value,
+ * so it fetches only its runes' half until step 03 of stage 10 adds `forgedValue`.
+ */
 export function salePrice(item: Item): number {
   const bare = unruned(item)
   const runes = (item.runes ?? []).reduce((sum, key) => sum + runePrice(key), 0)
   return Math.floor(((buyPrice(bare) ?? VALUES[bare.id] ?? 0) + runes) / 2)
 }
 
-/** Whether the post at its level sells `item`: tier 1 at grades up to min(level, 3); tier 2 at every grade from `TIER_TWO_LEVEL`. */
+/** Whether the post at its level sells `item`: tier 1 at grades up to min(level, 3); tier 2 at every grade from `TIER_TWO_LEVEL`; never tier 3 and up. */
 export function sells(world: WorldState, item: Item): boolean {
   const base = baseItem(item)
-  if (!base || item.mod || item.runes?.length) return false
+  if (!base || item.mod || item.runes?.length || !isShopTier(base.tier ?? 1)) return false
   if (base.tier === 2) return world.tradingPost >= TIER_TWO_LEVEL
   return (item.grade ?? 1) <= Math.min(world.tradingPost, 3)
 }
@@ -164,6 +176,7 @@ export function buyRefusal(game: GameState, party: Expedition, itemId: string): 
   const { world } = game
   if (!atEncampment(world, party)) return notHere(world)
   const item = itemById(itemId)
+  if (item && (item.tier ?? 1) >= 3) return 'The trading post does not sell that; the workshop forges it.'
   const price = item && !item.mod && !item.runes?.length ? buyPrice(item) : null
   if (!item || price === null) return 'The trading post does not sell that.'
   if (!sells(world, item)) return `A level ${sellingLevel(item)} trading post sells that.`

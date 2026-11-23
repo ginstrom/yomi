@@ -19,6 +19,7 @@ import {
   runeStats,
   slotClass,
   socketLines,
+  SOCKETS_BY_TIER,
   socketsOf,
   takeFromPouch,
   type Pouch,
@@ -131,6 +132,15 @@ describe('sockets', () => {
     expect(sockets('hawk_bow')).toBe(1)
     expect(sockets('ring_protection')).toBe(0)
     expect(sockets('shadow_cloak')).toBe(0)
+  })
+
+  it('come 1, 2 and 2 at tiers 3, 4 and 5, one more at Masterwork, at most 3, a small slot at most 1 (long-campaign stage 10)', () => {
+    const sockets = (id: string) => socketsOf(item(id))
+    expect(SOCKETS_BY_TIER).toEqual({ 1: 0, 2: 1, 3: 1, 4: 2, 5: 2 })
+    expect(['mithril_longsword', 'mithril_longsword@2', 'mithril_longsword@3'].map(sockets)).toEqual([1, 1, 2])
+    expect(['adamant_longsword', 'adamant_longsword@3'].map(sockets)).toEqual([2, 3])
+    expect(['starmetal_plate', 'heartwood_shield@3', 'drake_leather@3'].map(sockets)).toEqual([2, 3, 3])
+    expect(['drake_cap', 'drake_cap@3', 'adamant_helm@3', 'basilisk_boots', 'starmetal_gauntlets@3'].map(sockets)).toEqual([1, 1, 1, 1, 1])
   })
 
   it('are the same on a runed item as on its unruned one', () => {
