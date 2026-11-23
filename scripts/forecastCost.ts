@@ -11,7 +11,7 @@
 // no file. Long-campaign stage 10 step 07 measures it before and after its
 // speed-ups.
 //
-// Usage: node scripts/forecastCost.ts [--samples 40] [--runs 3]
+// Usage: node scripts/forecastCost.ts [--samples 40] [--runs 5]
 import { parseArgs } from 'node:util'
 import { performance } from 'node:perf_hooks'
 import { mulberry32 } from '../src/combat/rng.ts'
@@ -22,7 +22,7 @@ import { FORECAST_SAMPLES, battleForecastBase, forecast, forecastSeed, type Fore
 import { partyFighters } from '../src/game/party.ts'
 import { MATERIALS, type Tier } from '../src/inventory/catalog.ts'
 import { itemById, type EquipmentSlot } from '../src/inventory/inventory.ts'
-import { clampHp, maxHp } from '../src/character/character.ts'
+import { maxHp } from '../src/character/character.ts'
 import { parseArgs as parseSimulateArgs, raisedParty } from './simulate.ts'
 
 const { values } = parseArgs({ options: { samples: { type: 'string', default: String(FORECAST_SAMPLES) }, runs: { type: 'string', default: '5' } } })
@@ -36,7 +36,6 @@ const KIT_SLOTS: readonly EquipmentSlot[] = ['mainHand', 'offHand', 'armor']
 function partyAt(level: number, tier: Tier) {
   const party = raisedParty(parseSimulateArgs(['--party-level', String(level)]))
   for (const member of party) {
-    const before = maxHp(member)
     for (const slot of KIT_SLOTS) {
       const worn = member.equipment[slot]
       if (!worn?.family) continue
@@ -46,7 +45,6 @@ function partyAt(level: number, tier: Tier) {
       if (!item) throw new Error(`no ${material.id}_${worn.family}@2`)
       member.equipment[slot] = item
     }
-    clampHp(member, before)
     member.hp = maxHp(member)
   }
   return party
