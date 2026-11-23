@@ -142,7 +142,10 @@ describe('the trading post as a market', () => {
     expect([1, 2, 3, 4, 5, 6].map((level) => at(level).name)).toEqual(['Trading Post', 'Trading Post', 'Trading Post', 'Market', 'Market Hall', 'Trading House'])
     expect(at(5).effect).toContain('brings 3 gold every 5 days')
     expect(at(3).effect).not.toContain('gold every')
-    expect(at(4).next).toContain('3 gold every 5 days')
+    expect(at(4).next).toBe("Brings 3 gold every 5 days, up from 2, and sells contacted partners' materials, 3 gold a unit.")
+    expect(at(5).effect).toContain("sells contacted partners' materials, 3 gold a unit")
+    expect(at(6).effect).toContain("sells contacted partners' materials, 3 gold a unit")
+    expect(at(4).effect).not.toContain('partners')
     expect(at(6).next).toBeNull()
   })
 
@@ -168,7 +171,7 @@ describe('the trading post as a market', () => {
       'Adds Fine gear and Lesser runes.',
       'Adds Masterwork gear.',
       'Adds iron and steel gear, runes of the second rank and 2 gold every 5 days.',
-      'Brings 3 gold every 5 days, up from 2.',
+      "Brings 3 gold every 5 days, up from 2, and sells contacted partners' materials, 3 gold a unit.",
       'Brings 5 gold every 5 days, up from 3.',
     ])
   })
