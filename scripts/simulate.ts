@@ -786,10 +786,10 @@ export function wantsFamily(hero: Character, slot: EquipmentSlot, family: Family
  * steps 1 and 2, tiers 3 to 5): of the families it wants (`wantsFamily`), the
  * forge option the stock affords of the highest tier, then the best
  * `armourScore`, then the first in `forgeOptions`' order. Null when none is
- * affordable, or when it is no better than the worn item: a higher tier, or
- * the same tier in a wanted family the worn one is not of while the worn one
- * is plain (so it never trades a tempered item, or flips back and forth, for one
- * of its own tier).
+ * affordable, or when it is not of a higher tier than the worn item (none
+ * counting 0): a family switch, such as the fighter's longsword and war hammer
+ * as the lead foe's resistance crosses `HAMMER_RESISTANCE` between visits,
+ * waits for the next tier, so the weapon never flips back and forth.
  */
 export function forgeChoice(game: GameState, party: Expedition, member: number, slot: EquipmentSlot, leadResistance: number): ForgeOption | null {
   const hero = party.members[member]
@@ -804,9 +804,7 @@ export function forgeChoice(game: GameState, party: Expedition, member: number, 
   }
   if (!best) return null
   const wornTier = (worn && baseItem(worn) && worn.tier) || 0
-  if (best.tier > wornTier) return best
-  const wanted = worn?.family !== undefined && wantsFamily(hero, slot, worn.family, worn.stats ?? {}, leadResistance)
-  return best.tier === wornTier && !wanted && (worn?.grade ?? 1) === 1 ? best : null
+  return best.tier > wornTier ? best : null
 }
 
 /**

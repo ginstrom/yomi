@@ -1394,12 +1394,20 @@ describe('the gear policy (stage 10: families by role from tier 3)', () => {
     }
   })
 
-  it('switches a plain worn item of its tier to the wanted family, but never a tempered one', () => {
-    const plain = home({ workshop: 4, stock: { gold: 100, mithril: 8 }, members: [0], gear: [fullTier3] })
-    expect(forgeChoice(plain.game, plain.party, 0, 'mainHand', 4)?.family).toBe('war_hammer')
-    expect(forgeChoice(plain.game, plain.party, 0, 'mainHand', 3)).toBeNull()
-    const tempered = home({ workshop: 4, stock: { gold: 100, mithril: 8 }, members: [0], gear: [{ ...fullTier3, mainHand: 'mithril_longsword@2' }] })
-    expect(forgeChoice(tempered.game, tempered.party, 0, 'mainHand', 4)).toBeNull()
+  it('switches family only with a higher tier, so a plain weapon never flips as the lead foe\'s resistance crosses 4', () => {
+    // A plain Mithril Longsword worn, the stock able to forge a Mithril War Hammer (30 gold) but not to temper (60): no switch at its own tier, whatever the lead foe.
+    const { game, party } = home({ workshop: 4, stock: { gold: 30, mithril: 8 }, members: [0], gear: [fullTier3] })
+    expect(forgeChoice(game, party, 0, 'mainHand', 4)).toBeNull()
+    expect(forgeChoice(game, party, 0, 'mainHand', 3)).toBeNull()
+    for (const target of [hobgoblins, goblins, hobgoblins, goblins]) {
+      const trade = visitFacilities(game, party, 1, () => target)
+      expect(plainId(party.members[0].equipment.mainHand)).toBe('mithril_longsword')
+      expect(trade.goldOnForging).toBe(0)
+      game.world.stock = { gold: 30, mithril: 8 }
+    }
+    // With adamant at a level 5 workshop the next tier comes in the wanted family.
+    const up = home({ workshop: 5, stock: { gold: 100, adamant: 10 }, members: [0], gear: [fullTier3] })
+    expect(forgeChoice(up.game, up.party, 0, 'mainHand', 4)?.item.id).toBe('adamant_war_hammer')
   })
 
   it('wants the archer\'s bow at tiers 1 and 2 (bought) and the crossbow from tier 3 (forged)', () => {
