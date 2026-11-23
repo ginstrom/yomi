@@ -6,6 +6,7 @@ The rule stays in `src/inventory/CLAUDE.md`, "One id is one object". Touch every
 - Never build a graded, modified or runed item by hand; go through its id (or `withRunes`, `unruned`, `craftedItem`).
 - `public/assets/sprites/icon_<icon>.png` and its key in `ITEM_ICON_KEYS` (`src/scenes/itemIcons.ts`). How to draw it: `.claude/skills/yomi-sprites/`.
 - A worn look for a weapon, shield, armour, head or cloak: `gear-icon.md`.
+- A new gear family or a new material (a sixth tier, a new kind): `src/inventory/catalog.ts` (`FAMILIES`, `MATERIALS` with `MaterialDef.stock` naming the stock material a tier 3+ one spends; `TIER_BONUS`), `MATERIAL_TINTS` in `src/scenes/itemIcons.ts` (a tint for every tiered material), `FORGE_LEVEL`, `FORGE_GOLD` and `FORGE_MATERIAL` in `src/game/crafting.ts` for a tier 3+ one, the stock `Material` and `WORKS_NAMES` in `src/game/territory.ts` for a new stock material, and `GEAR` in `src/game/bandits.ts` for each bandit role's id at the tier.
 
 ## Tests that catch a miss
 

@@ -197,3 +197,13 @@ Not retuned; `npm test` 107 files, 2,736 tests pass on `82a7969`. Stopped for th
 - Long (100, `--log none`, 4:01, load 5.7 → 3.4): all figures identical to the step's `long` run. Forge-ready kit: at 5 none (0 of 84); at 10 none (0 of 53); at 15 fighter 1.9 / 0.6 runes, archer 1.9 / 0.6, mage 1.7 / 1.0 (8 of 16), against tier 4, 3–4 runes.
 
 Outcome (step 10): engineer opus, reviewer opus, clean, 1 review round (two record notes fixed).
+
+## Step 11: document and play
+
+2026-11-23, on `96a3b83`. Docs, the manual's shots and the stage design's Implementation notes (figures there); no rule, constant or simulator change, no simulation run.
+
+- Play script walked in the dev build (`npm run dev`), headless Chromium plus one headed window, a throwaway script outside the repository. Part 3, five auto-resolved fights each of `fight freebooter_host 15` at level 15 (`level 15 all auto`), each from a fresh load of the same save: Fine adamant kit (forged and equipped through the Forge tab and the Inventory panel) won 3 of 5, estimates 60, 50, 70, 55, 60%; iron won 0 of 5, estimate under 5% each. Fair, and a rout, as the design says; the `fh15` cell's 0 of 500 is the iron party against bandits in Fine adamant.
+- The estimate's wait ("Auto (...)" to the figure), in the page: headless iron 2.8 to 3.2 s (42 to 45 frames), Fine adamant 4.1 to 4.7 s (61 to 66 frames); headed (rAF 61 a second idle) iron 2.6 s (44 frames), adamant 3.7, 4.0, 3.7 s (60 to 63 frames). Load average 5.2 to 7.2 on 10 cores. A frame costs about 60 ms while it works, so step 07's "about 1 s" (frames at 60 a second) does not hold on a loaded machine here.
+- Screenshots: two added (`crafting-forge`, `trading-post-goods`), `crafting` and `crafting-runes` retaken; 31 others differ by pixel noise only and were restored.
+- `npm test` 107 files, 2,738 pass; build and `sprites:check` pass; `test:browser` 191 tests, 5 timeouts under load 13 to 28, all pass alone.
+

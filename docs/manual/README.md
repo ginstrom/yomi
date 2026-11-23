@@ -651,6 +651,10 @@ With more partners than a page holds, **Prev** and **Next** turn the page:
 
 ![The Routes tab's second page, Emberwatch's long road on the small map](images/trading-post-routes-page2.png)
 
+The Market Hall's **Goods** filter lists what each contacted partner sells:
+
+![The Goods filter at the Market Hall: Mithril, from Stonehollow, at 3 gold a unit, with Buy 1 and Buy 5](images/trading-post-goods.png)
+
 In the encampment, click the trading post and then **Enter the Trading Post**. Click a line to see the item's stats and price, then confirm with the button under them.
 
 - **Buy** lists every plain item at each grade the post sells: plain at level 1, Fine from level 2, Masterwork at level 3, and from level 4 the second tier (steel, ironwood, wolfhide, silk) at every grade. The buttons along the top filter the list by slot (**Weapons**, **Shields**, **Armor**, **Head**, **Hands**, **Feet**) and, under them, by family, or **All** of the slot; the tab opens on weapons. A second-tier item costs 2.5 times the first tier's price, a Fine item 3 times the plain price and a Masterwork one 8 times: a Masterwork Steel Longsword costs 12 × 2.5 × 8 = 240 gold. What you buy goes into the baggage; equip it from the character panel.
@@ -692,9 +696,11 @@ The screen opens on its **Modify** tab (its **Forge** tab makes gear and its **R
 | Long | bow, crossbow | range +1 / +2 / +3 | to hit −5% |
 | Reinforced | breastplate, leather | resistance +1 / +2 / +3 | to hit −5% |
 
-**Tempering.** A forged item (tier 3 to 5, plain) also shows two buttons above its modifiers, **Temper to Fine** and **Temper to Masterwork**. A workshop of level 3 or more tempers it straight to the grade for the tier's gold (10, 20 or 30 for tier 3 to 5, times the grade's number) and 4 of its material a grade; the item keeps its modifier and its runes, and Masterwork adds a socket. The trading post grades only tiers 1 and 2. Modifiers on forged gear cost 5 of its material in place of iron, copper or crystal.
+**Tempering.** A forged item (tier 3 to 5, plain) also shows two buttons above its modifiers, **Temper to Fine** and **Temper to Masterwork**. A workshop of level 3 or more tempers it straight to the grade for the tier's gold (30, 40 or 50 for tier 3 to 5, times the grade's number) and 4 of its material a grade; the item keeps its modifier and its runes, and Masterwork adds a socket. The trading post grades only tiers 1 and 2. Modifiers on forged gear cost 5 of its material in place of iron, copper or crystal.
 
 **Forging.** The **Forge** tab lists what the workshop makes, with a button for each slot (**Weapon**, **Shield**, **Armour**, **Head**, **Gloves**, **Boots**; it opens on weapons) over the families in the materials its level reaches: level 4 forges tier 3, level 5 tier 4 and level 6 tier 5. Each line shows the item and its cost: 30, 50 or 80 gold and 8, 10 or 12 of its material (double for a two-handed weapon and for plate). Click a line, and a hero's name on the right, to see what the item gives against what that hero wears in the slot (damage, armour, sockets, strength), then **Forge it**: the item goes into the baggage, and no time passes. A Mithril Longsword costs 30 gold and 8 mithril and has one socket, two once it is tempered to Masterwork. Below level 4 the tab says what a level 4 workshop forges.
+
+![The Forge tab at a level 4 workshop: the Mithril Longsword chosen, with what it gives the hero against what he wears](images/crafting-forge.png)
 
 A craft costs 5 gold and 5 iron (5 timber for a bow, crossbow or wooden shield) at grade I, 10 gold and 5 copper at grade II, and 20 gold and 5 crystal at grade III. A Light Longsword costs 4 AP a blow, so a hero who stands still strikes twice a turn.
 
