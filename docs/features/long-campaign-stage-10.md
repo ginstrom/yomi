@@ -4,17 +4,18 @@
 
 - Request (user's words):
   > The next thing is stage 10 of the long campaign: forging and the high tiers. Its design is docs/designs/long-campaign/stage-10-forging-and-high-tiers.md and it is marked "ready for planning". [...] As with stages 2–9, the approved stage design goes straight to the planner. Start with the bookkeeping commit, then cut a long-campaign-stage-10 branch off main and run the orchestrator. Early figures, the refactor guard and the 50-campaign check run with --near-source as in stage 9. Balance bands are mine to change: bring any out-of-band figures to me.
-- Slug `long-campaign-stage-10` · Phase 3, planning · Next action: check the planner's index, assign tiers · Branch: `long-campaign-stage-10`, off main at 4d51a8b (stage 9 merged as PR #11).
+- Slug `long-campaign-stage-10` · Phase 3, planning · Next action: the user answers plan questions 1–6, then step 01 · Branch: `long-campaign-stage-10`, off main at 4d51a8b (stage 9 merged as PR #11).
 - Path: Large, but the stage design is the approved design. Straight to planning, as stages 2–9 did.
 - Links:
   - Stages overview: `docs/designs/long-campaign/index.md`
   - Design: `docs/designs/long-campaign/stage-10-forging-and-high-tiers.md` (status "ready for planning")
   - Previous stage: `docs/features/long-campaign-stage-09.md`
-  - Plan: `docs/implementation-plans/long-campaign-stage-10/index.md` (to come)
+  - Plan: `docs/implementation-plans/long-campaign-stage-10/index.md` (11 steps, 25dee5a)
   - Plan log (history): `docs/implementation-plans/long-campaign-stage-10/log.md`
-  - Summary page: `.git/orchestrator/long-campaign-stage-10/summary.html`
-- Open questions: none yet.
-- Tiers (engineer / reviewer): planner opus. Steps: to assign.
+  - Summary page: `.git/orchestrator/long-campaign-stage-10/summary.html`, https://claude.ai/artifact/L6b8hMdWK1tF9VNUu4cdag
+- Open questions: plan index questions 1–5 (robe tiers, spell penalty, bandit grades, empty trophies, partners' goods; block 02–04), 6 (step 09's early-figure gate).
+- Tiers (engineer / reviewer): planner opus. 01, 06 sonnet / sonnet; 04, 05, 08, 11 sonnet / opus; 02, 03, 07, 09, 10 opus / opus. No escalations.
+- Worktree: 05 runs in its own worktree; merge before 08.
 - Verification: not started.
 - Carried forward, for this plan (from the user):
   - Mithril and the far ores/woods have no use yet (sell only); the simulated player noticed mithril has no stated use.

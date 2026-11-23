@@ -15,12 +15,11 @@
 - Open questions: for the user at the report: in the real long campaign the home country sees about half the spawns (8.3 a campaign over 1272–1602 days vs 14.5 over 325 near the Source); proposed: defer to stage 12's spawn retune.
 - Tiers (engineer / reviewer): planner opus; 01, 02, 04, 05, 08, 09 opus / opus; 03, 06, 07, 10 sonnet / opus (07 to opus if frame time is poor for an unknown cause). No escalations.
 - Worktrees: 03 and 06 run in their own worktrees and leave index.md and log.md alone; the orchestrator merges them and the next engineer records their status and log lines.
-- Verification: overall review (opus) clean at 296dc0c, ready for a PR (npm test 2632, build, e2e after reruns, 50-check 57fdea15…). QA (sonnet) re-check: pass at 296dc0c; its encampment stock defect fixed in a125235 (not re-reviewed). Simulated user: goals 1, 2, 4 met; 3, 5, 6 partly. Evidence: `.git/pr-review/long-campaign-stage-09/evidence/`. pr-reviewer: ready at a225599 (5 CRISP findings fixed in d593b34, 6dbaa99, 6b51b72, 76b0cf5, a225599; 2 simulator findings dismissed); record `.git/pr-review/long-campaign-stage-09.md`.
+- Verification: overall review (opus) clean at 296dc0c, ready for a PR (npm test 2632, build, e2e after reruns, 50-check 57fdea15…). QA (sonnet) re-check: pass at 296dc0c; its encampment stock defect fixed in a125235 (not re-reviewed). Simulated user: goals 1, 2, 4 met; 3, 5, 6 partly. Evidence: `.git/pr-review/long-campaign-stage-09/evidence/`. pr-reviewer: ready at a225599 (5 fixed, 2 dismissed; `.git/pr-review/long-campaign-stage-09.md`).
 - Carried forward (from stage 8 and earlier, for this plan):
   - The Routes tab shows at most 4 rows, no paging; a test fails once PARTNERS exceeds 4 (stage 9 adds 3).
   - A route whose raid comes and goes between yield days is never abandoned (count resets when told safe); unmeasured.
   - The simulator never raided or abandoned a route (500 campaigns, `--trading-post 4`): RAID_RADIUS / ABANDON_AFTER unjudged; the bigger map may show.
-  - From stage 6: at ready level 10 the company wins no more often than one party on today's map; stage 9 to look again.
   - `src/game/CLAUDE.md` is at its 8 KB cap: make room before adding a rule.
   - Waiting for stage 12, not this stage: market income, the simulator's spend order (works, forts, market levels), full-campaign route figures.
 
