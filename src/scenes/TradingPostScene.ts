@@ -497,6 +497,7 @@ export class TradingPostScene extends Phaser.Scene {
         this.frame.add(text)
         this.refusalBox = { top: text.y - text.height, bottom: text.y }
       }
+      // Deliberately the reverse of the names' order: Buy 1 (`confirm`) sits on the upper row, at CONFIRM_ALL_Y, and Buy 5 (`confirmAll`) below it, at CONFIRM_Y.
       this.button('confirmAll', at(CONFIRM_Y), buyLabel(many), () => this.onBuyGood(row, many), refusals[1] === null)
       this.button('confirm', at(CONFIRM_ALL_Y), buyLabel(one), () => this.onBuyGood(row, one), refusals[0] === null)
     } else if (this.tab === 'buy') {
