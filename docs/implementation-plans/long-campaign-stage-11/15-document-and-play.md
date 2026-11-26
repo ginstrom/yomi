@@ -97,6 +97,8 @@ The user's answers to Q1–Q10 (index, "Open questions") are recorded there and 
 
 ### 4.4 The manual
 
+Left by step 09: with Elder Glade's stand-in gone, the manual no longer says where wyvern hide comes from (the Goods line, about line 661, lost its clause). Say it with the trophies: wyverns leave 3 wyvern hide each.
+
 Follow `.claude/skills/yomi-manual/`. In `docs/manual/README.md`: the foes of the far rings (wolves to the elder wyrm, by ring, with what each does: routines, sweep, breath, gaze, spells, regeneration, the golem's immunity), trophies coming from kills (wolfhide, wyvern hide, basilisk scale, drake scale) and the hide tiers they forge, Elder Glade no longer selling wyvern hide, and the Source's guardian at the end. Retake every screenshot the skill lists for screens this stage changed (the battle with a new sprite, the victory screen with trophies, the Market Hall's goods) and any the skill says to retake each stage.
 
 ### 4.5 Implementation notes and the stages index

@@ -270,3 +270,5 @@ No flight; no other ring's kinds or nests; no change to `ogre_camp`'s data, any 
 | `git grep STAND_IN_GOODS`, old nest ids | none outside the plans, the designs, `game.md`'s version history and the test that they are gone |
 
 Earlier runs: #80 (first values) one failure, this step's own placeholder in the snapshot assertion; #81, #82 `npm test` and build at trial 3; #83 `npm test` before the final commit. Budgets: tuning trials 3 of 3, plus the user's one; no paid call.
+
+**Review round 1** (reviewer opus): clean, no blocking finding. The reviewer re-ran both cells on the clean tree at `818b7d0` (wy9 312, wy12 399, logs byte-identical) and the 50-campaign check (identical); `npm test` runlog #89; `npm run test:browser` #90, 184 passed and 8 timeouts, all passing on the rerun #91. Closing commit, records only: the outcome line and a note for stage 12 in `log.md` (only threats 9 and 12 occur on the map; a ring-12 roost pays the same experience as a ring-9 one and fewer hides for a harder fight); the roost's falling counts in `.claude/skills/yomi-balance/levers.md`; a note in `15-document-and-play.md` that the manual no longer says where wyvern hide comes from.
