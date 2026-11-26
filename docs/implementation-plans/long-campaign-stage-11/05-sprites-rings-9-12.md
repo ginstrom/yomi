@@ -90,10 +90,19 @@ The sprite id is the `UnitKind` id exactly (`wyvern`, `barrow_wight`, `basilisk`
 
 ## 6. Completion criteria
 
-- [ ] Four sources in `art/units/` (`wyvern`, `barrow_wight`, `basilisk`, `hill_giant`), each with `idle`, `walk` and `[points] chest`.
-- [ ] The atlas rebuilt with every unit, including any sprite step merged before this one; `sprites:check` and the asset check pass.
-- [ ] Provenance updated.
-- [ ] Renders compared beside the roster; notes for the reviewer recorded.
-- [ ] One commit on this step's worktree branch, "Stage 11 step 05: sprites for rings 9 and 12", files staged by path, no attribution lines; the index's row 05 updated with status and commit, ready for the orchestrator to merge before steps 09 and 10.
+- [x] Four sources in `art/units/` (`wyvern`, `barrow_wight`, `basilisk`, `hill_giant`), each with `idle`, `walk` and `[points] chest`.
+- [x] The atlas rebuilt with every unit, including any sprite step merged before this one; `sprites:check` and the asset check pass.
+- [x] Provenance updated.
+- [x] Renders compared beside the roster; notes for the reviewer recorded.
+- [x] One commit on this step's worktree branch, "Stage 11 step 05: sprites for rings 9 and 12", files staged by path, no attribution lines; the index's row 05 updated with status and commit, ready for the orchestrator to merge before steps 09 and 10.
 
 ## 7. Execution record
+
+Sprites commit 5bc31dc, on `long-campaign-stage-11-sprites-05` (cut from step 04's d7fb2e7, so the atlas holds wolf, worg_rider and ogre too).
+
+- Drawn: `wyvern` (blue-slate drake on two legs, half-open violet wing, tail curled up to an acid sting; rows 3-30), `barrow_wight` (man-sized, pale head, gold circlet, dark mail, cyan eyes, glowing hand; rows 5-30, about 14 columns), `basilisk` (low, six-pixel-thick stone-brown lizard, back spines, cyan-white eye brightest; rows 14-30), `hill_giant` (blue-grey-blue hide, fur mantle, boulder-fist left, club grounded right; fills rows 1-30 and columns 1-30, so the same height as the ogre and broader, with a small head).
+- Colour: the giant is blue so it is not mistaken for the ogre (flesh), troll (green) or the coming stone golem (grey).
+- Walk frames: only leg rows differ; every walk frame was read with `sprite show <id> --frame`; runs on a row never overlap (adjacent legs are one run). The giant's stride is one leg reaching back (the club side is fixed by the canvas edge).
+- Renders (outside the repo): `/private/tmp/claude-501/-Users-ryan-personal-yomi/6b9b93b7-3933-4bd1-a198-fa82ad0fff0d/scratchpad/step05-roster-x6.png` (troll, ogre, hill_giant, wyvern, basilisk, barrow_wight, salamander, horror; idle, walk frames, and display scale).
+- Verification: `npm test` runlog #10 (107 files, 2740 tests passed); `npm run sprites:check` runlog #12 (up to date: 138 sprites, 303 frames); `sprite check --project art` ok. No simulation run. Nothing in `src/` changed.
+- For the reviewer: the club (a plain brown block with the head resting on the ground) is the weakest read; the wyvern's wing is a triangular sail; the wight's walk_0 stride spreads the pale shins.
