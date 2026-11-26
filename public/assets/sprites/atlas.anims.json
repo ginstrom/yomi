@@ -297,6 +297,90 @@
     {
       "frames": [
         {
+          "duration": 700,
+          "frame": "barrow_wight/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 700,
+          "frame": "barrow_wight/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "barrow_wight/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 200,
+          "frame": "barrow_wight/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 200,
+          "frame": "barrow_wight/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 200,
+          "frame": "barrow_wight/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 200,
+          "frame": "barrow_wight/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "barrow_wight/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 760,
+          "frame": "basilisk/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 760,
+          "frame": "basilisk/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "basilisk/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 230,
+          "frame": "basilisk/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 230,
+          "frame": "basilisk/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 230,
+          "frame": "basilisk/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 230,
+          "frame": "basilisk/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "basilisk/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 260,
           "frame": "camp_fire/base",
           "key": "atlas"
@@ -1233,6 +1317,48 @@
     {
       "frames": [
         {
+          "duration": 700,
+          "frame": "hill_giant/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 700,
+          "frame": "hill_giant/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "hill_giant/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 190,
+          "frame": "hill_giant/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 190,
+          "frame": "hill_giant/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 190,
+          "frame": "hill_giant/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 190,
+          "frame": "hill_giant/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "hill_giant/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 520,
           "frame": "hobgoblin/idle_0",
           "key": "atlas"
@@ -1922,6 +2048,48 @@
         }
       ],
       "key": "worg_rider/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 620,
+          "frame": "wyvern/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 620,
+          "frame": "wyvern/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "wyvern/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 170,
+          "frame": "wyvern/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 170,
+          "frame": "wyvern/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 170,
+          "frame": "wyvern/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 170,
+          "frame": "wyvern/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "wyvern/walk",
       "repeat": -1
     }
   ]

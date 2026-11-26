@@ -1,0 +1,75 @@
+# A hill giant: a vast grey-hided brute in a shaggy fur mantle and a hide
+# belt, a stone gripped in one fist and a studded club dragging from the other.
+canvas = "unit"
+
+outline = "auto"
+
+[points]
+chest = [15, 14]
+
+[frames.idle_0.runs]
+1 = [[12, "NnnN"]]
+2 = [[11, "NnnnnnN"]]
+3 = [[11, "bcccccc"]]
+4 = [[11, "bccccWcc"]]
+5 = [[11, "bcccccccc"]]
+6 = [[11, "bbccWcWcc"]]
+7 = [[12, "bbcccc"]]
+8 = [[6, "NnnnttnnnttnnnttnnnN"]]
+9 = [[4, "NnttnnnttnnnttnnnttnnnN"]]
+10 = [[3, "bcbNnnttnnnttnnnttnnNbccb"]]
+11 = [[2, "bcbcNnnnnnnnnnnnnnnnnNbcccb"]]
+12 = [[2, "bcbcBcccccccccccccccBccccb"]]
+13 = [[2, "bcbcBcccccccccccccccBccccb"]]
+14 = [[2, "bcbcBcccccbcccccbcccBccccb"]]
+15 = [[2, "bcbcbBcccccbbbbcccccBccccb"]]
+16 = [[2, "bcbcbBccccccccccccccBccccb"]]
+17 = [[2, "bcbcbBccccccccccccccBcccBB"]]
+18 = [[2, "bbbbcBcccccccccccccccBccNNB"]]
+19 = [[1, "cccccbNNNNNNNNNNNNNNNNNbbcNnN"]]
+20 = [[1, "cccccBNnnnYnnnnnnnnnnnnNbBNnnN"]]
+21 = [[1, "cccccbBBBBBBBBBBBBBBBBBBbbNnnN"]]
+22 = [[2, "cccbb"], [7, "BccccccccccccccB"], [25, "NnnN"]]
+23 = [[7, "BcccccccccccccB"], [24, "NnnnnnN"]]
+24 = [[7, "BccccB"], [14, "BccccB"], [21, "NnnnnnnnN"]]
+25 = [[7, "BccccB"], [14, "BccccB"], [21, "NnnnnnnnN"]]
+26 = [[7, "BccccB"], [14, "BccccB"], [21, "NnnnnnnnN"]]
+27 = [[7, "BccccB"], [14, "BccccB"], [21, "NnnnnnnnN"]]
+28 = [[7, "BccccB"], [14, "BccccB"], [21, "NnnnnnnnN"]]
+29 = [[6, "bbccccB"], [14, "Bcccbb"], [21, "NnnnnnnnN"]]
+30 = [[5, "bbbccccB"], [14, "Bccccbb"], [21, "NNnnnnnnNN"]]
+
+# A breath: the shoulders and head sink a pixel; the legs and club head stay.
+[frames.idle_1]
+from = "idle_0"
+move = { rows = [0, 23], by = [0, 1] }
+
+[anim.idle]
+frames = ["idle_0", "idle_1"]
+ms = 700
+
+# A stride: the left leg reaches back; everything above the shins stays put.
+[frames.walk_0]
+from = "idle_0"
+[frames.walk_0.runs]
+27 = [[6, "BccccB."]]
+28 = [[6, "BccccB."]]
+29 = [[4, "bbccccB.."]]
+30 = [[3, "bbbccccB.."]]
+
+# The feet lift in turn: the left, then the right. Only the leg rows change.
+[frames.walk_1]
+from = "idle_0"
+[frames.walk_1.runs]
+29 = [[6, "......."]]
+30 = [[5, "........"]]
+
+[frames.walk_2]
+from = "idle_0"
+[frames.walk_2.runs]
+29 = [[14, "......"]]
+30 = [[14, "......."]]
+
+[anim.walk]
+frames = ["walk_0", "walk_1", "walk_0", "walk_2"]
+ms = 190
