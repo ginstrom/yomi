@@ -1,0 +1,83 @@
+# The Blight Horror as the Source's last guardian: the near-home horror grown
+# grander and fouler, a hulk of rotten olive flesh crowned with a ridge of tall
+# bone spikes, two pale eyes under a dark brow, a wide red maw of teeth, a
+# glowing blight core cracked open in its chest with acid-green veins running
+# from it, and a great clawed hand reaching forward.
+canvas = "unit"
+
+outline = "auto"
+
+[points]
+chest = [14, 17]
+
+[frames.idle_0.runs]
+1 = [[12, "W"], [20, "W"]]
+2 = [[12, "W"], [16, "W"], [20, "W"]]
+3 = [[12, "W"], [16, "W"], [20, "W"]]
+4 = [[8, "W"], [12, "W"], [16, "W"], [20, "W"], [24, "W"]]
+5 = [[8, "W"], [12, "W"], [16, "W"], [20, "W"], [24, "W"]]
+6 = [[8, "Ww"], [12, "Ww"], [16, "Ww"], [20, "Ww"], [24, "Ww"]]
+7 = [[8, "Ww"], [12, "Ww"], [16, "Ww"], [20, "Ww"], [24, "Ww"]]
+8 = [[7, "GgggggggggggggggggG"]]
+9 = [[6, "GgggggggggggggggggggG"]]
+10 = [[5, "GgggggggggggggggggggggG"]]
+11 = [[4, "Ggg"], [7, "E"], [8, "ggggggggggggg"], [21, "GGGGGGGG"]]
+12 = [[4, "Gggg"], [8, "E"], [9, "gggggggggg"], [19, "E"], [20, "g"], [21, "gYYggYYg"]]
+13 = [[4, "Ggggg"], [9, "E"], [10, "gggggggg"], [18, "E"], [19, "gg"], [21, "gYkggYkg"]]
+14 = [[4, "Gggggg"], [10, "E"], [11, "gggggg"], [17, "E"], [18, "ggg"], [21, "WRWRWRWRW"]]
+15 = [[4, "Ggggggg"], [11, "E"], [12, "gggg"], [16, "E"], [17, "gggg"], [21, "RRrrrrrRR"]]
+16 = [[4, "Gggggggg"], [12, "eEEe"], [16, "ggggg"], [21, "RrrrrrrrR"]]
+17 = [[4, "Gggggggg"], [12, "EYYE"], [16, "ggggg"], [21, "WRWRWRWRW"]]
+18 = [[4, "Gggggggg"], [12, "eEEe"], [16, "gggg"], [20, "g"], [21, "GgggggggG"]]
+19 = [[5, "Gggggggg"], [13, "E"], [14, "gggggggggG"], [24, "Gggge"]]
+20 = [[5, "Gggggggg"], [13, "E"], [14, "gggggggG"], [23, "Gggggge"]]
+21 = [[6, "Gggggg"], [12, "E"], [13, "ggggggggG"], [23, "Gggggg"]]
+22 = [[7, "Ggggg"], [12, "E"], [13, "gggggggG"], [22, "Gggggg"]]
+23 = [[8, "GgggggggggggG"], [22, "Ggggggg"]]
+24 = [[8, "Gggggg"], [15, "Gggggg"], [22, "Ggggggg"]]
+25 = [[7, "Gggggg"], [15, "Gggggg"], [22, "W.W.W.W"]]
+26 = [[6, "Gggggg"], [16, "Gggggg"], [22, "W.W.W.W"]]
+27 = [[6, "Gggggg"], [16, "Gggggg"]]
+28 = [[5, "Gggggg"], [17, "Gggggg"]]
+29 = [[4, "Gggggggg"], [17, "Ggggggg"]]
+30 = [[3, "WgWgWgWg"], [17, "WgWgWgWgW"]]
+
+# A breath: the hulk sinks a pixel over its legs, claw and all.
+[frames.idle_1]
+from = "idle_0"
+move = { rows = [0, 23], by = [0, 1] }
+
+[anim.idle]
+frames = ["idle_0", "idle_1"]
+ms = 650
+
+# A stride: the legs part and nothing above them moves.
+[frames.walk_0]
+from = "idle_0"
+[frames.walk_0.runs]
+24 = [[8, "Gggggg"], [15, "Gggggg"], [22, "Ggggggg"]]
+25 = [[7, "Gggggg"], [15, "Gggggg"], [22, "W.W.W.W"]]
+26 = [[6, "Gggggg"], [16, "Gggggg"], [22, "W.W.W.W"]]
+27 = [[5, "Gggggg"], [17, "Gggggg"]]
+28 = [[4, "Gggggg"], [18, "Gggggg"]]
+29 = [[3, "Gggggggg"], [18, "Ggggggg"]]
+30 = [[2, "WgWgWgWg"], [18, "WgWgWgWgW"]]
+
+# The near foot lifts: the left, then the right. Only the leg rows change.
+[frames.walk_1]
+from = "idle_0"
+[frames.walk_1.runs]
+28 = [[5, "......"]]
+29 = [[4, "........"]]
+30 = [[3, "........"]]
+
+[frames.walk_2]
+from = "idle_0"
+[frames.walk_2.runs]
+28 = [[17, "......"]]
+29 = [[17, "......."]]
+30 = [[17, "........."]]
+
+[anim.walk]
+frames = ["walk_0", "walk_1", "walk_0", "walk_2"]
+ms = 170

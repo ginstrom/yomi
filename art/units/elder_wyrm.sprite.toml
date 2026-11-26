@@ -1,0 +1,70 @@
+# An elder wyrm: a hulking, darker-scaled drake than the young dragon, hunched
+# on four thick angled legs, its thick neck lifted and its great horned head
+# thrust forward with ember in the open jaws, a tall rust wing folded up over the
+# back with ivory fingertips, ivory spines along the neck, tan belly plates, and
+# a heavy spiked tail dragging on the left.
+canvas = "unit"
+
+outline = "auto"
+
+[points]
+chest = [21, 17]
+
+[frames.idle_0.runs]
+1 = [[12, "ooW"], [19, "W"]]
+2 = [[11, "oRoW"], [19, "WW"]]
+3 = [[10, "ooRooW"], [20, "WWW"], [28, "W"]]
+4 = [[9, "ooRoooW"], [22, "WWW"], [27, "WW"]]
+5 = [[8, "oooRoooW"], [20, "RrrWWWRrrR"]]
+6 = [[7, "WoooRoooW"], [19, "RrrrRrrrYrrR"]]
+7 = [[6, "ooooRooooow"], [19, "RrrrRrrrrrkR"]]
+8 = [[5, "ooRooooRoooW"], [19, "RrrrrWFFFFWr"]]
+9 = [[4, "WooRooooRoooW"], [19, "RrrrRrWFFWrR"]]
+10 = [[3, "ooRooooooRoooW"], [19, "RrrrRrrrrrR"]]
+11 = [[3, "WooRoooooRooooW"], [19, "RrrrrrTR"]]
+12 = [[3, "ooRoooooooRoooW"], [18, "RrrrrrrTtR"]]
+13 = [[4, "oo"], [7, "oRo"], [11, "oRoo"], [15, "ooW"], [18, "RrrrrrrTtR"]]
+14 = [[12, "RRRRRRRRRRRRRRRR"]]
+15 = [[10, "RrrrrrrrrrrrrrrrrR"]]
+16 = [[8, "RrrrrrrrrrrrrrrrrrrTtR"]]
+17 = [[3, "W"], [6, "RrrrrrrrrrrrrrrrrrrrrTtR"]]
+18 = [[3, "W"], [5, "RrrrrrrrrrrrrrrrrrrrrrTtR"]]
+19 = [[2, "RRR"], [5, "RRRRRRRRRRRRRRRRRRRRRTtR"]]
+20 = [[1, "WRrR"], [5, "RRRRRRRRRRRRRRRRRRRRTtR"]]
+21 = [[2, "RrrR"], [6, "RTtTtTtTtTtTtTtTtTtRR"]]
+22 = [[7, "rrrrrr"], [14, "RRR"], [18, "RRR"], [22, "rrrrr"]]
+23 = [[6, "rrrrrr"], [14, "RRR"], [18, "RRR"], [22, "rrrrrr"]]
+24 = [[5, "rrrrrr"], [13, "RRR"], [17, "RRR"], [23, "rrrrr"]]
+25 = [[4, "rrrrr"], [12, "RRR"], [19, "RRR"], [23, "rrrrrr"]]
+26 = [[4, "rrrr"], [12, "RRR"], [19, "RRR"], [24, "rrrrr"]]
+27 = [[4, "rrrr"], [12, "RRR"], [19, "RRR"], [24, "rrrrr"]]
+28 = [[4, "rrrr"], [12, "RRR"], [20, "RRR"], [25, "rrrrr"]]
+29 = [[3, "rrrrrrr"], [11, "RRRRRR"], [19, "RRRRRR"], [24, "rrrrrrr"]]
+30 = [[2, "WrWrWrWr"], [10, "WRWRWRW"], [19, "WRWRWRW"], [24, "WrWrWrW"]]
+
+# A breath: everything above the legs sinks a pixel.
+[frames.idle_1]
+from = "idle_0"
+move = { rows = [1, 21], by = [0, 1] }
+
+[anim.idle]
+frames = ["idle_0", "idle_1"]
+ms = 900
+
+# A stride: the hind pair reaches back; the fore pair stays planted.
+[frames.walk_0]
+from = "idle_0"
+move = { rows = [25, 30], cols = [0, 16], by = [-1, 0] }
+
+# The pairs lift in turn: the hind feet, then the fore feet. Only the leg rows change.
+[frames.walk_1]
+from = "idle_0"
+move = { rows = [28, 30], cols = [0, 16], by = [0, -2] }
+
+[frames.walk_2]
+from = "idle_0"
+move = { rows = [28, 30], cols = [17, 31], by = [0, -2] }
+
+[anim.walk]
+frames = ["walk_0", "walk_1", "walk_0", "walk_2"]
+ms = 240
