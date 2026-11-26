@@ -204,11 +204,11 @@ All six end inside 300–475. Trials used: wolf pack 1, ogre camp 1, worg riders
 
 Step 08 (ring 7: wolves, worg riders, ogres): engineer opus, reviewer opus, verdict clean, 1 review round, no blocking finding. Commits `b0fbe7d`, `4ca43d2`, `79d678f` (record); clean-tree gates at `4ca43d2`: `npm test` runlog #69, `npm run build` #70, `npm run sprites:check` #71; the reviewer's `npm test` #77 at `79d678f`; browser: the reviewer's #78, 190 passed and 2 timeouts, both passing on the rerun #79. Cells wp6 418, wp9 358, wr7 463, wr9 326, oc7 405, oc10 308, all inside 300–475; 50-campaign hash identical; departures 1 to 6 of the execution record accepted.
 
-## Step 09: ring 9 (stopped at the cells' checkpoint)
+## Step 09: ring 9
 
 2026-11-27. The index trimmed first (`d901faf`, 31,534 → 28,361 bytes before this step's own lines). Cells: 500 battles from seed 1, `--encounter wyvern_roost --threat T --party-level T --player-kit expected`, run by `yomi-measure` one at a time on the dirty tree of each trial over `d901faf`, read against 300–475 (report only). Logs `logs/s11-09-<cell>` (first values), `logs/s11-09-t1-…`, `-t2-…`, `-t3-…` (gitignored).
 
-**50-campaign check:** `1e85d023a1b58697ec36724720f6ad5ba8b4a5dc2362f4ff6b22605ce37ed216`, **identical**, at the first values and again at trial 3's tree (`logs/s11-09-guard-50.jsonl`). The refactor guard is unedited and green.
+**50-campaign check:** `1e85d023a1b58697ec36724720f6ad5ba8b4a5dc2362f4ff6b22605ce37ed216`, **identical**, at the first values, at trial 3's tree and at the final tree (`logs/s11-09-guard-50.jsonl`). The refactor guard is unedited and green.
 
 **Yardstick at 9** (`foeYardstick(9, 'expected')`): armour class 40–60, to hit 80–100, hit points 53.7–107.4, damage a turn 8.3–13.8. Every block tried sits inside it, no exception.
 
@@ -221,12 +221,15 @@ Step 08 (ring 7: wolves, worg riders, ogres): engineer opus, reviewer opus, verd
 | 2 | the block reshaped to depend less on level (hits more often, through all the kit's resistance, fewer hit points) | 66 hit points, 100 to hit, pierce 11; dice as above | 3, 3, 3, 3 | 455 (0.652 / 0.574; 7.3; 217 / 120) | **159** (0.658 / 0.779; 8.8; 217 / 246) |
 | 3 | the block weakened | 56 hit points, 100 to hit, pierce 11; Bite 2d6+2 (11.5 a turn) | 3, 3, 3, 3 | **498** (0.632 / 0.531; 6.0; 194 / 74) | 399 (0.626 / 0.739; 8.5; 238 / 177) |
 
-Three trials used; **`wy9` is outside (498) at the last, so the step stopped for the orchestrator.** The code is at trial 3 (the smallest miss: 23 above at one end, against 125 or 141 below at the other).
+| 4 (the user's, 2026-11-27) | counts: a fourth wyvern (the Old Wyvern) at 9 and 10 | as trial 3 | 4, 4, 3, 3 | 312 (0.670 / 0.665; 7.3; 227 / 160) | 399 (the log identical to trial 3's, sha256 `48dda298…2aa3`) |
+| **Final (`cecd65f`)** | | 56 hit points, armour class 50, resistance 2, 100 to hit, pierce 11, 10 AP; Bite 2d6+2, Tail Sting 1d4 + Poisoned | 4, 4, 3, 3 | **312** | **399** |
+
+Three trials used with `wy9` outside (498) at the third, so the step stopped for the orchestrator at `2b35cb9` (trial 3). **The user decided one more trial, four wyverns at 9 and 10 with trial 3's block; both cells landed inside (312, 399) and it is kept.** The Wyvern Roost is the one encounter whose numbers fall as the threat rises: threat 11 fields three where 10 fields four and is worth less experience (3 × 11 × 150 of `FOE_XP` against 4 × 10 × 150); `encounters.test.ts` names it as the exception to "never fewer than before" and "worth more the higher the threat". Trial 4's two cells were run twice at once by mistake (the measuring agent and the engineer, after a lost notification); both gave 312 and 399 and the `wy9` log's hash is the agent's (`ddfec562…4456`). For stage 12: four at 9 is near the reading's floor (312) and four was a cliff for the Worg Riders at 7.
 
 **Why no one block fits both ends.** The expected kit is the same row at 9 and 12 (tier 3 Fine, two runes of rank 2; fighter and archer resistance 11, the fighter's armour class 53), while a foe gains 15 to hit, a third more hit points and a point of damage over the three levels. So the same three wyverns are far harder at 12 than at 9: 459 against 175, 455 against 159, 498 against 399. Between trials 2 and 3 (one block lever) `wy12` reaches 300 only where `wy9` is already about 480. Two wyverns are no battle at 9 (500, 41 damage taken: the fighter's Taunt holds both, at 37% to hit and 11 resistance) and three at 12 are a cliff, as a fourth foe was for the Worg Riders at 7. The step 02 bandit cells show the same slope (`bco9k` 499, `bco12k` 254).
 
 **What the wyvern needed against the kit** (first values on): one heavy bite and piercing, as ring 7's kinds, and its poison, which no armour cuts (at `wy9`, trial 1: bite 67.5, sting 11.3, poison ticks 32.3 damage a battle). At 9 the wyverns' attacks go to the taunting fighter (83% of them). Pierce 7 first, 11 from trial 2.
 
-**The policy snapshot:** re-recorded at trial 3's tree with the Wyvern Roost's lines only. The test asserts the first 14,242 lines against stage 10's `b9cef6e1…28ac`, the first 16,403 against step 08's `08248429…ebc1`, every line after them beginning `wyvern_roost`; 17,092 lines, `e72a3c03…ee28`. It will be re-recorded the same way when the roost is settled.
+**The policy snapshot:** re-recorded with the Wyvern Roost's lines only, at trial 3's tree and again at the final one. The test asserts the first 14,242 lines against stage 10's `b9cef6e1…28ac`, the first 16,403 against step 08's `08248429…ebc1`, every line after them beginning `wyvern_roost`; 17,051 lines, `8e432c09…4c60` (17,092 and `e72a3c03…ee28` at trial 3).
 
 **Far-world pins re-pinned, the change proven confined** (digested JSON dumped before and after, diffed value by value): `blight.test.ts`'s two 30-day runs differ in two spawned events' names each (a Bandit Troop at 12 is a Wyvern Roost, a Bandit Troop at 9 a Wolf Pack: seven eligible kinds at 9 where six were, two at 12 where one was; counts, places, RNG and the blight's hash unchanged); `worldMap.test.ts`'s session differs in 30 values: the three renamed nests' id, name and encounter (9), seven far spawns' name and encounter (14) and their spawned events' names (7); `SESSION_TURN` unchanged.

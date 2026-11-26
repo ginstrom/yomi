@@ -211,45 +211,62 @@ No flight; no other ring's kinds or nests; no change to `ogre_camp`'s data, any 
 
 ## 6. Completion criteria
 
-- [ ] `wyvern` kind, block, `wyvern_strikes`, XP 150, native 9, sounds, trophy (wyvern hide 3), yardstick (`'expected'`) with named exceptions.
-- [ ] `wyvern_roost` (9–12, counts as tuned), spawn kind appended (`fromThreat: 7`), favoured venom.
-- [ ] Ring 9's nests per C6; references to the old ids fixed; `SAVE_VERSION` 33.
-- [ ] `STAND_IN_GOODS` removed; goods are each partner's own; tests and docs fixed.
-- [ ] Tests of §4.5 pass; the engine test shows the sting poisoning.
-- [ ] Policy snapshot re-recorded, only `wyvern_roost` lines added, title extended.
-- [ ] Refactor guard green and unedited; 50-campaign hash identical to step 01's.
-- [ ] `wy9`, `wy12` recorded in `log.md` and `bands.md`; within 300–475 or brought to the orchestrator and answered.
-- [ ] CLAUDE.md lines made wrong fixed (`src/game/CLAUDE.md` under 8 KB); `docs/reference/game.md` updated.
-- [ ] One commit, "Stage 11 step 09: ring 9", files staged by path, no attribution lines; the index's row 09 updated with status and commit.
+- [x] `wyvern` kind, block, `wyvern_strikes`, XP 150, native 9, sounds, trophy (wyvern hide 3), yardstick (`'expected'`) with named exceptions.
+- [x] `wyvern_roost` (9–12, counts as tuned), spawn kind appended (`fromThreat: 7`), favoured venom.
+- [x] Ring 9's nests per C6; references to the old ids fixed; `SAVE_VERSION` 33.
+- [x] `STAND_IN_GOODS` removed; goods are each partner's own; tests and docs fixed.
+- [x] Tests of §4.5 pass; the engine test shows the sting poisoning.
+- [x] Policy snapshot re-recorded, only `wyvern_roost` lines added, title extended.
+- [x] Refactor guard green and unedited; 50-campaign hash identical to step 01's.
+- [x] `wy9`, `wy12` recorded in `log.md` and `bands.md`; within 300–475 or brought to the orchestrator and answered.
+- [x] CLAUDE.md lines made wrong fixed (`src/game/CLAUDE.md` under 8 KB); `docs/reference/game.md` updated.
+- [x] One commit, "Stage 11 step 09: ring 9", files staged by path, no attribution lines; the index's row 09 updated with status and commit. (Two code commits: departure 4.)
 
 ## 7. Execution record
 
-2026-11-27, engineer (model unset). **Stopped at the cells' checkpoint: `wy9` is 498 after three trials** (decision 4). Figures, trials and proofs: [`log.md`](log.md), "Step 09". Commits: `d901faf` (index trimmed), then the step's code at trial 3 (green; see the index row).
+2026-11-27, engineer (model unset). Commits: `d901faf` (the index trimmed, docs only), `2b35cb9` (the step at trial 3, stopped at the cells' checkpoint), `cecd65f` (the roost settled: the final code). Figures, trials and proofs: [`log.md`](log.md), "Step 09".
 
-**Built** (all of §4 but the settled tuning, `bands.md` and the final gates)
+**Built**
 
-- `WYVERN_STATS` (native 9, 150 XP, resistance 2, `wyvern_strikes`; at trial 3: 56 hit points, armour class 50, 100 to hit, pierce 11, 10 AP, bite 2d6+2 at 6 AP), in `STAGE_11_KINDS`, inside the kitted yardstick, no exception. `wyvern_strikes` "Bite and Sting" (6 AP, recharge 0, Bite then Tail Sting 1d4 laying Poisoned 3 turns), in `ABILITY_IDS` and `MONSTER_ABILITY_IDS` after `ogre_sweep`; sounds as its attacks (`SOUNDS_AS_ATTACKS`). No engine change, no flight.
-- `wyvern_roost` 9–12 after `ogre_camp`; spawn kind Wyvern Roost appended (`fromThreat: 7`); `FAVOURED_RUNES.wyvern_roost` venom; `TROPHIES.wyvern` wyvern hide 3.
+- `WYVERN_STATS` (native 9, 150 XP, resistance 2, `wyvern_strikes`): 56 hit points, armour class 50, 100 to hit, pierce 11, 10 action points, bite 2d6+2 at 6 AP. In `STAGE_11_KINDS`, inside the kitted yardstick, no exception. `wyvern_strikes` "Bite and Sting" (6 AP, recharge 0, Bite 2d6+2 then Tail Sting 1d4 laying Poisoned 3 turns), in `ABILITY_IDS` and `MONSTER_ABILITY_IDS` after `ogre_sweep`; it sounds as its attacks (`SOUNDS_AS_ATTACKS`). No engine change, no flight.
+- `wyvern_roost` 9–12 after `ogre_camp`, four slots (Wyvern, Wyvern Mate, Young Wyvern, Old Wyvern), counts 4, 4, 3, 3; spawn kind Wyvern Roost appended (`fromThreat: 7`); `FAVOURED_RUNES.wyvern_roost` venom; `TROPHIES.wyvern` wyvern hide 3.
 - Nests per C6 (`cinder_roost`, `deepcrag_roost`, `mere_ogres`; same hexes and loot); `SAVE_VERSION` 33.
-- `STAND_IN_GOODS` removed; `goodsForSale` lists each partner's own good; tests, `docs/reference/game.md` and the manual's sentence fixed.
+- `STAND_IN_GOODS` removed; `goodsForSale` lists each partner's own good; tests, `docs/reference/game.md` and the manual's sentence fixed (its Goods screenshot is step 15's).
 - Sounds: `FOE_SOUNDS.wyvern` the bite, `DEATH.wyvern` the salamander's cue, `STEP` heavy. No new cue.
 - Tests: `highRoster.test.ts` (the routine's two named attacks, the Sting's poison on a hit, none on a miss or on a felled foe, no flight), `encounters.test.ts`, `loot.test.ts`, `tradingPost.test.ts`, `worldMap.test.ts`, `blight.test.ts`, `save.test.ts`, `abilities.test.ts`, `sounds.test.ts`. Seen red against the old code (22 failures), then green.
+- Docs: `docs/reference/game.md`, `battle.md`, the manual's Goods sentence, `bands.md` (`WY9`, `WY12`, `wy9`, `wy12`, "Now"). No CLAUDE.md line was made wrong (`src/game/CLAUDE.md` untouched). `running.md` lists no cells by code.
 
-**Departures**
+**Cells:** `wy9` 312, `wy12` 399, both inside 300–475, after three trials and a fourth the user allowed (log). `oc10`: unchanged, step 08's figure (`ogre_camp`'s data and ring 7's kinds were not touched).
 
-1. Counts 3, 3, 3, 3 (C5: 2, 2, 3, 3), by trial 1. C5's row in the index is not yet changed: the roost is not settled.
-2. `armorPierce` (7, then 11) and 10 action points, numbers C3 does not name.
-3. Three far-world pins re-pinned as step 08 did, with the diff (log).
-4. Not done, waiting on the decision: `bands.md`'s `WY9`/`WY12` rows and "Now"; the browser run and `sprites:check` on the final tree; the completion boxes.
+**Departures from the task, and why**
 
-**Verification so far** (trial 3's tree): `npm test` runlog #81, 2852 passed; `npm run build` #82, exit 0; 50-campaign hash identical; guard unedited and green. Run #80 (first values) had one failure, this step's own placeholder in the snapshot assertion.
+1. **Counts 4, 4, 3, 3 and a fourth slot** (C5: wyvern ×3; 2, 2, 3, 3): the user's decision after the step stopped at trial 3 (`wy9` 498). The roost's numbers fall as the threat rises, so threat 11 fields fewer than 10 and is worth less experience; the two general tests in `encounters.test.ts` that forbade this name the Wyvern Roost as their one exception. C5's row in the index is updated.
+2. **`armorPierce` 11 and 10 action points**, numbers C3 does not name (the line under C3 has the piercing). What the wyvern needed against resistance 11: a bite through all of it, and its poison.
+3. **Three far-world pins re-pinned** as step 08 did, with the before/after diff (log).
+4. **Two code commits**, not one: the step was committed green at trial 3 before the stop, so the state would survive an interruption.
+5. **Decision 4 gained the user's standing rule** (top end inside, bottom may run easy, carry on), in the index and in the copies of decision 4 in `10-ring-12.md` to `13-source.md`.
+6. **The plan index trimmed first** (`d901faf`): C1, C2 and C8 point to their task files, the answered questions' table and the sprite steps' ordering notes removed; 31,534 → 28,361 bytes.
+7. Trial 4's two cells ran twice at once by mistake (log); the figures agree.
+8. Trials 2 and 3 each changed several numbers of the one block (the block as the lever).
 
-**Options for the orchestrator** (the cells: `wy9` 498, `wy12` 399 now)
+**For later steps**
 
-- A. Keep trial 3 and accept `wy9` at 498 (the user's call; the reading is the plan's, not a band).
-- B. Keep trial 1's stronger block and accept `wy12` at 175.
-- C. Let the roost differ by threat so 9 is harder than 12 in numbers with trial 3's block: four wyverns at 9 and 10, three at 11 and 12 (a fourth slot; counts fall as the threat rises, and a fourth foe may be a cliff). One more trial.
-- D. A lesser third foe at 11 and 12 with the stronger block (a nearer ring's kind by `fromThreat`, which changes C5's "wyvern ×3"). One or two more trials.
-- E. Read the cell at the band's top with the kit a level-12 party would more likely hold (the plan's kit is the row's low end at both 9 and 12): a change to decision 10, not to the roost.
+- The expected kit is one row across 9–12 (and 13–16, 17–20) while foes gain 5 to hit and about 11% hit points a level: within a kit row the same line-up is much harder at the top. Bands that sit inside one row (`wyvern_roost`; check `hill_giant_steading` 12–15 against rows 9–12 and 13–16) will want flat or falling counts; decision 4's standing rule now covers the miss.
+- Two foes are held by the fighter's Taunt at 9–12 and are no battle; three is where a line-up starts.
+- `young_dragon` (step 11) fields wyverns as minions: this block (56 hit points at 9, pierce 11) is what it gets. Changing `WYVERN_STATS` re-runs `wy9` (312, near the floor) and `wy12`.
+- The snapshot test now has two prefix checks (14,242 and 16,403 lines); add a third at 17,051 (`8e432c09…4c60`).
 
-Recommended: C tried once, else A.
+**Verification** (clean tree at `cecd65f`)
+
+| Check | Result |
+| --- | --- |
+| `npm test` | runlog #84: 2853 passed |
+| `npm run build` | runlog #85: exit 0 |
+| `npm run sprites:check` | runlog #86: exit 0, up to date (144 sprites) |
+| `npm run test:browser` | runlog #87 (one full run): 187 passed, 5 failed. Four were timeouts (`Test timed out in 60000ms`): `character.test.ts` "takes a tier-2 node…", `debug.test.ts` "fights any encounter at any threat…", `saves.test.ts` "deletes the slot of a party that falls", `world.test.ts` "drags to the far east edge…". The fifth, `story.test.ts` AC10 "ducks the music…", was Playwright's 30 s frame wait (a timeout) and, with it, the known uncaught `Cannot set properties of null (setting 'volume')` of `soundPlayer.ts`'s narration fade (the "no uncaught errors" assertion; not this step's). Rerun of those five files once, runlog #88 (the tree dirty with this record only): 103 passed. No failure names a ring-9 thing |
+| 50-campaign check | `1e85d023…ed216`, identical (first values, trial 3, final) |
+| Refactor guard | unedited, green (in `npm test`) |
+| Policy snapshot | earlier 16,403 lines unchanged (both prefix hashes), 648 `wyvern_roost` lines added |
+| `git grep STAND_IN_GOODS`, old nest ids | none outside the plans, the designs, `game.md`'s version history and the test that they are gone |
+
+Earlier runs: #80 (first values) one failure, this step's own placeholder in the snapshot assertion; #81, #82 `npm test` and build at trial 3; #83 `npm test` before the final commit. Budgets: tuning trials 3 of 3, plus the user's one; no paid call.
