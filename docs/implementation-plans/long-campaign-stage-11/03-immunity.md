@@ -83,11 +83,44 @@ This step re-records nothing: no unit has `immune`, so the policy snapshot is un
 
 ## 6. Completion criteria
 
-- [ ] `CombatantStats.immune`, compared by `sameCombatStats`, read through one helper by every status-laying path and by the policy.
-- [ ] `immune: true` on the event when a status is refused; `formatEvent`'s line; `LOG_SCHEMA_VERSION` 27.
-- [ ] Tests for every path, the non-ticking statuses, unchanged draws and a restored snapshot without the field.
-- [ ] Guard and snapshot unedited and green; the 50-campaign hash identical to step 01's (or explained as above), recorded in `log.md`.
-- [ ] Docs as §4.8.
-- [ ] One commit, "Stage 11 step 03: the golem's immunity", files staged by path, no attribution lines; the index's row 03 updated with status and commit.
+- [x] `CombatantStats.immune`, compared by `sameCombatStats`, read through one helper by every status-laying path and by the policy.
+- [x] `immune: true` on the event when a status is refused; `formatEvent`'s line; `LOG_SCHEMA_VERSION` 27.
+- [x] Tests for every path, the non-ticking statuses, unchanged draws and a restored snapshot without the field.
+- [x] Guard and snapshot unedited and green; the 50-campaign hash identical to step 01's (or explained as above), recorded in `log.md`.
+- [x] Docs as §4.8.
+- [x] One commit, "Stage 11 step 03: the golem's immunity", files staged by path, no attribution lines; the index's row 03 updated with status and commit.
 
 ## 7. Execution record
+
+### Engineer
+
+Code commit `d94188b` "Stage 11 step 03: the golem's immunity" (a record-only commit follows).
+
+**Built**
+
+- `CombatantStats.immune?: true` (`combat.ts`), compared by `sameCombatStats`; `refusesStatus(stats, status)` (`spells.ts`): the unit is immune and the status's rule has a `tick`.
+- Engine: `layStatus` returns null, changing nothing, where `refusesStatus`; `laidOn` wraps it for outcomes (`{ status, immune? }`). Read by `strikeUnit` (hostile spells, rolled areas), the friendly cast, the `auto` area, `statusAbility` (`foeStatus` / `selfStatus`), and the attack path (the strike's status and each on-hit status). `immune?: true` on `CastOutcome` (its `status` null) and on `AttackEvent`, only when a status was refused. `LOG_SCHEMA_VERSION` 27. `formatEvent`: "…, unaffected by the rest." after a hit's damage; "Golem is unaffected" where nothing else landed.
+- Policy: `statusWorth` is 0 where refused; `areaCast`'s status-only count and `statusArea` skip units that refuse the status (`canLay`). The snapshot is unedited.
+- `foeInfo.ts`: "Immune to acid and poison" (helper only; no scene file changed, so no browser run).
+- Docs: `docs/reference/battle.md` (Immunity; the policy's lines), `docs/reference/scenes.md`, `src/engine/CLAUDE.md` (what never draws), `.claude/skills/yomi-add-content/status.md`.
+- Tests: `src/engine/immunity.test.ts` (21; red first, 15 failing before the code): every path with and without the flag (same draw count, same events but for the status fields), the non-ticking statuses, the log lines, a restored snapshot with and without the field. The rolled area ability, the `auto` area and the `foeStatus` paths lay no ticking status in today's data, so the test injects three abilities for them. Also `policies.test.ts` (2, red against the old `policies.ts`), `combat.test.ts`, `foeInfo.test.ts`; the version assertions moved to 27.
+
+**Deviation (approved by the orchestrator, option A): the events hashes re-recorded.** Every `battle_start` writes `schemaVersion`, so log 27 alone moved `GUARD_EVENTS_SHA256` (`e4dd3391…fb6394` → `0b0f4c20…e961af`), the 18 `logs` digests of `src/game/forecast.test.ts` and the 50-campaign hash. Play did not move; the proof table is in `log.md` (step 03). `GUARD_RECORDS`, the forecast tallies and the policy snapshot are untouched and green. Index decision 15 carries the exception. **Later steps compare the 50-campaign check against `1e85d023a1b58697ec36724720f6ad5ba8b4a5dc2362f4ff6b22605ce37ed216`.**
+
+**Runs**
+
+| Run | Result |
+| --- | --- |
+| `npm test` before the re-record, schema 27 (runlog #33) | 19 failed, the events hashes only |
+| `npm test`, version held at 26 (runlog #34) | guard, snapshot and digests pass against the old constants |
+| 50-campaign check (`logs/s11-03-guard-50.jsonl`; `…-schema26.jsonl` kept beside it) | `1e85d023…ed216`; `57fdea15…e53e75` at schema 26, identical to step 01's |
+| Gate, clean tree at `d94188b`: `npm test` (runlog #58) | 2777 passed |
+| Gate, clean tree at `d94188b`: `npm run build` (runlog #59) | passed |
+
+Runlog #35 to #55 are `npm test` runs that failed on test timeouts alone (no assertion) while the host was loaded by another worktree's runs; #56 and #57 passed on the same tree once it was quiet.
+
+**For later steps**
+
+- Step 11 sets `immune: true` on `stone_golem`; the manual's "Hover over a monster" paragraph should then mention the "Immune to …" line (noted in `11-ring-15.md`).
+- A new ticking status is refused with no further code; lay statuses only through `layStatus` / `laidOn`.
+- The log line names no status ("unaffected by the rest"); the event carries only `immune: true`.

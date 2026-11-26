@@ -135,3 +135,16 @@ The breastplate alone gives gear §5.8's "about 5" and "about 8"; the rest is th
 
 Step 06 (sprites, ring 15): engineer sonnet, reviewer opus, verdict clean, 1 review round. Commits `7ebb9c6`, `943e193`; clean-tree checks `npm test` runlog #30 and `npm run sprites:check` runlog #31 (both at `943e193`). No simulation run.
 
+
+## Step 03: the golem's immunity
+
+**The log schema's bump to 27 moves every events hash, and nothing else does.** Every `battle_start` writes `schemaVersion`. Approved by the orchestrator: `GUARD_EVENTS_SHA256` and the 18 `logs` digests of `src/game/forecast.test.ts` re-recorded in this step; `GUARD_RECORDS` and the policy snapshot untouched and green.
+
+| Run | Result |
+| --- | --- |
+| `npm test`, schema 27, before the re-record (runlog #33) | 19 failed: `GUARD_EVENTS_SHA256` (`e4dd3391…fb6394` → `0b0f4c20e93ec2b2ebbb30710c4ce04989dd8e1168a75fff487b66d376e961af`) and the 18 forecast `logs` digests; `GUARD_RECORDS`, the forecast tallies and the policy snapshot pass |
+| `npm test`, the same tree with `LOG_SCHEMA_VERSION` held at 26 (runlog #34) | the guard, the policy snapshot and all 18 digests pass against the old constants; only the 5 assertions that the version is 27 fail |
+| 50-campaign check, schema held at 26 (`logs/s11-03-guard-50-schema26.jsonl`) | `57fdea1553a35b1af0e33b74a11ea9fe0a0e2f62ef9e5c80972af59276e53e75`, **identical** to step 01's |
+| 50-campaign check, schema 27 (`logs/s11-03-guard-50.jsonl`) | `1e85d023a1b58697ec36724720f6ad5ba8b4a5dc2362f4ff6b22605ce37ed216`; 73,274 lines in both; the 945 `battle_start` lines differ in `"schemaVersion":27` only (`sed 's/"schemaVersion":27/"schemaVersion":26/'` of it hashes to `57fdea15…e53e75`); no `"immune"` in it; the summaries equal but for the `--out` name; 26 of 50, 325 days, 18.9 battles |
+
+**The 50-campaign reference from here on is `1e85d023a1b58697ec36724720f6ad5ba8b4a5dc2362f4ff6b22605ce37ed216`** (schema 27; equal to `57fdea15…` at schema 26). Both runs took about 15 s each, run directly.
