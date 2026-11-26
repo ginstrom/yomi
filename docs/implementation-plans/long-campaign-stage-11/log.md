@@ -18,3 +18,7 @@ Step 05 (sprites, rings 9 and 12): engineer sonnet, reviewer opus, verdict clean
 
 Step 06 (sprites, ring 15): engineer sonnet, reviewer opus, verdict clean, 1 review round. Commits `7ebb9c6`, `943e193`; clean-tree checks `npm test` runlog #30 and `npm run sprites:check` runlog #31 (both at `943e193`). No simulation run.
 
+
+## Step 07 outcome
+
+Step 07 (sprites, ring 18 and the Source): engineer sonnet, reviewer opus, verdict clean, 1 review round. Commits `95e5046`, `651a4c7` (review fixes); clean-tree checks `npm run sprites:check` runlog #49 and `npm test` runlog #50 (plain, 5 timeouts under load) then #51 (`--testTimeout=120000`, 2740 passed), all at `651a4c7`. No simulation run.

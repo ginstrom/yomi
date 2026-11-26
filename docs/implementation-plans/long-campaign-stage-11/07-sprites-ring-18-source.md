@@ -99,3 +99,12 @@ Engineer (sonnet-tier brief), worktree `yomi-s11-sprites`, branch `long-campaign
 - Previews (outside the repo): `/private/tmp/claude-501/-Users-ryan-personal-yomi/6b9b93b7-3933-4bd1-a198-fa82ad0fff0d/scratchpad/roster-display.png` (display scale: lich, wight, cultist, shaman, wyrm, young dragon, golem, ogre, hill giant, source_horror, horror, troll), and `blight_lich-6x.png`, `elder_wyrm-6x.png`, `source_horror-6x.png` in the same folder.
 - For the reviewer: the kinds do not exist in `src/` yet, so none can be seen in battle until steps 12 and 13. Judge at display scale beside the roster: wyrm vs young dragon (pose, mass, darker value), source_horror vs horror, lich vs wight and cultist.
 - The orchestrator must merge this branch before step 12.
+
+### Review round 1 (opus reviewer: clean, no blocking findings; non-blocking fixes made in 651a4c7)
+
+- Fixed, `elder_wyrm`: heavier (belly deepened a row, far legs thickened to 4px); a notch under the jaw (row 10) gives the head a profile; the header no longer claims neck spines or a heavy tail (it says a tapering tail ending in an ivory spike).
+- Fixed, `blight_lich`: `walk_1` and `walk_2` sway the hem a pixel (rows 28-29, left then right) besides the feet on row 30.
+- Fixed, `source_horror`: the idle comment says the talons stay planted; the stray `e` pixels at the arm's edge are now `g`; a few `e` moss speckles added to the body to tie it to `horror`.
+- Accepted, not fixed: the lich's ribcage reads as a brooch or lantern; the wyrm's wing is flat.
+- Every walk frame of the three checked with `sprite show --frame`: no notches. Previews: `roster-display-r2.png`, `*-6x-r2.png` in the scratchpad folder named above.
+- Clean tree at 651a4c7: `npm run sprites:check` runlog #49 (pass). `npm test` plain runlog #50: 5 failed, all "Test timed out" under host load; rerun once with `--testTimeout=120000` runlog #51: 2740 passed. The coordinator runs plain `npm test` on the merge.
