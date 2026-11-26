@@ -129,3 +129,35 @@ Test-first: write each test red before the code.
 - [ ] One commit, "Stage 11 step 02: expected kit and the kitted yardstick", files staged by path, no attribution lines; the index's row 02 updated with status and commit.
 
 ## 7. Execution record
+
+2026-11-26, engineer (model unset). Code commit `67a6f0d` "Stage 11 step 02: expected kit and the kitted yardstick"; this record in a follow-up commit.
+
+**Built**
+- `scripts/simulate.ts`: `PlayerKit`, `CliArgs.playerKit` and `--player-kit own|expected` (refused with `--campaign`: "--player-kit expected cannot be used with --campaign, ..."; with `--player-weapon`: exactly "choose one of --player-kit expected and --player-weapon"; a bad value: "--player-kit must be own or expected"); `expectedGear`, `EXPECTED_RUNES`, `encounterLeadResistance(encounter, threat, members)` (which `leadFoeResistance` now calls: one reading of the lead foe), `kitLabel(args)` (the summary line's kit), `kittedFighterRow(level)`; `runBattle` dresses the party through `battleParty`.
+- `src/combat/combat.ts`: `KITTED_FIGHTER_GROWTH`, `foeYardstick(level, kit = 'bare')`; `fighterGrowth` takes its table.
+- `src/game/encounters.test.ts`: `STAGE_11_KINDS` and `STAGE_11_EXCEPTIONS` (both empty), the per-kind check shared (`holds`), today's kinds on `'bare'` with `EXCEPTIONS` untouched.
+- Docs: `docs/reference/simulator.md` (the flag; "The expected kit worn"), `docs/reference/battle.md`, `src/combat/CLAUDE.md`, `.claude/skills/yomi-balance/running.md` and `bands.md` (cell codes and measure names), `.claude/skills/yomi-add-content/foe.md`.
+
+**Verification**
+- `npm test` on the clean tree at `67a6f0d`: runlog #22, exit 0, 2753 passed (107 files). `npm run build`: runlog #23, exit 0.
+- Refactor guard green, `GUARD_RECORDS` and `GUARD_EVENTS_SHA256` unedited (no `GUARD_` line in the diff).
+- 50-campaign check: `57fdea15…53e75`, identical to step 01's (`logs/s11-02-guard-50.jsonl`).
+- `own` unchanged: a test (`runBattle` with `--player-kit own` equals without), and `bc3` and `bco9` rerun, identical to step 01.
+- Kitted rows, bands, plausibility and the five kitted cells: `log.md`, "Step 02". Cells: `bco9k` 499, `bco12k` 254, `fh15k` 477, `fh18k` 500, `sgk20` 500.
+- Budgets: no paid call; one `yomi-measure` spawn (8 runs, about 2.5 minutes of simulation).
+
+**Readings and assumptions**
+- *Rune order in one item.* C1's "Ember, then Stone" and "Stone, then Life" are read socket by socket: an item's first socket takes the first kind, every later socket the second (`EXPECTED_RUNES`). So the tier 5 Masterwork weapon holds Ember III, Stone III, Stone III (one Ember, as gear §5.8's "+5 fire" reading has one fire bonus). The policy's own `RUNE_ORDER` with an unlimited pouch would fill every weapon socket with Ember.
+- *Every row fits.* `sockets[0]` (1, 2, 3, 4) is always the main hand's sockets plus one of the body armour's, so no rune is left over and the shield and small slots take none; Life is never reached.
+- *The kit replaces everything worn* (rings and amulets too; the ready-made party wears none).
+- *The archer's armour follows the policy's strength rule*: metal at tiers 1 to 3 and 5 (Mithril and Starmetal ease strength), hide small slots at tier 4.
+- *Mean damage a turn* counts each on-hit entry's damage but a bane entry (none in this kit).
+- The war hammer: `expectedGear(fighter, level, lead)` with `lead >= 4`; `KITTED_FIGHTER_GROWTH` is measured with the longsword (lead 0), as C2 says.
+- Tests were written before the code; all but the constant's passed on the first implementation (the constant's test was seen red against a placeholder, which is how the rows were read).
+
+**Plausibility: reported, not adjusted** (`log.md`). The four yardstick fields look sound against campaign §5.2's sketch; the kitted fighter's resistance (7, 11, 13, 21 at levels 5, 10, 15, 20, against gear §5.8's "about 5" and "about 8") and armour class (53 and 73 against 40 and 55) are well above the provisional reading, and the yardstick has no resistance field. `fh18k` and `sgk20` are 500 of 500.
+
+**For later steps**
+- Ring steps: add each kind to `STAGE_11_KINDS` (and its exceptions to `STAGE_11_EXCEPTIONS`) in `src/game/encounters.test.ts`; a kind in that list leaves the bare test by itself.
+- A foe's plain weapon damage meets resistance 11 to 21 on the kitted fighter (the archer 11 to 18, the mage 3 to 7): damage that is to tell at rings 12 to 18 has to go through resistance (`throughResistance` areas, spells, elements) or carry `armorPierce`. The cells will show it; decision 4's 300–475 may need this from the first trial.
+- `FIGHTER_GROWTH` (the bare table) no longer matches today's bare fighter (hit 65/83/93/100/100 and hit points 35/59/89/119/149 at levels 1/5/10/15/20); it was left alone (out of scope; stage 12 re-measures).
