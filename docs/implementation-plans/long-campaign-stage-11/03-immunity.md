@@ -124,3 +124,14 @@ Runlog #35 to #55 are `npm test` runs that failed on test timeouts alone (no ass
 - Step 11 sets `immune: true` on `stone_golem`; the manual's "Hover over a monster" paragraph should then mention the "Immune to …" line (noted in `11-ring-15.md`).
 - A new ticking status is refused with no further code; lay statuses only through `layStatus` / `laidOn`.
 - The log line names no status ("unaffected by the rest"); the event carries only `immune: true`.
+
+### Review round 1
+
+Reviewer opus, verdict clean, no blocking finding; nothing to fix or dispute. Its reruns: runlog #62 and #63 at `dd09f70`. The re-record was verified independently (the schema-27 50-campaign log equals the baseline byte for byte with the version put back to 26).
+
+Non-blocking notes, **not fixed** (for whoever next touches these):
+
+- `battleEngine.ts` 1590 (Shadowdancer), 1607 (Rooted) and 2460 (Unbreakable's Shielded) ignore `layStatus`'s nullable return, and the first two record `status_laid` regardless. Harmless while Mirrored, Rooted and Shielded do not tick; a rule that lays a ticking status this way must check the return.
+- The friendly-cast path is tested only with Shielded (no friendly spell lays a ticking status).
+- The `selfStatus` "is unaffected" line in `describeAbility` is unreachable today (no `selfStatus` ticks).
+- The log line does not name the refused status ("unaffected by the rest"); the event carries only `immune: true`.

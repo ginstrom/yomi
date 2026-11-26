@@ -152,3 +152,7 @@ Step 06 (sprites, ring 15): engineer sonnet, reviewer opus, verdict clean, 1 rev
 ## Step 07 outcome
 
 Step 07 (sprites, ring 18 and the Source): engineer sonnet, reviewer opus, verdict clean, 1 review round. Commits `95e5046`, `651a4c7` (review fixes); clean-tree checks `npm run sprites:check` runlog #49 and `npm test` runlog #50 (plain, 5 timeouts under load) then #51 (`--testTimeout=120000`, 2740 passed), all at `651a4c7`. No simulation run.
+
+## Step 03 outcome
+
+Step 03 (the golem's immunity): engineer opus, reviewer opus, verdict clean, 1 review round, no blocking finding. Commits `d94188b`, `85eaefd` (record); clean-tree gates at `d94188b`: `npm test` runlog #58, `npm run build` runlog #59; the reviewer's reruns #62 and #63 at `dd09f70`. The events-hash re-record (schema 27 only, above) was verified independently by the reviewer: the schema-27 50-campaign log equals the baseline byte for byte with the version put back to 26.
