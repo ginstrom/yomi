@@ -5,3 +5,7 @@ Append-only history for [the plan](index.md) and [the feature record](../../feat
 ## Plan written
 
 2026-11-26, against `1a008af` on `long-campaign-stage-11`. Fifteen steps; ten open questions, each with a default (index, "Open questions").
+
+## Step 04 outcome
+
+Step 04 (sprites, ring 7): engineer sonnet, reviewer opus, verdict clean, 2 review rounds. Commits `21834ec`, `5619234`, `d4d6402`, `e5e6b6b`; clean-tree checks `npm test` runlog #7 and `npm run sprites:check` runlog #8. No simulation run.

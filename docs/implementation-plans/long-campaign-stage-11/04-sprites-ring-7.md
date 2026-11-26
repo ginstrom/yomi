@@ -92,3 +92,5 @@ No game code changes: only the sprite sources and the exported atlas.
 
 - Review round 1 (found: wolf was the worg recoloured and as big; ogre `walk_0` row 29 notch; wolf legs stiff; record cited a dirty-tree run). Fixed in `d4d6402`: the wolf redrawn about 23 columns long with a back at row 22 and 4-row legs (`chest` [17, 23]), far legs slanted in `walk_0`; the worg unchanged and now clearly bigger; the ogre's row 29 left foot solid. Finding 4 (ogre face faint) accepted as not required.
 - Verification on the clean tree at `d4d6402`: `npm test` runlog #7 (exit 0), `npm run sprites:check` runlog #8 (exit 0); `sprite check` ok. Previews: `/private/tmp/claude-501/s11/wolf-beside-worg_rider.png`, `/private/tmp/claude-501/s11/ring7-beside-roster-v2.png`.
+
+- Review round 2 (opus reviewer): clean; findings 1, 2, 3, 5 resolved, finding 4 accepted. No code change in this round.
