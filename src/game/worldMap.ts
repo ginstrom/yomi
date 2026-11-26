@@ -304,12 +304,12 @@ export function newWorld(
       farMonsters('ashen_ogres', 'Ashen Hill Ogres', 70, 36, 'ogre_camp', [SPARK_WAND]),
       farMonsters('moorland_bandits', 'Moorland Bandits', 62, 52, 'bandit_camp', [AMULET_FOCUS]),
       farMonsters('hollow_riders', 'Hollow Riders', 55, 67, 'worg_riders', [HAWK_BOW]),
-      // Threat 9 (68 to 80).
+      // Threat 9 (68 to 80): two wyvern roosts and an ogre camp (long-campaign stage 11), and two bandit companies.
       farMonsters('ironhold_company', 'Ironhold Company', 67, 4, 'bandit_company', [RING_PROTECTION]),
-      farMonsters('cinder_springs', 'Cinder Springs', 74, 18, 'salamander_pool', [EMBERBLADE]),
-      farMonsters('deepweb_hollow', 'Deepweb Hollow', 83, 36, 'spider_nest', [SAGE_CIRCLET]),
+      farMonsters('cinder_roost', 'Cinder Roost', 74, 18, 'wyvern_roost', [EMBERBLADE]),
+      farMonsters('deepcrag_roost', 'Deepcrag Roost', 83, 36, 'wyvern_roost', [SAGE_CIRCLET]),
       farMonsters('grey_company', 'Grey Company', 74, 54, 'bandit_company', [STORM_WAND]),
-      farMonsters('smoking_mere', 'Smoking Mere', 66, 69, 'salamander_pool', [RING_FORTUNE]),
+      farMonsters('mere_ogres', 'Mere Ogres', 66, 69, 'ogre_camp', [RING_FORTUNE]),
       // Threat 12 (81 to 94).
       farMonsters('ravenhill_company', 'Ravenhill Company', 80, 5, 'bandit_company', [SHADOW_CLOAK]),
       farMonsters('stonegate_company', 'Stonegate Company', 88, 20, 'bandit_company', [HAWK_BOW]),

@@ -158,10 +158,10 @@ describe('newWorld', () => {
       'Moorland Bandits': ['Amulet of Focus'],
       'Hollow Riders': ['Hawkeye Bow'],
       'Ironhold Company': ['Ring of Protection'],
-      'Cinder Springs': ['Emberblade'],
-      'Deepweb Hollow': ["Sage's Circlet"],
+      'Cinder Roost': ['Emberblade'],
+      'Deepcrag Roost': ["Sage's Circlet"],
       'Grey Company': ['Wand of Storms'],
-      'Smoking Mere': ['Ring of Fortune'],
+      'Mere Ogres': ['Ring of Fortune'],
       'Ravenhill Company': ['Cloak of Shadows'],
       'Stonegate Company': ['Hawkeye Bow'],
       'Thornwall Company': ['Amulet of Focus'],
@@ -690,7 +690,7 @@ describe('the outer rings (stage 9 step 05: their nests, sites and far partners)
   /** The outer rings' threats, and the encounters each ring's fixed nests must include. */
   const RINGS: Record<number, EncounterId[]> = {
     7: ['bandit_camp', 'wolf_pack', 'worg_riders', 'ogre_camp'],
-    9: ['spider_nest', 'salamander_pool', 'bandit_company'],
+    9: ['bandit_company', 'wyvern_roost', 'ogre_camp'],
     12: ['bandit_company'],
     15: ['freebooter_host'],
     18: ['freebooter_host'],
@@ -731,6 +731,18 @@ describe('the outer rings (stage 9 step 05: their nests, sites and far partners)
       ['hollow_riders', 'Hollow Riders', 'worg_riders', offsetToHex(55, 67), ['Hawkeye Bow']],
     ])
     for (const gone of ['webwood_nest', 'ashen_pool', 'hollow_spiders']) expect(world.locations.map((l) => l.id)).not.toContain(gone)
+  })
+
+  it('fill ring 9 with two Wyvern Roosts and an Ogre Camp, where its salamanders and spiders were, and keep its two Bandit Companies (stage 11 step 09)', () => {
+    const ring = nests.filter((l) => l.threat === 9).map((l) => [l.id, l.name, l.kind === 'monsters' && l.encounter, l.position, l.kind === 'monsters' && l.loot.map((item) => item.name)])
+    expect(ring).toEqual([
+      ['ironhold_company', 'Ironhold Company', 'bandit_company', offsetToHex(67, 4), ['Ring of Protection']],
+      ['cinder_roost', 'Cinder Roost', 'wyvern_roost', offsetToHex(74, 18), ['Emberblade']],
+      ['deepcrag_roost', 'Deepcrag Roost', 'wyvern_roost', offsetToHex(83, 36), ["Sage's Circlet"]],
+      ['grey_company', 'Grey Company', 'bandit_company', offsetToHex(74, 54), ['Wand of Storms']],
+      ['mere_ogres', 'Mere Ogres', 'ogre_camp', offsetToHex(66, 69), ['Ring of Fortune']],
+    ])
+    for (const gone of ['cinder_springs', 'deepweb_hollow', 'smoking_mere']) expect(world.locations.map((l) => l.id)).not.toContain(gone)
   })
 
   it('put 4 to 6 fixed nests in each outer ring, fighting the ring\'s encounters', () => {
@@ -827,7 +839,10 @@ const SESSION_TURN = 146
 // Re-recorded in stage 11 step 08: ring 7's three nests renamed (id, name, encounter) and its three spawn kinds joined
 // the eligible ones at threats 7 and 9, so ten far spawns are of another kind (name, encounter); nothing else differs
 // (the digested JSON diffed before and after), and SESSION_TURN is unchanged.
-const SESSION_SHA256 = 'bfe5f76d93ac9fc2f90f6583fff5bb898726c9a95dec2a7b7c29a68be29600bf'
+// Re-recorded in stage 11 step 09: ring 9's three nests renamed (id, name, encounter) and the Wyvern Roost joined the
+// eligible spawn kinds at threats 9 and 12, so seven far spawns are of another kind (name, encounter, and the spawned
+// event's name); nothing else differs (30 values in the digested JSON, diffed before and after); SESSION_TURN unchanged.
+const SESSION_SHA256 = 'c07df50d73359bd93d5cdd112e2d3ee268f0db59d094f75e3b2e603ddfed5910'
 
 describe('the trade partners on a new world', () => {
   const kinds = (world: WorldState) => world.locations.map((l) => l.kind)

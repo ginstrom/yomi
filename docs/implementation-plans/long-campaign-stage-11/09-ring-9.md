@@ -223,3 +223,33 @@ No flight; no other ring's kinds or nests; no change to `ogre_camp`'s data, any 
 - [ ] One commit, "Stage 11 step 09: ring 9", files staged by path, no attribution lines; the index's row 09 updated with status and commit.
 
 ## 7. Execution record
+
+2026-11-27, engineer (model unset). **Stopped at the cells' checkpoint: `wy9` is 498 after three trials** (decision 4). Figures, trials and proofs: [`log.md`](log.md), "Step 09". Commits: `d901faf` (index trimmed), then the step's code at trial 3 (green; see the index row).
+
+**Built** (all of §4 but the settled tuning, `bands.md` and the final gates)
+
+- `WYVERN_STATS` (native 9, 150 XP, resistance 2, `wyvern_strikes`; at trial 3: 56 hit points, armour class 50, 100 to hit, pierce 11, 10 AP, bite 2d6+2 at 6 AP), in `STAGE_11_KINDS`, inside the kitted yardstick, no exception. `wyvern_strikes` "Bite and Sting" (6 AP, recharge 0, Bite then Tail Sting 1d4 laying Poisoned 3 turns), in `ABILITY_IDS` and `MONSTER_ABILITY_IDS` after `ogre_sweep`; sounds as its attacks (`SOUNDS_AS_ATTACKS`). No engine change, no flight.
+- `wyvern_roost` 9–12 after `ogre_camp`; spawn kind Wyvern Roost appended (`fromThreat: 7`); `FAVOURED_RUNES.wyvern_roost` venom; `TROPHIES.wyvern` wyvern hide 3.
+- Nests per C6 (`cinder_roost`, `deepcrag_roost`, `mere_ogres`; same hexes and loot); `SAVE_VERSION` 33.
+- `STAND_IN_GOODS` removed; `goodsForSale` lists each partner's own good; tests, `docs/reference/game.md` and the manual's sentence fixed.
+- Sounds: `FOE_SOUNDS.wyvern` the bite, `DEATH.wyvern` the salamander's cue, `STEP` heavy. No new cue.
+- Tests: `highRoster.test.ts` (the routine's two named attacks, the Sting's poison on a hit, none on a miss or on a felled foe, no flight), `encounters.test.ts`, `loot.test.ts`, `tradingPost.test.ts`, `worldMap.test.ts`, `blight.test.ts`, `save.test.ts`, `abilities.test.ts`, `sounds.test.ts`. Seen red against the old code (22 failures), then green.
+
+**Departures**
+
+1. Counts 3, 3, 3, 3 (C5: 2, 2, 3, 3), by trial 1. C5's row in the index is not yet changed: the roost is not settled.
+2. `armorPierce` (7, then 11) and 10 action points, numbers C3 does not name.
+3. Three far-world pins re-pinned as step 08 did, with the diff (log).
+4. Not done, waiting on the decision: `bands.md`'s `WY9`/`WY12` rows and "Now"; the browser run and `sprites:check` on the final tree; the completion boxes.
+
+**Verification so far** (trial 3's tree): `npm test` runlog #81, 2852 passed; `npm run build` #82, exit 0; 50-campaign hash identical; guard unedited and green. Run #80 (first values) had one failure, this step's own placeholder in the snapshot assertion.
+
+**Options for the orchestrator** (the cells: `wy9` 498, `wy12` 399 now)
+
+- A. Keep trial 3 and accept `wy9` at 498 (the user's call; the reading is the plan's, not a band).
+- B. Keep trial 1's stronger block and accept `wy12` at 175.
+- C. Let the roost differ by threat so 9 is harder than 12 in numbers with trial 3's block: four wyverns at 9 and 10, three at 11 and 12 (a fourth slot; counts fall as the threat rises, and a fourth foe may be a cliff). One more trial.
+- D. A lesser third foe at 11 and 12 with the stronger block (a nearer ring's kind by `fromThreat`, which changes C5's "wyvern ×3"). One or two more trials.
+- E. Read the cell at the band's top with the kit a level-12 party would more likely hold (the plan's kit is the row's low end at both 9 and 12): a change to decision 10, not to the roost.
+
+Recommended: C tried once, else A.

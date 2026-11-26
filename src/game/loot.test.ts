@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { mulberry32 } from '../combat/rng.ts'
 import { RUNE_IDS } from '../inventory/runes.ts'
 import type { UnitId } from '../engine/battleEngine.ts'
-import { ENCOUNTER_COUNTS, TROPHIES, banditCamp, ogreCamp, wolfPack, type FoeKind, type Trophy, type UnitKind } from './encounters.ts'
-import { FAVOURED_CHANCE, lootRng, rollRunes, takeRunes, takeTrophies, trophiesFor } from './loot.ts'
+import { ENCOUNTER_COUNTS, TROPHIES, banditCamp, ogreCamp, wolfPack, wyvernRoost, type FoeKind, type Trophy, type UnitKind } from './encounters.ts'
+import { FAVOURED_CHANCE, FAVOURED_RUNES, lootRng, rollRunes, takeRunes, takeTrophies, trophiesFor } from './loot.ts'
 import { newGame } from './gameState.ts'
 import { SOURCE_THREAT } from './worldMap.ts'
 
@@ -129,6 +129,17 @@ describe('rune loot', () => {
     expect(rollRunes(14, 'salamander_pool', scripted([0.2, 0.5, 0.9, 0.35, 0.5]))).toEqual(['ember3', 'venom3'])
   })
 
+  it('favours venom at a Wyvern Roost, across its band (stage 11 step 09), and no element at ring 7\'s nests', () => {
+    expect(FAVOURED_RUNES).toEqual({ salamander_pool: 'ember', spider_nest: 'venom', wyvern_roost: 'venom' })
+    for (const threat of [9, 12]) {
+      const all = rolls(threat, 'wyvern_roost').flat()
+      const venom = all.filter((k) => k.startsWith('venom')).length / all.length
+      expect(venom).toBeGreaterThan(0.5)
+      expect(venom).toBeLessThan(0.6)
+    }
+    for (const id of ['wolf_pack', 'worg_riders', 'ogre_camp'] as const) expect(FAVOURED_RUNES[id]).toBeUndefined()
+  })
+
   it('puts the runes in the pouch on top of what it held', () => {
     const game = newGame()
     game.runes = { venom2: 1 }
@@ -158,8 +169,21 @@ describe('trophies', () => {
     expect(JSON.stringify({ ...game.world, stock: { gold: 5, wyvern_hide: 1 } })).toBe(rng)
   })
 
-  it('holds ring 7\'s trophies: wolfhide, one a Wolf and one a Worg Rider (gear §4.3; stage 11 step 08)', () => {
-    expect(TROPHIES).toEqual({ wolf: { material: 'wolfhide', amount: 1 }, worg_rider: { material: 'wolfhide', amount: 1 } })
+  it('holds the trophies of rings 7 and 9: wolfhide, one a Wolf and one a Worg Rider; wyvern hide, three a Wyvern (gear §4.3; stage 11 steps 08 and 09)', () => {
+    expect(TROPHIES).toEqual({
+      wolf: { material: 'wolfhide', amount: 1 },
+      worg_rider: { material: 'wolfhide', amount: 1 },
+      wyvern: { material: 'wyvern_hide', amount: 3 },
+    })
+  })
+
+  it('adds three wyvern hide for each wyvern of a won Wyvern Roost to the stock', () => {
+    expect(trophiesFor(['wyvern', 'wyvern', 'warrior'])).toEqual({ wyvern_hide: 6 })
+    const game = newGame(undefined, null, 1)
+    game.world.stock.wyvern_hide = 1
+    const roost = wyvernRoost([], 12)
+    expect(takeTrophies(game, roost.kinds)).toEqual({ wyvern_hide: 3 * ENCOUNTER_COUNTS.wyvern_roost[3] })
+    expect(game.world.stock.wyvern_hide).toBe(1 + 3 * ENCOUNTER_COUNTS.wyvern_roost[3])
   })
 
   it('adds a wolfhide for each wolf of a won Wolf Pack, and for each wolf and rider of an Ogre Camp, to the stock', () => {

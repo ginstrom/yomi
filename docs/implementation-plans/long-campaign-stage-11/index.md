@@ -85,7 +85,7 @@ Each a `MonsterKind`, `UnitKind` id = sprite id, block `<NAME>_STATS` in `src/co
 | `elder_wyrm` | Elder Wyrm | 18 | 450 | res 5, regeneration 2, wards fire 15 | `wyrm_breath`, `wyrm_strikes` | 12 |
 | `source_horror` | Blight Horror | 20 | 500 | res 3, regeneration 2, blightborn | `blight_breath`, `horror_claws` | 13 |
 
-Piercing (the yardstick does not see `armorPierce`; step 08, against the kit's resistance): wolf 4, worg rider 6, ogre 5.
+Piercing (the yardstick does not see `armorPierce`; step 08, against the kit's resistance): wolf 4, worg rider 6, ogre 5; wyvern 11 (step 09, not settled).
 
 ### C4. The new abilities (steps 08 to 13)
 
@@ -168,7 +168,7 @@ All 13 kinds' sprites are in the atlas (`art/units/<kind>.sprite.toml`); text in
 | 06 | [Sprites: ring 15](06-sprites-ring-15.md) | `stone_golem`, `blight_cultist`, `young_dragon` (C8) | — | sonnet / opus | done (`7ebb9c6`, `943e193`) |
 | 07 | [Sprites: ring 18 and the Source](07-sprites-ring-18-source.md) | `blight_lich`, `elder_wyrm`, `source_horror` (C8) | — | sonnet / opus | done (`95e5046`, `651a4c7`) |
 | 08 | [Ring 7: wolves, worg riders, ogres](08-ring-7.md) | Kinds, abilities, encounters, nests, spawn kinds, wolfhide; save 32; snapshot; cells | 02, 04 | opus / opus | done (`b0fbe7d`, `4ca43d2`) |
-| 09 | [Ring 9: wyverns](09-ring-9.md) | Wyvern, roost, nests, wyvern hide, stand-in removed; save 33; cells | 08, 05 | opus / opus | pending |
+| 09 | [Ring 9: wyverns](09-ring-9.md) | Wyvern, roost, nests, wyvern hide, stand-in removed; save 33; cells | 08, 05 | opus / opus | in progress: built and committed, stopped at the checkpoint (`wy9` 498 after three trials; `log.md`, step 09) |
 | 10 | [Ring 12: wights, basilisks, giants](10-ring-12.md) | Three kinds and encounters, nests, basilisk scale; save 34; cells | 09, 05 | opus / opus | pending |
 | 11 | [Ring 15: golems, cultists, young dragons](11-ring-15.md) | Three kinds (golem `immune`), encounters, nests, drake scale; save 35; cells | 10, 03, 06 | opus / opus | pending |
 | 12 | [Ring 18: the lich and the elder wyrm](12-ring-18.md) | Two kinds and encounters, nests, drake scale; save 36; cells | 11, 07 | opus / opus | pending |

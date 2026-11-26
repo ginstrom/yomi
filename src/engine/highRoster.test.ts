@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ABILITIES } from '../combat/abilities.ts'
-import { OGRE_STATS, WOLF_STATS, WORG_RIDER_STATS, damageThrough, effectiveResistance, type CombatantStats } from '../combat/combat.ts'
+import { OGRE_STATS, WOLF_STATS, WORG_RIDER_STATS, WYVERN_STATS, damageThrough, effectiveResistance, type CombatantStats } from '../combat/combat.ts'
 import { hex, hexKey } from '../grid/hex.ts'
 import { BattleEngine, type AbilityEvent, type Action, type AttackEvent, type UnitSetup } from './battleEngine.ts'
 
@@ -175,6 +175,78 @@ describe('ring 7 (stage 11 step 08)', () => {
       expect(engine.legalActions('ogre').some((a) => a.type === 'ability')).toBe(false)
       for (let turn = 0; turn < 2 * recharge; turn++) engine.step(END_TURN)
       expect(engine.legalActions('ogre').some((a) => a.type === 'ability')).toBe(true)
+    })
+  })
+})
+
+describe('ring 9 (stage 11 step 09)', () => {
+  describe('the Wyvern’s Bite and Sting', () => {
+    const use: Action = { type: 'ability', unit: 'wyvern', ability: 'wyvern_strikes', target: 'hero' }
+    const { apCost, strikes } = ABILITIES.wyvern_strikes
+    const [bite, sting] = strikes!
+    const dice = (strike: typeof bite) => Array<number>(strike.damage!.count).fill(0)
+    const poison = (engine: BattleEngine) => unitOf(engine, 'hero').statuses.find((s) => s.id === 'poisoned')
+    const field = (rng: () => number, hero: Partial<CombatantStats> = {}) => enemyTurn([heroAt('hero', 1, 1, hero), foeAt('wyvern', WYVERN_STATS, 2, 1)], rng)
+
+    it('is a routine of two strikes of their own dice, the Bite then a Tail Sting that poisons', () => {
+      expect(ABILITIES.wyvern_strikes.name).toBe('Bite and Sting')
+      expect(strikes!.map((s) => s.name)).toEqual(['Bite', 'Tail Sting'])
+      expect(bite.status).toBeUndefined()
+      expect(sting.status).toEqual({ id: 'poisoned', turns: 3 })
+      expect(ABILITIES.wyvern_strikes.area).toBeUndefined()
+    })
+
+    it('strikes one foe twice in one action, as two attacks with their names, and the Sting that hits lays Poisoned', () => {
+      const stream = counted([HIT, ...dice(bite), HIT, ...dice(sting)])
+      const engine = field(stream.rng, { resistance: 0 })
+      const events = engine.step(use)
+      const attacks = events.filter((e): e is AttackEvent => e.type === 'attack')
+      expect(attacks.map((e) => [e.ability, e.strike, e.defender, e.hit])).toEqual([
+        ['wyvern_strikes', 'Bite', 'hero', true],
+        ['wyvern_strikes', 'Tail Sting', 'hero', true],
+      ])
+      expect(attacks.map((e) => e.apCost)).toEqual([apCost, 0])
+      expect(attacks.map((e) => e.damageDice)).toEqual([bite.damage, sting.damage])
+      expect(attacks.map((e) => e.damage)).toEqual([bite, sting].map((s) => s.damage!.count + s.damage!.bonus))
+      expect(unitOf(engine, 'wyvern').ap).toBe(WYVERN_STATS.actionPoints - apCost)
+      expect(poison(engine)).toMatchObject({ id: 'poisoned', turnsLeft: 3 })
+      // A roll and its dice for each strike, and nothing for the poison.
+      expect(stream.draws()).toBe(2 + bite.damage!.count + sting.damage!.count)
+    })
+
+    it('lays nothing when the Sting misses, though the Bite lands, through armour less the Wyvern’s piercing', () => {
+      const stream = counted([HIT, ...dice(bite), MISS])
+      const engine = field(stream.rng)
+      const attacks = engine.step(use).filter((e): e is AttackEvent => e.type === 'attack')
+      expect(attacks.map((e) => e.hit)).toEqual([true, false])
+      const rolled = bite.damage!.count + bite.damage!.bonus
+      expect(attacks[0].damage).toBe(damageThrough(rolled, effectiveResistance(WYVERN_STATS, HERO_STATS.resistance!)))
+      expect(poison(engine)).toBeUndefined()
+      expect(unitOf(engine, 'hero').hp).toBe(HERO_STATS.maxHp - attacks[0].damage)
+    })
+
+    it('poisons with the Sting alone: the Bite may miss and the Sting still land', () => {
+      const engine = field(counted([MISS, HIT, ...dice(sting)]).rng)
+      const attacks = engine.step(use).filter((e): e is AttackEvent => e.type === 'attack')
+      expect(attacks.map((e) => e.hit)).toEqual([false, true])
+      expect(poison(engine)).toMatchObject({ id: 'poisoned' })
+    })
+
+    it('lays no poison on a foe the Sting fells', () => {
+      // The Bite's least leaves the hero 1 hit point; the Sting takes it.
+      const least = bite.damage!.count + bite.damage!.bonus
+      const engine = field(counted([HIT, ...dice(bite), HIT, ...dice(sting)]).rng, { maxHp: least + 1, resistance: 0 })
+      engine.step(use)
+      expect(unitOf(engine, 'hero').hp).toBe(0)
+      expect(unitOf(engine, 'hero').statuses).toEqual([])
+    })
+
+    it('does not fly: a hero in its way blocks it as any unit is blocked', () => {
+      // A board one hex high: the hero at (1,0) stands between the Wyvern and the far side.
+      const engine = new BattleEngine({ board: { cols: 5, rows: 1 }, units: [heroAt('hero', 1, 0), foeAt('wyvern', WYVERN_STATS, 2, 0)] }, { rng: () => HIT })
+      engine.step(END_TURN)
+      const reach = engine.legalActions('wyvern').flatMap((a) => (a.type === 'move' ? [a.to.q] : []))
+      expect(reach.every((q) => q > 1)).toBe(true)
     })
   })
 })

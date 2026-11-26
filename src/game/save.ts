@@ -34,12 +34,13 @@ import { CUTSCENE_IDS } from '../story/cutscenes.ts'
  * (wolfhide, wyvern hide, basilisk scale, drake scale) to the stock's
  * materials; no migration. Version 32 (stage 11, ring 7) renames three of
  * ring 7's fixed nests and gives them the wolves', worg riders' and ogres'
- * encounters; no migration.
+ * encounters; no migration. Version 33 (stage 11, ring 9) does the same for
+ * ring 9: two Wyvern Roosts and an Ogre Camp; no migration.
  * Rules and item numbers may change
  * freely, as a character stores no derived number and an item is saved by
  * its id.
  */
-export const SAVE_VERSION = 32
+export const SAVE_VERSION = 33
 
 /** One slot's contents. */
 export interface SaveFile {

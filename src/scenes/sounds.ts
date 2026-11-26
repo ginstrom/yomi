@@ -248,6 +248,7 @@ export const FOE_SOUNDS: Record<FoeKind, AttackSound> = {
   wolf: attackSound('battle.swing.bite', 'battle.hit.claw'),
   worg_rider: light('battle.hit.pierce'),
   ogre: heavy('battle.hit.crush'),
+  wyvern: attackSound('battle.swing.bite', 'battle.hit.claw'),
   bandit_cutthroat: light('battle.hit.pierce'),
   bandit_captain: blade,
   bandit_brute: heavy('battle.hit.slash'),
@@ -362,6 +363,8 @@ export const DEATH: Record<UnitKind, CueId> = {
   wolf: 'battle.death.brute',
   worg_rider: 'battle.death.goblinoid',
   ogre: 'battle.death.brute',
+  // No cue of its own: the wyvern falls with the salamander's hiss, the other great lizard.
+  wyvern: 'battle.death.salamander',
 }
 
 type StepClass = 'light' | 'armored' | 'heavy' | 'skitter'
@@ -387,6 +390,7 @@ export const STEP: Record<UnitKind, StepClass> = {
   wolf: 'light',
   worg_rider: 'light',
   ogre: 'heavy',
+  wyvern: 'heavy',
 }
 
 /** A footstep's cue for a unit of `kind` wearing `body`; a kind of none known steps lightly. */

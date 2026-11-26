@@ -19,6 +19,7 @@ import {
   TROLL_STATS,
   WOLF_STATS,
   WORG_RIDER_STATS,
+  WYVERN_STATS,
   foeAtLevel,
   foeYardstick,
   type CombatantStats,
@@ -52,6 +53,7 @@ import {
   trollLair,
   wolfPack,
   worgRiders,
+  wyvernRoost,
   xpReward,
 } from './encounters.ts'
 import { readyMadeParty, partyFighters } from './party.ts'
@@ -64,6 +66,8 @@ const HOME_THREATS = 5
 const WOLF_PACK_COUNTS = [4, 4, 4, 5]
 const WORG_RIDERS_COUNTS = [3, 3, 5]
 const OGRE_CAMP_COUNTS = [3, 3, 3, 4]
+/** Ring 9's counts (stage 11 step 09; the cells' tuning is in the plan's log). */
+const WYVERN_ROOST_COUNTS = [3, 3, 3, 3]
 
 describe.each(Object.entries(ENCOUNTERS))('the %s encounter', (_id, build) => {
   const wounded = party().map((fighter, i) => ({ ...fighter, hp: 5 + i }))
@@ -481,7 +485,7 @@ describe('ring 7\'s encounters (long-campaign stage 11 step 08)', () => {
   }
 
   it('are registered after the Freebooter Host, in order, with their bands and counts', () => {
-    expect(Object.keys(ENCOUNTERS).slice(-3)).toEqual(['wolf_pack', 'worg_riders', 'ogre_camp'])
+    expect(Object.keys(ENCOUNTERS).slice(-4, -1)).toEqual(['wolf_pack', 'worg_riders', 'ogre_camp'])
     expect(Object.keys(ENCOUNTERS).indexOf('wolf_pack')).toBe(Object.keys(ENCOUNTERS).indexOf('freebooter_host') + 1)
     expect([ENCOUNTER_BANDS.wolf_pack, ENCOUNTER_BANDS.worg_riders, ENCOUNTER_BANDS.ogre_camp]).toEqual([
       { min: 6, max: 9 },
@@ -558,6 +562,44 @@ describe('ring 7\'s encounters (long-campaign stage 11 step 08)', () => {
   })
 })
 
+describe('ring 9\'s encounter (long-campaign stage 11 step 09)', () => {
+  const fielded = (threat: number) => {
+    const { setup, kinds } = wyvernRoost(party(), threat)
+    return setup.units.filter((u) => u.side === 'enemy').map((u) => [kinds[u.id], u.stats.name, u.stats])
+  }
+  const ROOST = ['Wyvern', 'Wyvern Mate', 'Young Wyvern']
+
+  it('is registered after ring 7\'s, with its band and counts', () => {
+    expect(Object.keys(ENCOUNTERS).slice(-1)).toEqual(['wyvern_roost'])
+    expect(Object.keys(ENCOUNTERS).indexOf('wyvern_roost')).toBe(Object.keys(ENCOUNTERS).indexOf('ogre_camp') + 1)
+    expect(ENCOUNTER_BANDS.wyvern_roost).toEqual({ min: 9, max: 12 })
+    expect(ENCOUNTER_COUNTS.wyvern_roost).toEqual(WYVERN_ROOST_COUNTS)
+  })
+
+  it.each([
+    [9, 0],
+    [12, 3],
+  ])('fields the Wyvern Roost at threat %i: wyverns only, each the kind at that level under its own name', (threat, index) => {
+    const foes = fielded(threat)
+    expect(wyvernRoost(party(), threat).threat).toBe(threat)
+    expect(foes.map(([kind, name]) => [kind, name])).toEqual(ROOST.slice(0, WYVERN_ROOST_COUNTS[index]).map((name) => ['wyvern', name]))
+    for (const [, name, stats] of foes) expect(stats).toEqual({ ...foeStats('wyvern', threat), name })
+  })
+
+  it('is fought below its band as at 9 and above it as at 12', () => {
+    expect(wyvernRoost(party(), 8)).toEqual(wyvernRoost(party(), 9))
+    expect(wyvernRoost(party())).toEqual(wyvernRoost(party(), 9))
+    expect(wyvernRoost(party(), 13)).toEqual(wyvernRoost(party(), 12))
+  })
+
+  it('writes the Wyvern as campaign §5.5 has it, but for its flight: resistance 2, Bite and Sting, 150 XP, native 9', () => {
+    expect(foeStats('wyvern', 9)).toEqual({ ...WYVERN_STATS, abilityDamageBonus: 0 })
+    expect(WYVERN_STATS).toMatchObject({ name: 'Wyvern', resistance: 2, abilities: ['wyvern_strikes'], attackRange: 1 })
+    expect(FOE_XP.wyvern).toBe(150)
+    expect(FOE_NATIVE_LEVEL.wyvern).toBe(9)
+  })
+})
+
 describe('the encounters\' bands and counts', () => {
   const ids = Object.keys(ENCOUNTERS) as EncounterId[]
   /** The five encounters the map had before bandits, which keep the counts 2, 3, 3, 3, 4 at threats 1 to 5. */
@@ -602,11 +644,11 @@ describe('the encounters\' bands and counts', () => {
     expect(encountersFor(5)).toEqual([...today, 'bandit_camp', 'spider_nest', 'salamander_pool'])
     expect(encountersFor(6)).toEqual(['source_guardians', 'bandit_camp', 'spider_nest', 'salamander_pool', 'wolf_pack'])
     expect(encountersFor(7)).toEqual(['source_guardians', 'bandit_camp', 'spider_nest', 'salamander_pool', 'wolf_pack', 'worg_riders', 'ogre_camp'])
-    for (const threat of [8, 9]) {
-      expect(encountersFor(threat)).toEqual(['source_guardians', 'spider_nest', 'salamander_pool', 'bandit_company', 'wolf_pack', 'worg_riders', 'ogre_camp'])
-    }
-    expect(encountersFor(10)).toEqual(['source_guardians', 'bandit_company', 'ogre_camp'])
-    for (const threat of [11, 13]) expect(encountersFor(threat)).toEqual(['source_guardians', 'bandit_company'])
+    expect(encountersFor(8)).toEqual(['source_guardians', 'spider_nest', 'salamander_pool', 'bandit_company', 'wolf_pack', 'worg_riders', 'ogre_camp'])
+    expect(encountersFor(9)).toEqual(['source_guardians', 'spider_nest', 'salamander_pool', 'bandit_company', 'wolf_pack', 'worg_riders', 'ogre_camp', 'wyvern_roost'])
+    expect(encountersFor(10)).toEqual(['source_guardians', 'bandit_company', 'ogre_camp', 'wyvern_roost'])
+    for (const threat of [11, 12]) expect(encountersFor(threat)).toEqual(['source_guardians', 'bandit_company', 'wyvern_roost'])
+    expect(encountersFor(13)).toEqual(['source_guardians', 'bandit_company'])
     for (const threat of [14, 20]) expect(encountersFor(threat)).toEqual(['source_guardians', 'freebooter_host'])
     expect(encountersFor(21)).toEqual([])
     expect(encountersFor(0)).toEqual([])
@@ -627,13 +669,14 @@ const BLOCKS: Record<MonsterKind, CombatantStats> = {
   wolf: WOLF_STATS,
   worg_rider: WORG_RIDER_STATS,
   ogre: OGRE_STATS,
+  wyvern: WYVERN_STATS,
 }
 
 describe('foeStats', () => {
   const kinds = Object.keys(BLOCKS) as MonsterKind[]
 
-  it('gives every monster kind a native level, 1 but for the Giant Spider\'s 4, the Salamander\'s 5 and stage 11\'s kinds (ring 7: the Wolf 6, the Worg Rider and the Ogre 7)', () => {
-    const above: Partial<Record<MonsterKind, number>> = { giant_spider: 4, salamander: 5, wolf: 6, worg_rider: 7, ogre: 7 }
+  it('gives every monster kind a native level, 1 but for the Giant Spider\'s 4, the Salamander\'s 5 and stage 11\'s kinds (ring 7: the Wolf 6, the Worg Rider and the Ogre 7; ring 9: the Wyvern 9)', () => {
+    const above: Partial<Record<MonsterKind, number>> = { giant_spider: 4, salamander: 5, wolf: 6, worg_rider: 7, ogre: 7, wyvern: 9 }
     for (const kind of kinds) expect(FOE_NATIVE_LEVEL[kind]).toBe(above[kind] ?? 1)
   })
 
@@ -676,7 +719,7 @@ describe('the foe yardstick', () => {
    * The kinds added in long-campaign stage 11, held to the kitted yardstick (`foeYardstick(level, 'expected')`) until
    * stage 12 measures again; every other kind stays on the bare one. Each ring step adds its kinds here.
    */
-  const STAGE_11_KINDS: readonly MonsterKind[] = ['wolf', 'worg_rider', 'ogre']
+  const STAGE_11_KINDS: readonly MonsterKind[] = ['wolf', 'worg_rider', 'ogre', 'wyvern']
   /** The fields a stage 11 kind is meant to sit outside the kitted yardstick on, and why. */
   const STAGE_11_EXCEPTIONS: typeof EXCEPTIONS = []
 

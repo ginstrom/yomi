@@ -344,6 +344,7 @@ export const SPAWN_KINDS: ReadonlyArray<{ encounter: EncounterId; name: string; 
   { encounter: 'wolf_pack', name: 'Wolf Pack', fromThreat: 7 },
   { encounter: 'worg_riders', name: 'Worg Band', fromThreat: 7 },
   { encounter: 'ogre_camp', name: 'Ogre Camp', fromThreat: 7 },
+  { encounter: 'wyvern_roost', name: 'Wyvern Roost', fromThreat: 7 },
 ]
 
 function spawn(

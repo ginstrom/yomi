@@ -106,6 +106,7 @@ export const ABILITY_IDS = [
   'fire_spit',
   'worg_strikes',
   'ogre_sweep',
+  'wyvern_strikes',
   'power_attack',
   'cleave',
   'taunt',
@@ -128,7 +129,7 @@ export const ABILITY_IDS = [
 export type AbilityId = (typeof ABILITY_IDS)[number]
 
 /** The abilities only monsters have, in `ABILITY_IDS` order; every other ability is a hero's technique. */
-export const MONSTER_ABILITY_IDS: readonly AbilityId[] = ['troll_claws', 'spider_bite', 'spider_web', 'fire_spit', 'worg_strikes', 'ogre_sweep']
+export const MONSTER_ABILITY_IDS: readonly AbilityId[] = ['troll_claws', 'spider_bite', 'spider_web', 'fire_spit', 'worg_strikes', 'ogre_sweep', 'wyvern_strikes']
 
 /** The Spellsword's Strikes, which Arcane Knight makes at the weapon's own AP. */
 export const SPELLSWORD_STRIKES: readonly AbilityId[] = ['flame_strike', 'frost_strike', 'thunder_strike']
@@ -219,6 +220,17 @@ export const ABILITIES: Record<AbilityId, Ability> = {
       damage: { count: 2, sides: 8, bonus: 2 },
       halfOnMiss: false,
     },
+  },
+  wyvern_strikes: {
+    name: 'Bite and Sting',
+    verb: 'strikes',
+    description: 'Bites one foe and stings it with its tail, the sting laying a poison; it turns to the next foe beside it if the first falls.',
+    apCost: 6,
+    recharge: 0,
+    strikes: [
+      { name: 'Bite', verb: 'bites', damage: { count: 2, sides: 6, bonus: 2 } },
+      { name: 'Tail Sting', verb: 'stings', damage: { count: 1, sides: 4, bonus: 0 }, status: { id: 'poisoned', turns: 3 } },
+    ],
   },
   // ---- The heroes' techniques (design §4.3). `apCost` is ignored where `weaponAp` is set.
   power_attack: {

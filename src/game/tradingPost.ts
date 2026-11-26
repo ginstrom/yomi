@@ -295,18 +295,16 @@ export function sellRune(game: GameState, party: Expedition, key: RuneKey): stri
 export const GOODS_LEVEL = 5
 /** Gold a unit of a partner's good. */
 export const GOOD_PRICE = 3
-/** Goods a partner sells besides its own until stage 11 brings their monsters (decision 8). */
-export const STAND_IN_GOODS: Readonly<Record<string, readonly Material[]>> = { elder_glade: ['wyvern_hide'] }
 
 export interface GoodOffer { partner: string; name: string; material: Material }
 
-/** What the Market Hall sells: each contacted partner that is not silent, in `PARTNERS` order, its good then its stand-ins; nothing below `GOODS_LEVEL`. */
+/** What the Market Hall sells: each contacted partner that is not silent, in `PARTNERS` order, its own good; nothing below `GOODS_LEVEL`. Trophies come only from kills (`TROPHIES`). */
 export function goodsForSale(world: WorldState): GoodOffer[] {
   if (world.tradingPost < GOODS_LEVEL) return []
   const offers: GoodOffer[] = []
   for (const p of partners(world)) {
     if (!isContacted(world, p.id) || isSilent(world, p.id)) continue
-    for (const material of [p.good, ...(STAND_IN_GOODS[p.id] ?? [])]) offers.push({ partner: p.id, name: p.name, material })
+    offers.push({ partner: p.id, name: p.name, material: p.good })
   }
   return offers
 }

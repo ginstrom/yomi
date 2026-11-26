@@ -589,6 +589,33 @@ export const OGRE_STATS: CombatantStats = {
   abilities: ['ogre_sweep'],
 }
 
+/**
+ * A wyvern, native to level 9: a winged hunter that closes fast (10 action
+ * points, as the Wolf) and in one action bites and stings with its tail
+ * (`wyvern_strikes`), the sting poisoning. Its hide turns a little of a blow.
+ * A hero in the expected kit has resistance 11 at its levels, so its bite
+ * goes through all of it (`armorPierce` 11) and its poison works whatever
+ * the armour; the sting itself is light. It hits often and falls fast (the
+ * third block tried against the cells: the plan's log has the trials). Its flight (moving over units) is
+ * deferred (long-campaign stage 11, decision 11): a plain block that moves
+ * as any unit.
+ */
+export const WYVERN_STATS: CombatantStats = {
+  name: 'Wyvern',
+  maxHp: 56,
+  ac: 50,
+  resistance: 2,
+  toHit: 100,
+  critChance: 5,
+  armorPierce: 11,
+  damage: { count: 2, sides: 6, bonus: 2 },
+  weapon: 'Fangs',
+  attackApCost: 6,
+  attackRange: 1,
+  actionPoints: 10,
+  abilities: ['wyvern_strikes'],
+}
+
 /** What each level above the first adds to a monster: this share of its level 1 hit points... */
 export const FOE_HP_PER_LEVEL = 1.15
 /** ...this many points to its chance to hit and to its armour class... */

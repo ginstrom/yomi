@@ -1111,7 +1111,7 @@ describe('policies', () => {
     expect(isPolicyName('toString')).toBe(false)
   })
 
-  describe('the choices of today’s encounters (a snapshot, re-recorded in skill trees step 13 when heroes and bandits learned techniques, in step 16 when a technique came to be weighed by the blows that fit this turn and the Captain took Pin before Heavy Hand, in step 28 when nodes came to cost perk points and the heroes and bandits to save for them, and in step 30 when the knight, swordmaster and evoker_healer plans moved and the bandits at threat 4 went back to plain gear; and in long-campaign stage 9 step 01, when the Bandit Company and Freebooter Host came and the Spider Nest’s, Salamander Pool’s and Source’s bands widened, and in its step 09, when the Source’s guardians were raised to level 6 at most; and in long-campaign stage 10 step 02, when bandits from threat 9 took tiers 3 to 5; and in long-campaign stage 11 step 08, when ring 7’s wolves, worg riders and ogres came: their encounters’ lines added after the rest, every earlier line unchanged)', () => {
+  describe('the choices of today’s encounters (a snapshot, re-recorded in skill trees step 13 when heroes and bandits learned techniques, in step 16 when a technique came to be weighed by the blows that fit this turn and the Captain took Pin before Heavy Hand, in step 28 when nodes came to cost perk points and the heroes and bandits to save for them, and in step 30 when the knight, swordmaster and evoker_healer plans moved and the bandits at threat 4 went back to plain gear; and in long-campaign stage 9 step 01, when the Bandit Company and Freebooter Host came and the Spider Nest’s, Salamander Pool’s and Source’s bands widened, and in its step 09, when the Source’s guardians were raised to level 6 at most; and in long-campaign stage 10 step 02, when bandits from threat 9 took tiers 3 to 5; and in long-campaign stage 11 step 08, when ring 7’s wolves, worg riders and ogres came: their encounters’ lines added after the rest, every earlier line unchanged; and in long-campaign stage 11 step 09, when the Wyvern Roost came: its lines added after those, every earlier line unchanged)', () => {
     /** Every action `aggressive` chooses, both sides, over each encounter at each threat of its band against the ready-made party of that level, a few seeds, 8 rounds at most. */
     function choices(): string[] {
       const lines: string[] = []
@@ -1146,9 +1146,14 @@ describe('policies', () => {
       // The encounters before stage 11, as recorded in stage 10 step 02: the high roster's lines come after them (`ENCOUNTERS` order).
       const EARLIER = 14242
       expect(sha(lines.slice(0, EARLIER))).toBe('b9cef6e182080a3fa26d796534ec1b631e6628d6a140c11525ebee8fabb728ac')
-      expect(new Set(lines.slice(EARLIER).map((line) => line.split(' ')[0]))).toEqual(new Set(['wolf_pack', 'worg_riders', 'ogre_camp']))
-      expect(lines.length).toBe(16403)
-      expect(sha(lines)).toBe('082484296b928e87debbded89fc5b7b04d81e8513f3a2eab59e23096f076ebc1')
+      // With ring 7's (stage 11 step 08), as recorded there: ring 9's lines come after them.
+      const RING_7 = 16403
+      expect(new Set(lines.slice(EARLIER, RING_7).map((line) => line.split(' ')[0]))).toEqual(new Set(['wolf_pack', 'worg_riders', 'ogre_camp']))
+      expect(sha(lines.slice(0, RING_7))).toBe('082484296b928e87debbded89fc5b7b04d81e8513f3a2eab59e23096f076ebc1')
+      // Ring 9's (step 09): the Wyvern Roost's lines only.
+      expect(new Set(lines.slice(RING_7).map((line) => line.split(' ')[0]))).toEqual(new Set(['wyvern_roost']))
+      expect(lines.length).toBe(17092)
+      expect(sha(lines)).toBe('e72a3c039794005aeba49c09cd16930226d59ae6630b159d5b8aa7a15186ee28')
     }, 60_000)
   })
 })

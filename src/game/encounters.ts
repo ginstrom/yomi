@@ -11,6 +11,7 @@ import {
   TROLL_STATS,
   WOLF_STATS,
   WORG_RIDER_STATS,
+  WYVERN_STATS,
   foeAtLevel,
   type CombatantStats,
 } from '../combat/combat.ts'
@@ -54,7 +55,7 @@ function partyKinds(party: readonly Fighter[]): Record<UnitId, UnitKind> {
 }
 
 /** Monsters: stat blocks scaled by `foeAtLevel` from their native level. */
-export type MonsterKind = 'goblin' | 'kobold' | 'shaman' | 'horror' | 'hobgoblin' | 'troll' | 'armored_troll' | 'giant_spider' | 'salamander' | 'wolf' | 'worg_rider' | 'ogre'
+export type MonsterKind = 'goblin' | 'kobold' | 'shaman' | 'horror' | 'hobgoblin' | 'troll' | 'armored_troll' | 'giant_spider' | 'salamander' | 'wolf' | 'worg_rider' | 'ogre' | 'wyvern'
 
 /** Humanoids built by hero rules (bandits.ts). */
 export type BanditKind = 'bandit_cutthroat' | 'bandit_archer' | 'bandit_brute' | 'bandit_mage' | 'bandit_captain' | 'bandit_crossbowman'
@@ -75,13 +76,14 @@ export interface Trophy {
  * The trophy of each foe kind that leaves one, granted after a win
  * (`takeTrophies`, loot.ts), from gear §4.3's table. It fills ring by ring
  * as long-campaign stage 11 adds the kinds: wolves and worg riders wolfhide 1
- * a foe (ring 7); still to come, wyverns wyvern hide 3, basilisks basilisk
- * scale 3, young dragons drake scale 6, elder wyrms drake scale 10. Until
- * ring 9 lands, wyvern hide comes only from Elder Glade's stand-in goods.
+ * a foe (ring 7), wyverns wyvern hide 3 (ring 9); still to come, basilisks
+ * basilisk scale 3, young dragons drake scale 6, elder wyrms drake scale 10.
+ * No partner sells a trophy: Elder Glade's wyvern hide went when wyverns came.
  */
 export const TROPHIES: Partial<Record<FoeKind, Trophy>> = {
   wolf: { material: 'wolfhide', amount: 1 },
   worg_rider: { material: 'wolfhide', amount: 1 },
+  wyvern: { material: 'wyvern_hide', amount: 3 },
 }
 
 /**
@@ -96,7 +98,8 @@ export const TROPHIES: Partial<Record<FoeKind, Trophy>> = {
  * native level (`EVEN_FOE_XP_PER_LEVEL`), the Salamander a little above for
  * its spit and its ward; first values, for the simulator to tune.
  * The kinds of long-campaign stage 11 (first values too): the Wolf a weak
- * foe of its level, the Worg Rider an even one, the Ogre well above one.
+ * foe of its level, the Worg Rider an even one, the Ogre well above one,
+ * the Wyvern above one too, for its poison.
  * Bandits, built by hero rules (bandits.ts), are even foes for a hero of
  * their level, whatever their role, and so worth `EVEN_FOE_XP_PER_LEVEL`.
  */
@@ -114,6 +117,7 @@ export const FOE_XP: Record<UnitKind, number> = {
   wolf: 80,
   worg_rider: 100,
   ogre: 140,
+  wyvern: 150,
   bandit_cutthroat: 100,
   bandit_archer: 100,
   bandit_brute: 100,
@@ -159,6 +163,7 @@ const FOE_STATS: Record<MonsterKind, CombatantStats> = {
   wolf: WOLF_STATS,
   worg_rider: WORG_RIDER_STATS,
   ogre: OGRE_STATS,
+  wyvern: WYVERN_STATS,
 }
 
 /** The level each monster kind's stat block is written for; it grows from there (`foeAtLevel`). */
@@ -175,6 +180,7 @@ export const FOE_NATIVE_LEVEL: Record<MonsterKind, number> = {
   wolf: 6,
   worg_rider: 7,
   ogre: 7,
+  wyvern: 9,
 }
 
 function isBandit(kind: FoeKind): kind is BanditKind {
@@ -373,6 +379,13 @@ const OGRE_CAMP_SLOTS: readonly FoeSlot[] = [
   { id: 'wolf', kind: 'wolf', name: 'Camp Wolf', at: [9, 4] },
 ]
 
+// Ring 9 (long-campaign stage 11): wyverns only, the roost's pair first and their young.
+const WYVERN_ROOST_SLOTS: readonly FoeSlot[] = [
+  { id: 'wyvern', kind: 'wyvern', name: 'Wyvern', at: [8, 4] },
+  { id: 'mate', kind: 'wyvern', name: 'Wyvern Mate', at: [8, 2] },
+  { id: 'young', kind: 'wyvern', name: 'Young Wyvern', at: [8, 6] },
+]
+
 /** Today's encounters are fought at threats 1 to 5, with these many foes at each. */
 const TODAY = { band: { min: 1, max: 5 }, counts: [2, 3, 3, 3, 4] } as const satisfies Omit<EncounterDef, 'slots'>
 
@@ -429,6 +442,12 @@ const WOLF_PACK: EncounterDef = { slots: WOLF_PACK_SLOTS, band: { min: 6, max: 9
 const WORG_RIDERS: EncounterDef = { slots: WORG_RIDERS_SLOTS, band: { min: 7, max: 9 }, counts: [3, 3, 5] }
 /** The Ogre Camp, threats 7 to 10: both Ogres and the rider to 9, the wolf too at 10 (an Ogre and a rider alone at 7 were won 500 times in 500). */
 const OGRE_CAMP: EncounterDef = { slots: OGRE_CAMP_SLOTS, band: { min: 7, max: 10 }, counts: [3, 3, 3, 4] }
+/**
+ * Ring 9's encounter (stage 11 step 09). The Wyvern Roost, threats 9 to 12: three at every threat (a pair at 9 was won
+ * 500 times in 500). Not settled: with one block and three wyverns the cells at 9 and 12 do not both sit in the
+ * reading (498 and 399 here; 459 and 175 with a stronger block); the plan's log has the trials.
+ */
+const WYVERN_ROOST: EncounterDef = { slots: WYVERN_ROOST_SLOTS, band: { min: 9, max: 12 }, counts: [3, 3, 3, 3] }
 
 /**
  * A Goblin and a Kobold across the board from the party; where the threat is
@@ -547,6 +566,15 @@ export function ogreCamp(party: readonly Fighter[], threat = 7): Encounter {
 }
 
 /**
+ * A roost of wyverns, fought at threats 9 to 12: each closes fast, bites
+ * hard through armour and stings with its tail, and the sting's poison works
+ * on whatever the armour is.
+ */
+export function wyvernRoost(party: readonly Fighter[], threat = 9): Encounter {
+  return encounter(party, WYVERN_ROOST, threat)
+}
+
+/**
  * The experience each party member earns for winning `encounter`: what its
  * foes are worth together, a foe of level L being worth L times its kind's
  * `FOE_XP`, as the yardstick has it.
@@ -572,6 +600,7 @@ export const ENCOUNTERS = {
   wolf_pack: wolfPack,
   worg_riders: worgRiders,
   ogre_camp: ogreCamp,
+  wyvern_roost: wyvernRoost,
 } satisfies Record<string, (party: readonly Fighter[], threat?: number) => Encounter>
 
 export type EncounterId = keyof typeof ENCOUNTERS
@@ -591,6 +620,7 @@ export const ENCOUNTER_BANDS: Record<EncounterId, ThreatBand> = {
   wolf_pack: WOLF_PACK.band,
   worg_riders: WORG_RIDERS.band,
   ogre_camp: OGRE_CAMP.band,
+  wyvern_roost: WYVERN_ROOST.band,
 }
 
 /** How many foes each encounter fields at each threat of its band, from `band.min` up, from its definition. */
@@ -608,6 +638,7 @@ export const ENCOUNTER_COUNTS: Record<EncounterId, readonly number[]> = {
   wolf_pack: WOLF_PACK.counts,
   worg_riders: WORG_RIDERS.counts,
   ogre_camp: OGRE_CAMP.counts,
+  wyvern_roost: WYVERN_ROOST.counts,
 }
 
 /** The encounters whose band holds `threat`, in `ENCOUNTERS` order. */
