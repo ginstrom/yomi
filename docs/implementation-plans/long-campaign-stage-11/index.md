@@ -1,12 +1,12 @@
 # Implementation plan: long campaign, stage 11 (the high roster)
 
-The outer rings get their monsters, ring by ring: wolves, worg riders and ogres (ring 7), wyverns (9), barrow wights, basilisks and hill giants (12), stone golems, blight cultists and young dragons (15), the blight lich and the elder wyrm (18), and the Source's Blight Horror rebuilt at native level 20. Each kind gets a native-level block against the yardstick, its abilities (stage 2's system), wards, `FOE_XP`, `FOE_NATIVE_LEVEL`, a trophy where gear §4.3 names one, and a sprite; each ring gets its encounters (band, counts), its fixed nests in place of bandit placeholders, its spawn kinds and its favoured runes. One engine addition: the golem's `CombatantStats.immune`. The simulator gains `--player-kit expected` for single battles, and the per-ring cells are measured with it. Elder Glade's wyvern-hide stand-in goes; `SOURCE_FOE_LEVEL` goes.
+The outer rings get their monsters, ring by ring (7, 9, 12, 15, 18), and the Source's Blight Horror is rebuilt at native level 20: each kind with its block against the yardstick, abilities, wards, XP, native level, trophy and sprite; each ring with its encounters, fixed nests, spawn kinds and favoured runes. One engine addition, the golem's `CombatantStats.immune`; the simulator gains `--player-kit expected` for the per-ring cells. Elder Glade's wyvern-hide stand-in and `SOURCE_FOE_LEVEL` go.
 
 **Source design:** [`docs/designs/long-campaign/stage-11-high-roster.md`](../../designs/long-campaign/stage-11-high-roster.md) (status "ready for planning"; the stage design is the approved design). It cuts from [`reference/campaign-to-level-20.md`](../../designs/long-campaign/reference/campaign-to-level-20.md) §5.5 (the roster), §5.2 (the yardstick), §4.2 (a battle with special attacks), and [`reference/gear-and-runes.md`](../../designs/long-campaign/reference/gear-and-runes.md) §4.3 (trophies), §4.5 (rune loot), §4.6 (wards). Conventions: [`docs/designs/long-campaign/index.md`](../../designs/long-campaign/index.md). Previous stage: [stage 10's plan](../long-campaign-stage-10/index.md) and [feature record](../../features/long-campaign-stage-10.md). Feature record: [`docs/features/long-campaign-stage-11.md`](../../features/long-campaign-stage-11.md). History: [`log.md`](log.md). Written against `1a008af` on branch `long-campaign-stage-11` (off main at `c138d83`).
 
 ## Decisions taken for the orchestrator
 
-The plan follows the stage design, then the references, then the code (where they disagree the code is right, per the stages index). Items marked *(for the user)* read the design one way where it is silent or loose; each has a default the plan is written for and is listed under Open questions with the steps it blocks.
+Design first, then the references, then the code (the code wins, per the stages index). *(For the user)* marks a reading of a silent or loose design: the plan is written for its default; Open questions lists the steps it blocks.
 
 1. **Encounter compositions and first counts** *(for the user, Q1)*: the design names each encounter's band but not its foes or counts. Default: C5's table (lead kind first, minions from the same or nearer rings), first values that the ring's step tunes against its cells.
 2. **Each ring's nests** *(for the user, Q2)*: nests keep their positions and unique loot, and change encounter, id and name; each ring keeps its nest count; bandits keep about a third (2 of 5 in rings 7 to 15, 1 of 4 in ring 18). Spiders and salamanders leave the fixed nests of rings 7 and 9 (they still spawn there). Table: C6.
@@ -36,7 +36,7 @@ The plan follows the stage design, then the references, then the code (where the
 - **Commands** (local Node 26: prefix `PATH=/opt/homebrew/opt/node@26/bin:$PATH`; or the podman `make` targets):
   - `npm test` (`tsc && vitest run`) is the gate before every commit; `npx vitest run <file>` for one file; `npm run build` before a ring step's commit;
   - `npm run test:browser` (or `-- -t <name>`) after any scene change; read `e2e/CLAUDE.md` first;
-  - `npm run simulate -- <flags>`: each run its own `--out` under `logs/` (gitignored) or `--log none`. **Never run two simulations at once** (steps 01, 02, 03, 08–14 run them, in order). Measurements go through the `yomi-measure` agent. Long runs: 100 campaigns took 4 minutes alone in stage 10, up to 20 under load.
+  - `npm run simulate -- <flags>`: each run its own `--out` under `logs/` (gitignored) or `--log none`. **Never run two simulations at once** (steps 01, 02, 03, 08–14 run them, in order). Measurements go through the `yomi-measure` agent; 100 long campaigns took 4 minutes alone in stage 10.
 - **The refactor guard.** `scripts/simulate.test.ts`, `describe('the refactor guard')`, args `--campaign --battles 5 --seed 1 --parties 1 --ready-level 7 --near-source`; `GUARD_RECORDS`, `GUARD_EVENTS_SHA256`. Rules: `.claude/skills/yomi-balance/guards.md`. Every step keeps it green and unedited (decision 15).
 - **The 50-campaign check** before committing a domain or simulator step (02, 03, 08–13, 14 if anything changed), against the hash before the step (step 01's, `log.md`), recorded "identical" or the diff in `log.md`:
 
@@ -46,11 +46,10 @@ The plan follows the stage design, then the references, then the code (where the
   ```
 
   Sprite steps (04–07) and step 15 change no rule and need not run it (say so).
-- **The policy snapshot:** decision 16.
 - **The early-game figure.** Stage 10 ended at `one` 288 (331 days, 1.2 dead), `company` 289, `rl10` 409 (533 days), with `--near-source`; `one`, `company` and the days are accepted until stage 12 (`bands.md`). Step 01 re-measures them; step 14 measures again. A move of more than about 5 points is explained in the commit and in `src/game/CLAUDE.md`'s scaling line, or brought to the orchestrator.
 - **Determinism.** No step adds, drops or reorders a draw of the world RNG or a battle's RNG for an existing encounter. New spawn kinds are appended (`.claude/skills/yomi-add-content/encounter.md`). The immunity draws nothing. Favoured runes draw from the loot stream, as today.
 - **Import cycles.** `encounters.ts` imports `bandits.ts`; `loot.ts` imports `encounters.ts` and `worldMap.ts`; `blight.ts`, `territory.ts`, `worldMap.ts`, `trade.ts` and `buildings.ts` import one another (`src/game/CLAUDE.md`): nothing at module load. `src/combat/` imports nothing from `src/game/` or `scripts/`.
-- **Content checklists** (`.claude/skills/yomi-add-content/`): `foe.md` (each kind: sprite, `MonsterKind`, `FOE_STATS`, `FOE_XP`, `FOE_NATIVE_LEVEL`, `FOE_SOUNDS`, `DEATH`, the yardstick), `ability.md` (`ABILITIES`, `ABILITY_IDS` with the monsters' before the techniques, `ABILITY_SOUNDS`, `ABILITY_LOOKS`), `encounter.md` (`ENCOUNTERS`, `ENCOUNTER_BANDS`, `ENCOUNTER_COUNTS`, `SPAWN_KINDS`), `status.md` and `battle-event.md` (step 03). Sprites: `.claude/skills/yomi-sprites/` (`art/CLAUDE.md`, `docs/reference/sprites.md`, `docs/designs/sprite-drawing-guidance.md`); never edit an exported PNG; `npm run sprites`, `npm run sprites:check`, then the `yomi-asset-check` agent. Balance: `.claude/skills/yomi-balance/`. Manual: `.claude/skills/yomi-manual/`.
+- **Content checklists** (`.claude/skills/yomi-add-content/`): `foe.md`, `ability.md`, `encounter.md` (ring steps), `status.md`, `battle-event.md` (step 03). Sprites: `.claude/skills/yomi-sprites/`; never edit an exported PNG; `npm run sprites`, `npm run sprites:check`, then the `yomi-asset-check` agent. Balance: `.claude/skills/yomi-balance/`. Manual: `.claude/skills/yomi-manual/`.
 - **Commits.** One commit per step once `npm test` passes (and the guard holds), on `long-campaign-stage-11`, without pushing; files staged by path. A sprite step runs in its own worktree and commits on its own branch, merged by the orchestrator before its ring step. Messages "Stage 11 step NN: <title>". No attribution lines.
 - **Docs.** Each step fixes the CLAUDE.md lines its change makes wrong and searches the CLAUDE.md files, `.claude/` and `docs/reference/` for every name it renames or removes (`SOURCE_FOE_LEVEL`, `STAND_IN_GOODS`, renamed nest ids). `scripts/claudeMd.test.ts` caps each directory's `CLAUDE.md` at 8 KB: **`src/game/CLAUDE.md` is at 7,654 bytes**; move detail to `docs/reference/game.md` before adding a line. Each ring step adds its cells to `bands.md`'s cell codes and measure names (report only) and "Now"; step 15 writes the rest and the manual.
 
@@ -198,14 +197,7 @@ Each listed location keeps its position and loot and takes the new id, name and 
 | 14 | [Measure and record](14-measure.md) | Early figures vs step 01; `long` (100) vs stage 10: Source share, battles to level for stage 12; every cell | 13 | opus / opus | pending |
 | 15 | [Document and play](15-document-and-play.md) | CLAUDE.md files, `docs/reference/`, skills, manual and screenshots, implementation notes, stages index; play script walked | 14 | sonnet / opus | pending |
 
-**Tiers.** "opus" means leave the model unset; "sonnet" means `model: "sonnet"`.
-- 01: fixed measures through `yomi-measure`; the reviewer checks figures against the logs.
-- 02: a kit builder that must agree with stage 10's gear policy, a measured constant and a test that keeps it true.
-- 03: an engine rule touching every status-laying path, a log bump and RNG discipline.
-- 04–07: tool work on text sources (sonnet); the reviewer judges how the sprites read beside the roster.
-- 08–13: authoring blocks against a yardstick, abilities built from existing fields, a snapshot re-record to prove narrow, and tuning counts against cells.
-- 14: reading figures against bands and stage 10, deciding what goes to the orchestrator.
-- 15: everything decided; the reviewer checks docs against code and the play script against what was seen.
+**Tiers.** "opus" means leave the model unset; "sonnet" means `model: "sonnet"`. Each task file's Difficulty line gives the reasons.
 
 ## Execution order
 
@@ -233,7 +225,6 @@ Each listed location keeps its position and loot and takes the new id, name and 
 | §6 simulator: `--player-kit expected`, cells at both band ends | 02; 08–13; 14 |
 | §6 play: `fight` each new encounter levelled and kitted | 15 |
 | §6 after the last ring: long run (100) vs stage 10, Source share and battles to level for stage 12 | 01 (baseline), 14 |
-| §7 risks: ring by ring; sprites in parallel | execution order |
 | Carried: trophies table, stand-in, `SOURCE_FOE_LEVEL` | 08–12, 09, 13 |
 | Cross-stage: docs, manual, implementation notes, stages index | each step; 15 |
 
@@ -248,20 +239,20 @@ Each listed location keeps its position and loot and takes the new id, name and 
 
 ## Open questions
 
-None blocks a step now: each has a default the plan is written for. The orchestrator should bring them to the user before the steps named.
+None blocks a step now; bring them to the user before the steps named.
 
-| Q | Question | Default (decision) | Blocks |
+| Q | Question | Default | Blocks |
 | --- | --- | --- | --- |
-| Q1 | Who fights in each encounter, and how many at each threat? | C5's table, tuned per ring (1) | 08–12 |
-| Q2 | Which nests change in each ring, and how many bandits stay? | C6: positions and loot kept, about a third bandits (2) | 08–12 |
-| Q3 | Who guards the Source at 20, and does the near-home Source stay as it is? | `source_horror` with two Blight Cultists; near-home Source unchanged for `--near-source` (3) | 07, 13 |
-| Q4 | What does "a party of the threat's level wins most but not all" mean as a number? | 300–475 of 500, report only, not a band (4) | 08–14 |
-| Q5 | Which hero side are the new kinds' blocks judged against before stage 12? | A kitted fighter table from `expectedKit`, today's kinds unchanged (5) | 02, 08–13 |
-| Q6 | Which new nests favour which rune? | Wyverns venom, basilisks rime, cult and lich storm, dragons ember (6) | 09–12 |
-| Q7 | Blight Breath: blight or acid, and does it spare the Horror's guardians? | Blight, lays Corroded, foes only (7) | 13 |
-| Q8 | Worg Riders' band: 6–9 with a native-7 rider? | 7–9 (8) | 08 |
-| Q9 | 14 sprites or 13? | 13: twelve kinds and the rebuilt Horror (9) | 07 |
-| Q10 | The expected kit in a cell: which end of each range, which runes? | The low end; Ember, Stone; Stone, Life; war hammer against resistance 4+ (10) | 02 |
+| Q1 | Each encounter's foes and counts | decision 1 | 08–12 |
+| Q2 | Which nests change | decision 2 | 08–12 |
+| Q3 | The Source's guardians at 20; near-home Source kept | decision 3 | 07, 13 |
+| Q4 | "Most but not all" as a number | decision 4 | 08–14 |
+| Q5 | The hero side for the new kinds' yardstick | decision 5 | 02, 08–13 |
+| Q6 | Favoured runes of the new nests | decision 6 | 09–12 |
+| Q7 | Blight Breath's element and targets | decision 7 | 13 |
+| Q8 | Worg Riders' band | decision 8 | 08 |
+| Q9 | 13 or 14 sprites | decision 9 | 07 |
+| Q10 | The expected kit in a cell | decision 10 | 02 |
 
 ## For implementers
 
