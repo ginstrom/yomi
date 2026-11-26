@@ -55,7 +55,7 @@ from = "idle_0"
 26 = [[9, "SssSS"], [16, "sssSS"]]
 27 = [[8, "SssSS"], [17, "sssSS"]]
 28 = [[7, "SssSS"], [18, "sssSS"]]
-29 = [[6, "SssSS."], [8, ".."], [16, "....."], [18, "ssssSS"]]
+29 = [[11, "..."], [6, "SssSS"], [16, "....."], [18, "ssssSS"]]
 30 = [[5, "SsssssSS"], [13, "......"], [16, "..."], [19, "sssssSS"]]
 
 # The near foot lifts: the left, then the right. Only the leg rows change.
