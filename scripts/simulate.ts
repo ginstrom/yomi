@@ -29,7 +29,7 @@ import type { Character } from '../src/character/character.ts'
 import { calling, capstoneOf, type PathId } from '../src/character/trees.ts'
 import { attributesOf, type PerkId } from '../src/character/perks.ts'
 import { SKILL_IDS, type SkillId } from '../src/character/skills.ts'
-import { ABILITY_IDS, type AbilityId } from '../src/combat/abilities.ts'
+import { ABILITY_IDS, MONSTER_ABILITY_IDS, type AbilityId } from '../src/combat/abilities.ts'
 import { ENCOUNTERS, heroId, xpReward, type EncounterId } from '../src/game/encounters.ts'
 import { PREROLLS, autoHeal, readyMadeParty, partyFighters, rewardVictory, type Party } from '../src/game/party.ts'
 import { blightAt, blightedShare, boardIndex, monsterStrength, seedBlight, type WorldEvent } from '../src/game/blight.ts'
@@ -2055,7 +2055,7 @@ function fightAt(run: CampaignRun, party: Expedition, target: MonsterLocation): 
   for (const member of members) autoAdvance(member, playerPlan(run.args.plans, member))
   noteMarks(record, members, battles.length, game.world.workshop)
   record.runesFound += takeRunes(game, target.threat, target.encounter, battleSeed).length
-  // None drop this stage (decision 8): `TROPHIES` is empty until stage 11.
+  // The hides and scales of the kinds `TROPHIES` names (wolves and worg riders from stage 11's ring 7), to the stock.
   takeTrophies(game, encounter.kinds)
   clearLocation(game, target.id)
   return 'won'
@@ -2489,9 +2489,8 @@ export interface Summary {
   avgEnemyUnbreakableSaves: number
 }
 
-/** The monsters' abilities, counted with the area attacks and not among the techniques. */
-const MONSTER_ABILITIES: readonly AbilityId[] = ['troll_claws', 'spider_bite', 'spider_web', 'fire_spit']
-const isTechnique = (id: AbilityId) => !MONSTER_ABILITIES.includes(id)
+/** A hero's technique; the monsters' abilities (`MONSTER_ABILITY_IDS`) are counted with the area attacks and not among them. */
+const isTechnique = (id: AbilityId) => !MONSTER_ABILITY_IDS.includes(id)
 const sides = (): Record<Side, number> => ({ player: 0, enemy: 0 })
 
 /** Adds up what `summarize` reports, an event at a time, so a long run need not be held in memory. */

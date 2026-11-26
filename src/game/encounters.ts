@@ -7,7 +7,10 @@ import {
   GOBLIN_STATS,
   HOBGOBLIN_CHIEF_STATS,
   KOBOLD_STATS,
+  OGRE_STATS,
   TROLL_STATS,
+  WOLF_STATS,
+  WORG_RIDER_STATS,
   foeAtLevel,
   type CombatantStats,
 } from '../combat/combat.ts'
@@ -51,7 +54,7 @@ function partyKinds(party: readonly Fighter[]): Record<UnitId, UnitKind> {
 }
 
 /** Monsters: stat blocks scaled by `foeAtLevel` from their native level. */
-export type MonsterKind = 'goblin' | 'kobold' | 'shaman' | 'horror' | 'hobgoblin' | 'troll' | 'armored_troll' | 'giant_spider' | 'salamander'
+export type MonsterKind = 'goblin' | 'kobold' | 'shaman' | 'horror' | 'hobgoblin' | 'troll' | 'armored_troll' | 'giant_spider' | 'salamander' | 'wolf' | 'worg_rider' | 'ogre'
 
 /** Humanoids built by hero rules (bandits.ts). */
 export type BanditKind = 'bandit_cutthroat' | 'bandit_archer' | 'bandit_brute' | 'bandit_mage' | 'bandit_captain' | 'bandit_crossbowman'
@@ -70,12 +73,16 @@ export interface Trophy {
 
 /**
  * The trophy of each foe kind that leaves one, granted after a win
- * (`takeTrophies`, loot.ts). Empty until stage 11 adds the kinds of gear
- * §4.3's table: wolves and worgs wolfhide 1 a foe, wyverns wyvern hide 3,
- * basilisks basilisk scale 3, young dragons drake scale 6, elder wyrms drake
- * scale 10. Until then the trophies come only from partners' goods.
+ * (`takeTrophies`, loot.ts), from gear §4.3's table. It fills ring by ring
+ * as long-campaign stage 11 adds the kinds: wolves and worg riders wolfhide 1
+ * a foe (ring 7); still to come, wyverns wyvern hide 3, basilisks basilisk
+ * scale 3, young dragons drake scale 6, elder wyrms drake scale 10. Until
+ * ring 9 lands, wyvern hide comes only from Elder Glade's stand-in goods.
  */
-export const TROPHIES: Partial<Record<FoeKind, Trophy>> = {}
+export const TROPHIES: Partial<Record<FoeKind, Trophy>> = {
+  wolf: { material: 'wolfhide', amount: 1 },
+  worg_rider: { material: 'wolfhide', amount: 1 },
+}
 
 /**
  * The experience beating a level 1 unit of each kind is worth. An even match for a
@@ -88,6 +95,8 @@ export const TROPHIES: Partial<Record<FoeKind, Trophy>> = {}
  * The Giant Spider and the Salamander are priced near an even foe of their
  * native level (`EVEN_FOE_XP_PER_LEVEL`), the Salamander a little above for
  * its spit and its ward; first values, for the simulator to tune.
+ * The kinds of long-campaign stage 11 (first values too): the Wolf a weak
+ * foe of its level, the Worg Rider an even one, the Ogre well above one.
  * Bandits, built by hero rules (bandits.ts), are even foes for a hero of
  * their level, whatever their role, and so worth `EVEN_FOE_XP_PER_LEVEL`.
  */
@@ -102,6 +111,9 @@ export const FOE_XP: Record<UnitKind, number> = {
   armored_troll: 220,
   giant_spider: 100,
   salamander: 120,
+  wolf: 80,
+  worg_rider: 100,
+  ogre: 140,
   bandit_cutthroat: 100,
   bandit_archer: 100,
   bandit_brute: 100,
@@ -144,6 +156,9 @@ const FOE_STATS: Record<MonsterKind, CombatantStats> = {
   armored_troll: ARMORED_TROLL_STATS,
   giant_spider: GIANT_SPIDER_STATS,
   salamander: SALAMANDER_STATS,
+  wolf: WOLF_STATS,
+  worg_rider: WORG_RIDER_STATS,
+  ogre: OGRE_STATS,
 }
 
 /** The level each monster kind's stat block is written for; it grows from there (`foeAtLevel`). */
@@ -157,6 +172,9 @@ export const FOE_NATIVE_LEVEL: Record<MonsterKind, number> = {
   armored_troll: 1,
   giant_spider: 4,
   salamander: 5,
+  wolf: 6,
+  worg_rider: 7,
+  ogre: 7,
 }
 
 function isBandit(kind: FoeKind): kind is BanditKind {
@@ -324,6 +342,33 @@ const FREEBOOTER_HOST_SLOTS: readonly FoeSlot[] = [
   { id: 'mage', kind: 'bandit_mage', name: 'Freebooter Hedge-Mage', at: [9, 4] },
   { id: 'archer', kind: 'bandit_archer', name: 'Freebooter Archer', at: [9, 6] },
 ]
+// Ring 7 (long-campaign stage 11). The Pack Leader in the middle and the pack about it: wolves only, which run round
+// the front rank to whoever stands behind it.
+const WOLF_PACK_SLOTS: readonly FoeSlot[] = [
+  { id: 'leader', kind: 'wolf', name: 'Pack Leader', at: [8, 4] },
+  { id: 'grey', kind: 'wolf', name: 'Grey Wolf', at: [8, 2] },
+  { id: 'lean', kind: 'wolf', name: 'Lean Wolf', at: [8, 6] },
+  { id: 'scarred', kind: 'wolf', name: 'Scarred Wolf', at: [9, 4] },
+  { id: 'young', kind: 'wolf', name: 'Young Wolf', at: [9, 6] },
+]
+
+// The Chief first, then a wolf and a rider by turns, so three field two riders and a wolf between them.
+const WORG_RIDERS_SLOTS: readonly FoeSlot[] = [
+  { id: 'chief', kind: 'worg_rider', name: 'Worg Rider Chief', at: [8, 4] },
+  { id: 'wolf', kind: 'wolf', name: 'Grey Wolf', at: [8, 2] },
+  { id: 'rider', kind: 'worg_rider', name: 'Worg Rider', at: [8, 6] },
+  { id: 'wolf2', kind: 'wolf', name: 'Lean Wolf', at: [9, 4] },
+]
+
+// An Ogre first, a Worg Rider beside it, then the second Ogre and the camp's wolf: the Ogres hold the middle while
+// the rider and the wolf go round.
+const OGRE_CAMP_SLOTS: readonly FoeSlot[] = [
+  { id: 'ogre', kind: 'ogre', name: 'Ogre', at: [8, 4] },
+  { id: 'rider', kind: 'worg_rider', name: 'Worg Rider', at: [8, 2] },
+  { id: 'brute', kind: 'ogre', name: 'Ogre Brute', at: [8, 6] },
+  { id: 'wolf', kind: 'wolf', name: 'Camp Wolf', at: [9, 4] },
+]
+
 /** Today's encounters are fought at threats 1 to 5, with these many foes at each. */
 const TODAY = { band: { min: 1, max: 5 }, counts: [2, 3, 3, 3, 4] } as const satisfies Omit<EncounterDef, 'slots'>
 
@@ -367,6 +412,16 @@ const BANDIT_CAMP: EncounterDef = { slots: BANDIT_CAMP_SLOTS, band: { min: 3, ma
 const BANDIT_COMPANY: EncounterDef = { slots: BANDIT_COMPANY_SLOTS, band: { min: 8, max: 13 }, counts: [4, 4, 4, 4, 4, 4] }
 /** The Freebooter Host, four at threats 14 to 16 and five from 17 to 20 (long-campaign stage 9; first values). */
 const FREEBOOTER_HOST: EncounterDef = { slots: FREEBOOTER_HOST_SLOTS, band: { min: 14, max: 20 }, counts: [4, 4, 4, 5, 5, 5, 5] }
+/**
+ * Ring 7's encounters (long-campaign stage 11 step 08), their counts tuned against the ring's cells (a party of the
+ * threat's level in the expected kit, 300 to 475 wins of 500 at both ends of the band; the plan's log has the trials).
+ * The Wolf Pack, threats 6 to 9.
+ */
+const WOLF_PACK: EncounterDef = { slots: WOLF_PACK_SLOTS, band: { min: 6, max: 9 }, counts: [3, 4, 4, 5] }
+/** The Worg Riders, threats 7 to 9 (the rider is native to 7). */
+const WORG_RIDERS: EncounterDef = { slots: WORG_RIDERS_SLOTS, band: { min: 7, max: 9 }, counts: [3, 3, 4] }
+/** The Ogre Camp, threats 7 to 10. */
+const OGRE_CAMP: EncounterDef = { slots: OGRE_CAMP_SLOTS, band: { min: 7, max: 10 }, counts: [2, 3, 3, 4] }
 
 /**
  * A Goblin and a Kobold across the board from the party; where the threat is
@@ -457,6 +512,31 @@ export function freebooterHost(party: readonly Fighter[], threat = 14): Encounte
 }
 
 /**
+ * A pack of wolves, fought at threats 6 to 9: fast, so they are round the
+ * front rank and on the archer and the mage in their first turn, each biting
+ * once a turn through some of any armour.
+ */
+export function wolfPack(party: readonly Fighter[], threat = 6): Encounter {
+  return encounter(party, WOLF_PACK, threat)
+}
+
+/**
+ * Goblins on worgs with wolves running beside them, fought at threats 7 to
+ * 9: each rider strikes with spear and bite in one action.
+ */
+export function worgRiders(party: readonly Fighter[], threat = 7): Encounter {
+  return encounter(party, WORG_RIDERS, threat)
+}
+
+/**
+ * Ogres, which sweep their clubs round at everyone beside them, with a Worg
+ * Rider and a wolf of their camp; fought at threats 7 to 10.
+ */
+export function ogreCamp(party: readonly Fighter[], threat = 7): Encounter {
+  return encounter(party, OGRE_CAMP, threat)
+}
+
+/**
  * The experience each party member earns for winning `encounter`: what its
  * foes are worth together, a foe of level L being worth L times its kind's
  * `FOE_XP`, as the yardstick has it.
@@ -479,6 +559,9 @@ export const ENCOUNTERS = {
   salamander_pool: salamanderPool,
   bandit_company: banditCompany,
   freebooter_host: freebooterHost,
+  wolf_pack: wolfPack,
+  worg_riders: worgRiders,
+  ogre_camp: ogreCamp,
 } satisfies Record<string, (party: readonly Fighter[], threat?: number) => Encounter>
 
 export type EncounterId = keyof typeof ENCOUNTERS
@@ -495,6 +578,9 @@ export const ENCOUNTER_BANDS: Record<EncounterId, ThreatBand> = {
   salamander_pool: SALAMANDER_POOL.band,
   bandit_company: BANDIT_COMPANY.band,
   freebooter_host: FREEBOOTER_HOST.band,
+  wolf_pack: WOLF_PACK.band,
+  worg_riders: WORG_RIDERS.band,
+  ogre_camp: OGRE_CAMP.band,
 }
 
 /** How many foes each encounter fields at each threat of its band, from `band.min` up, from its definition. */
@@ -509,6 +595,9 @@ export const ENCOUNTER_COUNTS: Record<EncounterId, readonly number[]> = {
   salamander_pool: SALAMANDER_POOL.counts,
   bandit_company: BANDIT_COMPANY.counts,
   freebooter_host: FREEBOOTER_HOST.counts,
+  wolf_pack: WOLF_PACK.counts,
+  worg_riders: WORG_RIDERS.counts,
+  ogre_camp: OGRE_CAMP.counts,
 }
 
 /** The encounters whose band holds `threat`, in `ENCOUNTERS` order. */

@@ -153,10 +153,10 @@ describe('newWorld', () => {
       'Salamander Pool': ["Sage's Circlet"],
       'Spider Nest': ['Emberblade'],
       'Wildland Bandits': ['Ring of Fortune'],
-      'Webwood Nest': ['Cloak of Shadows'],
-      'Ashen Pool': ['Wand of Sparks'],
+      'Greyfang Pack': ['Cloak of Shadows'],
+      'Ashen Hill Ogres': ['Wand of Sparks'],
       'Moorland Bandits': ['Amulet of Focus'],
-      'Hollow Spiders': ['Hawkeye Bow'],
+      'Hollow Riders': ['Hawkeye Bow'],
       'Ironhold Company': ['Ring of Protection'],
       'Cinder Springs': ['Emberblade'],
       'Deepweb Hollow': ["Sage's Circlet"],
@@ -689,7 +689,7 @@ describe('the outer rings (stage 9 step 05: their nests, sites and far partners)
   const source = world.locations.find((l) => l.id === SOURCE_ID)!
   /** The outer rings' threats, and the encounters each ring's fixed nests must include. */
   const RINGS: Record<number, EncounterId[]> = {
-    7: ['bandit_camp', 'spider_nest', 'salamander_pool'],
+    7: ['bandit_camp', 'wolf_pack', 'worg_riders', 'ogre_camp'],
     9: ['spider_nest', 'salamander_pool', 'bandit_company'],
     12: ['bandit_company'],
     15: ['freebooter_host'],
@@ -719,6 +719,18 @@ describe('the outer rings (stage 9 step 05: their nests, sites and far partners)
       expect(l.threat, l.id).toBeGreaterThanOrEqual(ENCOUNTER_BANDS[l.encounter].min)
       expect(l.threat, l.id).toBeLessThanOrEqual(ENCOUNTER_BANDS[l.encounter].max)
     }
+  })
+
+  it('fill ring 7 with the wolves, the worg riders and the ogres, where its spiders and salamander were, and keep its two bandit camps (stage 11 step 08)', () => {
+    const ring = nests.filter((l) => l.threat === 7).map((l) => [l.id, l.name, l.kind === 'monsters' && l.encounter, l.position, l.kind === 'monsters' && l.loot.map((item) => item.name)])
+    expect(ring).toEqual([
+      ['wildland_bandits', 'Wildland Bandits', 'bandit_camp', offsetToHex(55, 6), ['Ring of Fortune']],
+      ['greyfang_pack', 'Greyfang Pack', 'wolf_pack', offsetToHex(62, 20), ['Cloak of Shadows']],
+      ['ashen_ogres', 'Ashen Hill Ogres', 'ogre_camp', offsetToHex(70, 36), ['Wand of Sparks']],
+      ['moorland_bandits', 'Moorland Bandits', 'bandit_camp', offsetToHex(62, 52), ['Amulet of Focus']],
+      ['hollow_riders', 'Hollow Riders', 'worg_riders', offsetToHex(55, 67), ['Hawkeye Bow']],
+    ])
+    for (const gone of ['webwood_nest', 'ashen_pool', 'hollow_spiders']) expect(world.locations.map((l) => l.id)).not.toContain(gone)
   })
 
   it('put 4 to 6 fixed nests in each outer ring, fighting the ring\'s encounters', () => {
@@ -812,7 +824,10 @@ const SESSION_TURN = 146
 // Re-recorded in skill trees step 28: the characters' `perkPicks` renamed `perkPoints`, nothing else (the old hash held with the name put back).
 // Re-recorded in stage 9 step 04, as SESSION_TURN.
 // Re-recorded in stage 9 step 05, as SESSION_TURN.
-const SESSION_SHA256 = '67df0b7738eb831193910eb2acea8c336042e033d8af618bed195cd4e1b5cc6e'
+// Re-recorded in stage 11 step 08: ring 7's three nests renamed (id, name, encounter) and its three spawn kinds joined
+// the eligible ones at threats 7 and 9, so ten far spawns are of another kind (name, encounter); nothing else differs
+// (the digested JSON diffed before and after), and SESSION_TURN is unchanged.
+const SESSION_SHA256 = 'bfe5f76d93ac9fc2f90f6583fff5bb898726c9a95dec2a7b7c29a68be29600bf'
 
 describe('the trade partners on a new world', () => {
   const kinds = (world: WorldState) => world.locations.map((l) => l.kind)

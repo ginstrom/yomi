@@ -523,6 +523,69 @@ export const SALAMANDER_STATS: CombatantStats = {
   abilities: ['fire_spit'],
 }
 
+/**
+ * A grey wolf of the outer wilds, native to level 6: fast (10 action points
+ * where other foes have 8), so it runs round the front rank to the archer and
+ * the mage, and bites once a turn, hard, its jaws finding the gaps in armour
+ * (`armorPierce`). Nothing on it stops a blow. Its pack bonus is deferred
+ * (long-campaign stage 11, decision 11): a plain block.
+ */
+export const WOLF_STATS: CombatantStats = {
+  name: 'Wolf',
+  maxHp: 55,
+  ac: 40,
+  toHit: 85,
+  critChance: 5,
+  armorPierce: 4,
+  damage: { count: 2, sides: 6, bonus: 3 },
+  weapon: 'Fangs',
+  attackApCost: 6,
+  attackRange: 1,
+  actionPoints: 10,
+}
+
+/**
+ * A goblin on a worg, native to level 7: in one action the rider's spear and
+ * the worg's bite at one foe (`worg_strikes`), or the spear alone after a
+ * long move. The rider's leathers turn a little of a blow.
+ */
+export const WORG_RIDER_STATS: CombatantStats = {
+  name: 'Worg Rider',
+  maxHp: 62,
+  ac: 44,
+  resistance: 1,
+  toHit: 85,
+  critChance: 5,
+  armorPierce: 4,
+  damage: { count: 1, sides: 8, bonus: 2 },
+  weapon: 'Spear',
+  attackApCost: 5,
+  attackRange: 1,
+  actionPoints: 8,
+  abilities: ['worg_strikes'],
+}
+
+/**
+ * A brute twice a man's height, native to level 7: easy to hit and slow to
+ * fall, its club staving in armour (`armorPierce`), one blow a turn; with two
+ * foes beside it, it sweeps the club round at all of them (`ogre_sweep`).
+ */
+export const OGRE_STATS: CombatantStats = {
+  name: 'Ogre',
+  maxHp: 90,
+  ac: 34,
+  resistance: 2,
+  toHit: 85,
+  critChance: 5,
+  armorPierce: 5,
+  damage: { count: 2, sides: 8, bonus: 2 },
+  weapon: 'Club',
+  attackApCost: 6,
+  attackRange: 1,
+  actionPoints: 8,
+  abilities: ['ogre_sweep'],
+}
+
 /** What each level above the first adds to a monster: this share of its level 1 hit points... */
 export const FOE_HP_PER_LEVEL = 1.15
 /** ...this many points to its chance to hit and to its armour class... */

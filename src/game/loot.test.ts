@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { mulberry32 } from '../combat/rng.ts'
 import { RUNE_IDS } from '../inventory/runes.ts'
 import type { UnitId } from '../engine/battleEngine.ts'
-import { TROPHIES, type FoeKind, type Trophy, type UnitKind } from './encounters.ts'
+import { ENCOUNTER_COUNTS, TROPHIES, banditCamp, ogreCamp, wolfPack, type FoeKind, type Trophy, type UnitKind } from './encounters.ts'
 import { FAVOURED_CHANCE, lootRng, rollRunes, takeRunes, takeTrophies, trophiesFor } from './loot.ts'
 import { newGame } from './gameState.ts'
 import { SOURCE_THREAT } from './worldMap.ts'
@@ -158,11 +158,24 @@ describe('trophies', () => {
     expect(JSON.stringify({ ...game.world, stock: { gold: 5, wyvern_hide: 1 } })).toBe(rng)
   })
 
-  it('takes nothing this stage: the table is empty until stage 11', () => {
-    expect(TROPHIES).toEqual({})
+  it('holds ring 7\'s trophies: wolfhide, one a Wolf and one a Worg Rider (gear §4.3; stage 11 step 08)', () => {
+    expect(TROPHIES).toEqual({ wolf: { material: 'wolfhide', amount: 1 }, worg_rider: { material: 'wolfhide', amount: 1 } })
+  })
+
+  it('adds a wolfhide for each wolf of a won Wolf Pack, and for each wolf and rider of an Ogre Camp, to the stock', () => {
+    const game = newGame(undefined, null, 1)
+    const pack = wolfPack([], 9)
+    expect(takeTrophies(game, pack.kinds)).toEqual({ wolfhide: ENCOUNTER_COUNTS.wolf_pack[3] })
+    expect(game.world.stock.wolfhide).toBe(ENCOUNTER_COUNTS.wolf_pack[3])
+    const camp = Object.values(ogreCamp([], 10).kinds)
+    expect(trophiesFor(camp)).toEqual({ wolfhide: camp.filter((kind) => kind !== 'ogre').length })
+  })
+
+  it('takes nothing from a won Bandit Camp, nor from an Ogre', () => {
     const game = newGame(undefined, null, 1)
     const before = JSON.stringify(game)
-    expect(takeTrophies(game, { foe_0: 'troll', foe_1: 'bandit_brute' })).toEqual({})
+    expect(takeTrophies(game, banditCamp([], 7).kinds)).toEqual({})
+    expect(takeTrophies(game, { foe_0: 'troll', foe_1: 'bandit_brute', foe_2: 'ogre' })).toEqual({})
     expect(JSON.stringify(game)).toBe(before)
   })
 })

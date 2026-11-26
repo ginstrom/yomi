@@ -341,6 +341,9 @@ export const SPAWN_KINDS: ReadonlyArray<{ encounter: EncounterId; name: string; 
   { encounter: 'salamander_pool', name: 'Salamander Spring', fromThreat: 7 },
   { encounter: 'bandit_company', name: 'Bandit Troop', fromThreat: 7 },
   { encounter: 'freebooter_host', name: 'Freebooter Band', fromThreat: 7 },
+  { encounter: 'wolf_pack', name: 'Wolf Pack', fromThreat: 7 },
+  { encounter: 'worg_riders', name: 'Worg Band', fromThreat: 7 },
+  { encounter: 'ogre_camp', name: 'Ogre Camp', fromThreat: 7 },
 ]
 
 function spawn(

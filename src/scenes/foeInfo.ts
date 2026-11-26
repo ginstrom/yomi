@@ -1,4 +1,4 @@
-import { ABILITIES, type Ability, type AbilityId, type Strike } from '../combat/abilities.ts'
+import { ABILITIES, MONSTER_ABILITY_IDS, type Ability, type AbilityId, type Strike } from '../combat/abilities.ts'
 import { ELEMENTS, formatDamage, type CombatantStats, type DamageRoll } from '../combat/combat.ts'
 import { STATUSES, STATUS_IDS, refusesStatus, type StatusLaid } from '../combat/spells.ts'
 import { TAUNT_PENALTY, type UnitSnapshot } from '../engine/battleEngine.ts'
@@ -48,11 +48,9 @@ export function describeAbility(id: AbilityId, bonus = 0, stats: Pick<CombatantS
   return [...cost, ...effectLines(ability, bonus)]
 }
 
-/** The abilities only monsters have; every other ability is a hero's technique, which shows what it costs. */
-const MONSTER_ABILITIES: readonly AbilityId[] = ['troll_claws', 'spider_bite', 'spider_web', 'fire_spit']
-
+/** A hero's technique, which shows what it costs; a monster's ability does not. */
 function isTechnique(id: AbilityId): boolean {
-  return !MONSTER_ABILITIES.includes(id)
+  return !MONSTER_ABILITY_IDS.includes(id)
 }
 
 function costLine(id: AbilityId, stats: Pick<CombatantStats, 'attackApCost'>): string {

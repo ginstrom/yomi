@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { ABILITIES, ABILITY_IDS, SPELLSWORD_STRIKES, abilityApCost, type Ability, type AbilityId } from './abilities.ts'
+import { ABILITIES, ABILITY_IDS, MONSTER_ABILITY_IDS, SPELLSWORD_STRIKES, abilityApCost, type Ability, type AbilityId } from './abilities.ts'
 import { GOBLIN_STATS, TROLL_STATS, foeAtLevel, sameCombatStats, type CombatantStats } from './combat.ts'
 
-const MONSTER_ABILITIES: AbilityId[] = ['troll_claws', 'spider_bite', 'spider_web', 'fire_spit']
+/** The monsters' abilities before long-campaign stage 11, which use none of the fields the techniques brought. */
+const FIRST_MONSTER_ABILITIES: AbilityId[] = ['troll_claws', 'spider_bite', 'spider_web', 'fire_spit']
+const MONSTER_ABILITIES = MONSTER_ABILITY_IDS
 const HERO_ABILITIES = ABILITY_IDS.filter((id) => !MONSTER_ABILITIES.includes(id))
 
 describe('abilities', () => {
@@ -30,12 +32,19 @@ describe('abilities', () => {
       for (const key of ['weapon', 'toHit', 'damageBonus', 'onHit', 'spreads'] as const) expect(strike[key]).toBeUndefined()
     }
     if (ability.area) {
+      // The high roster's areas (stage 11) may be centred on the user, strike foes only and go through resistance; none uses the weapon, an automatic laying or a bane.
+      const kept = FIRST_MONSTER_ABILITIES.includes(id) ? [] : ['throughResistance', 'foesOnly', 'centredOnSelf']
       for (const key of ['weaponDamage', 'weaponRange', 'throughResistance', 'foesOnly', 'auto', 'bane', 'centredOnSelf'] as const) {
-        expect(ability.area[key]).toBeUndefined()
+        if (!kept.includes(key)) expect(ability.area[key]).toBeUndefined()
       }
     }
     expect(abilityApCost(TROLL_STATS, id)).toBe(ability.apCost)
     expect(ability.apCost).toBeGreaterThan(0)
+  })
+
+  it('lists the monsters’ abilities first, the high roster’s after Fire Spit, then the heroes’ techniques', () => {
+    expect(ABILITY_IDS.slice(0, MONSTER_ABILITY_IDS.length)).toEqual(MONSTER_ABILITY_IDS)
+    expect(MONSTER_ABILITY_IDS).toEqual([...FIRST_MONSTER_ABILITIES, 'worg_strikes', 'ogre_sweep'])
   })
 
   it('lists the heroes’ techniques after the monsters’ abilities, in the plan’s order', () => {

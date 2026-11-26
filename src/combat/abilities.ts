@@ -65,7 +65,11 @@ export interface AreaAttack {
  * at one foe, an area, or (a hero's technique) a status laid with no roll on
  * itself or on a foe. It costs action points, and a hero's may cost mana; one
  * with a `recharge` is used at most every that many turns of its side.
- * Monsters' abilities set none of the heroes' fields.
+ * Monsters' abilities (`MONSTER_ABILITY_IDS`) set none of the heroes' cost
+ * fields (mana, weapon AP, a needed weapon) and their strikes have their own
+ * dice; the high roster's areas (long-campaign stage 11) may use the area
+ * fields the techniques brought (`centredOnSelf`, `foesOnly`,
+ * `throughResistance`).
  */
 export interface Ability {
   name: string
@@ -100,6 +104,8 @@ export const ABILITY_IDS = [
   'spider_bite',
   'spider_web',
   'fire_spit',
+  'worg_strikes',
+  'ogre_sweep',
   'power_attack',
   'cleave',
   'taunt',
@@ -120,6 +126,9 @@ export const ABILITY_IDS = [
 ] as const
 
 export type AbilityId = (typeof ABILITY_IDS)[number]
+
+/** The abilities only monsters have, in `ABILITY_IDS` order; every other ability is a hero's technique. */
+export const MONSTER_ABILITY_IDS: readonly AbilityId[] = ['troll_claws', 'spider_bite', 'spider_web', 'fire_spit', 'worg_strikes', 'ogre_sweep']
 
 /** The Spellsword's Strikes, which Arcane Knight makes at the weapon's own AP. */
 export const SPELLSWORD_STRIKES: readonly AbilityId[] = ['flame_strike', 'frost_strike', 'thunder_strike']
@@ -180,6 +189,35 @@ export const ABILITIES: Record<AbilityId, Ability> = {
       element: 'fire',
       status: { id: 'seared', turns: 1 },
       halfOnMiss: true,
+    },
+  },
+  // ---- The high roster (long-campaign stage 11), ring by ring.
+  worg_strikes: {
+    name: 'Spear and Bite',
+    verb: 'strikes',
+    description: 'The rider’s spear and the worg’s bite at one foe, turning to the next foe beside it if the first falls.',
+    apCost: 6,
+    recharge: 0,
+    strikes: [
+      { name: 'Spear', verb: 'spears', damage: { count: 1, sides: 8, bonus: 2 } },
+      { name: 'Bite', verb: 'bites', damage: { count: 1, sides: 6, bonus: 1 } },
+    ],
+  },
+  ogre_sweep: {
+    name: 'Sweep',
+    verb: 'sweeps its club',
+    description: 'Every foe beside the user takes 2d8+2, through armour.',
+    apCost: 6,
+    recharge: 1,
+    area: {
+      shape: 'burst',
+      centredOnSelf: true,
+      range: 0,
+      radius: 1,
+      foesOnly: true,
+      throughResistance: true,
+      damage: { count: 2, sides: 8, bonus: 2 },
+      halfOnMiss: false,
     },
   },
   // ---- The heroes' techniques (design §4.3). `apCost` is ignored where `weaponAp` is set.

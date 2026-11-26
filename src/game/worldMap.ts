@@ -298,12 +298,12 @@ export function newWorld(
       monsters('bandit_hideout', 'Bandit Hideout', 47, 13, 'bandit_camp', [STORM_WAND]),
       monsters('salamander_pool', 'Salamander Pool', 54, 28, 'salamander_pool', [SAGE_CIRCLET]),
       monsters('spider_nest', 'Spider Nest', 57, 10, 'spider_nest', [EMBERBLADE]),
-      // Threat 7 (55 to 67 hexes out).
+      // Threat 7 (55 to 67 hexes out): the wolves, worg riders and ogres of long-campaign stage 11, and two bandit camps.
       farMonsters('wildland_bandits', 'Wildland Bandits', 55, 6, 'bandit_camp', [RING_FORTUNE]),
-      farMonsters('webwood_nest', 'Webwood Nest', 62, 20, 'spider_nest', [SHADOW_CLOAK]),
-      farMonsters('ashen_pool', 'Ashen Pool', 70, 36, 'salamander_pool', [SPARK_WAND]),
+      farMonsters('greyfang_pack', 'Greyfang Pack', 62, 20, 'wolf_pack', [SHADOW_CLOAK]),
+      farMonsters('ashen_ogres', 'Ashen Hill Ogres', 70, 36, 'ogre_camp', [SPARK_WAND]),
       farMonsters('moorland_bandits', 'Moorland Bandits', 62, 52, 'bandit_camp', [AMULET_FOCUS]),
-      farMonsters('hollow_spiders', 'Hollow Spiders', 55, 67, 'spider_nest', [HAWK_BOW]),
+      farMonsters('hollow_riders', 'Hollow Riders', 55, 67, 'worg_riders', [HAWK_BOW]),
       // Threat 9 (68 to 80).
       farMonsters('ironhold_company', 'Ironhold Company', 67, 4, 'bandit_company', [RING_PROTECTION]),
       farMonsters('cinder_springs', 'Cinder Springs', 74, 18, 'salamander_pool', [EMBERBLADE]),

@@ -245,6 +245,9 @@ export const FOE_SOUNDS: Record<FoeKind, AttackSound> = {
   horror: claw,
   salamander: claw,
   giant_spider: attackSound('battle.swing.bite', 'battle.hit.claw'),
+  wolf: attackSound('battle.swing.bite', 'battle.hit.claw'),
+  worg_rider: light('battle.hit.pierce'),
+  ogre: heavy('battle.hit.crush'),
   bandit_cutthroat: light('battle.hit.pierce'),
   bandit_captain: blade,
   bandit_brute: heavy('battle.hit.slash'),
@@ -327,6 +330,8 @@ export interface AbilitySound {
 export const ABILITY_SOUNDS: Partial<Record<AbilityId, AbilitySound>> = {
   fire_spit: { release: 'battle.ability.spit', impact: 'battle.impact.fire' },
   spider_web: { release: 'battle.ability.web', impact: 'battle.impact.web' },
+  // The Ogre's club swung round: a heavy swing, and a crushing blow where it lands.
+  ogre_sweep: { release: 'battle.swing.heavy', impact: 'battle.hit.crush', miss: 'battle.miss.swing' },
   // A shield struck for a challenge, and the hex of the foes it draws.
   taunt: { release: 'battle.armor.metal', impact: 'battle.impact.hex' },
   volley: { release: 'battle.shot.bow', impact: 'battle.hit.pierce', miss: 'battle.miss.shot' },
@@ -353,6 +358,10 @@ export const DEATH: Record<UnitKind, CueId> = {
   giant_spider: 'battle.death.spider',
   salamander: 'battle.death.salamander',
   horror: 'battle.death.horror',
+  // No beast's cue yet: the wolf falls with the brutes' growl.
+  wolf: 'battle.death.brute',
+  worg_rider: 'battle.death.goblinoid',
+  ogre: 'battle.death.brute',
 }
 
 type StepClass = 'light' | 'armored' | 'heavy' | 'skitter'
@@ -375,6 +384,9 @@ export const STEP: Record<UnitKind, StepClass> = {
   horror: 'heavy',
   giant_spider: 'skitter',
   salamander: 'skitter',
+  wolf: 'light',
+  worg_rider: 'light',
+  ogre: 'heavy',
 }
 
 /** A footstep's cue for a unit of `kind` wearing `body`; a kind of none known steps lightly. */
