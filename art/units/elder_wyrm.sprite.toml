@@ -1,8 +1,8 @@
 # An elder wyrm: a hulking, darker-scaled drake than the young dragon, hunched
 # on four thick angled legs, its thick neck lifted and its great horned head
 # thrust forward with ember in the open jaws, a tall rust wing folded up over the
-# back with ivory fingertips, ivory spines along the neck, tan belly plates, and
-# a heavy spiked tail dragging on the left.
+# back with ivory fingertips, tan belly plates, and a tapering tail on the left
+# ending in an ivory spike.
 canvas = "unit"
 
 outline = "auto"
@@ -20,7 +20,7 @@ chest = [21, 17]
 7 = [[6, "ooooRooooow"], [19, "RrrrRrrrrrkR"]]
 8 = [[5, "ooRooooRoooW"], [19, "RrrrrWFFFFWr"]]
 9 = [[4, "WooRooooRoooW"], [19, "RrrrRrWFFWrR"]]
-10 = [[3, "ooRooooooRoooW"], [19, "RrrrRrrrrrR"]]
+10 = [[3, "ooRooooooRoooW"], [19, "RrrrR"]]
 11 = [[3, "WooRoooooRooooW"], [19, "RrrrrrTR"]]
 12 = [[3, "ooRoooooooRoooW"], [18, "RrrrrrrTtR"]]
 13 = [[4, "oo"], [7, "oRo"], [11, "oRoo"], [15, "ooW"], [18, "RrrrrrrTtR"]]
@@ -32,13 +32,13 @@ chest = [21, 17]
 19 = [[2, "RRR"], [5, "RRRRRRRRRRRRRRRRRRRRRTtR"]]
 20 = [[1, "WRrR"], [5, "RRRRRRRRRRRRRRRRRRRRTtR"]]
 21 = [[2, "RrrR"], [6, "RTtTtTtTtTtTtTtTtTtRR"]]
-22 = [[7, "rrrrrr"], [14, "RRR"], [18, "RRR"], [22, "rrrrr"]]
-23 = [[6, "rrrrrr"], [14, "RRR"], [18, "RRR"], [22, "rrrrrr"]]
-24 = [[5, "rrrrrr"], [13, "RRR"], [17, "RRR"], [23, "rrrrr"]]
-25 = [[4, "rrrrr"], [12, "RRR"], [19, "RRR"], [23, "rrrrrr"]]
-26 = [[4, "rrrr"], [12, "RRR"], [19, "RRR"], [24, "rrrrr"]]
-27 = [[4, "rrrr"], [12, "RRR"], [19, "RRR"], [24, "rrrrr"]]
-28 = [[4, "rrrr"], [12, "RRR"], [20, "RRR"], [25, "rrrrr"]]
+22 = [[7, "rrrrrr"], [13, "RRRRRRRRR"], [22, "rrrrr"]]
+23 = [[6, "rrrrrr"], [13, "RRRR"], [17, "RRRR"], [22, "rrrrrr"]]
+24 = [[5, "rrrrrr"], [12, "RRRR"], [17, "RRRR"], [23, "rrrrr"]]
+25 = [[4, "rrrrr"], [11, "RRRR"], [18, "RRRR"], [23, "rrrrrr"]]
+26 = [[4, "rrrr"], [11, "RRRR"], [18, "RRRR"], [24, "rrrrr"]]
+27 = [[4, "rrrr"], [11, "RRRR"], [18, "RRRR"], [24, "rrrrr"]]
+28 = [[4, "rrrr"], [11, "RRRR"], [19, "RRRR"], [25, "rrrrr"]]
 29 = [[3, "rrrrrrr"], [11, "RRRRRR"], [19, "RRRRRR"], [24, "rrrrrrr"]]
 30 = [[2, "WrWrWrWr"], [10, "WRWRWRW"], [19, "WRWRWRW"], [24, "WrWrWrW"]]
 

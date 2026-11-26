@@ -60,14 +60,17 @@ from = "idle_0"
 [frames.walk_0.rows]
 30 = "......vBWWW......WWWBv.t........"
 
-# The left foot lifts, then the right. Only the hem's bottom row changes.
+# The left foot lifts, then the right, and the hem swings a pixel left, then right.
+# Only the hem's bottom three rows change.
 [frames.walk_1]
 from = "idle_0"
+move = { rows = [28, 29], cols = [0, 22], by = [-1, 0] }
 [frames.walk_1.rows]
 30 = "......vB.......WWW..Bv.t........"
 
 [frames.walk_2]
 from = "idle_0"
+move = { rows = [28, 29], cols = [0, 22], by = [1, 0] }
 [frames.walk_2.rows]
 30 = "......vB..WWW.......Bv.t........"
 
