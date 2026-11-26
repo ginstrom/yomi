@@ -148,3 +148,7 @@ Step 06 (sprites, ring 15): engineer sonnet, reviewer opus, verdict clean, 1 rev
 | 50-campaign check, schema 27 (`logs/s11-03-guard-50.jsonl`) | `1e85d023a1b58697ec36724720f6ad5ba8b4a5dc2362f4ff6b22605ce37ed216`; 73,274 lines in both; the 945 `battle_start` lines differ in `"schemaVersion":27` only (`sed 's/"schemaVersion":27/"schemaVersion":26/'` of it hashes to `57fdea15…e53e75`); no `"immune"` in it; the summaries equal but for the `--out` name; 26 of 50, 325 days, 18.9 battles |
 
 **The 50-campaign reference from here on is `1e85d023a1b58697ec36724720f6ad5ba8b4a5dc2362f4ff6b22605ce37ed216`** (schema 27; equal to `57fdea15…` at schema 26). Both runs took about 15 s each, run directly.
+
+## Step 07 outcome
+
+Step 07 (sprites, ring 18 and the Source): engineer sonnet, reviewer opus, verdict clean, 1 review round. Commits `95e5046`, `651a4c7` (review fixes); clean-tree checks `npm run sprites:check` runlog #49 and `npm test` runlog #50 (plain, 5 timeouts under load) then #51 (`--testTimeout=120000`, 2740 passed), all at `651a4c7`. No simulation run.

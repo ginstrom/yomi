@@ -187,7 +187,7 @@ Each listed location keeps its position and loot and takes the new id, name and 
 | 04 | [Sprites: ring 7](04-sprites-ring-7.md) | `wolf`, `worg_rider`, `ogre` (C8) | — | sonnet / opus | done (branch `long-campaign-stage-11-sprites-04`, commits `21834ec`, `d4d6402`) |
 | 05 | [Sprites: rings 9 and 12](05-sprites-rings-9-12.md) | `wyvern`, `barrow_wight`, `basilisk`, `hill_giant` (C8) | — | sonnet / opus | done: commits 5bc31dc, 3d0e480 (runlog #18 npm test, #20 sprites:check); review clean |
 | 06 | [Sprites: ring 15](06-sprites-ring-15.md) | `stone_golem`, `blight_cultist`, `young_dragon` (C8) | — | sonnet / opus | done: branch `long-campaign-stage-11-sprites-06`, commits 7ebb9c6, 943e193 (runlog #30 npm test, #31 sprites:check); review clean |
-| 07 | [Sprites: ring 18 and the Source](07-sprites-ring-18-source.md) | `blight_lich`, `elder_wyrm`, `source_horror` (C8) | — | sonnet / opus | pending |
+| 07 | [Sprites: ring 18 and the Source](07-sprites-ring-18-source.md) | `blight_lich`, `elder_wyrm`, `source_horror` (C8) | — | sonnet / opus | done, 95e5046, 651a4c7 (review clean; merge before step 12) |
 | 08 | [Ring 7: wolves, worg riders, ogres](08-ring-7.md) | Kinds, abilities, encounters, nests, spawn kinds, wolfhide; save 32; snapshot; cells | 02, 04 | opus / opus | pending |
 | 09 | [Ring 9: wyverns](09-ring-9.md) | Wyvern, roost, nests, wyvern hide, stand-in removed; save 33; cells | 08, 05 | opus / opus | pending |
 | 10 | [Ring 12: wights, basilisks, giants](10-ring-12.md) | Three kinds and encounters, nests, basilisk scale; save 34; cells | 09, 05 | opus / opus | pending |

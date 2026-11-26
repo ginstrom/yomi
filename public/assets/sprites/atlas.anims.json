@@ -423,6 +423,48 @@
     {
       "frames": [
         {
+          "duration": 750,
+          "frame": "blight_lich/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 750,
+          "frame": "blight_lich/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "blight_lich/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 200,
+          "frame": "blight_lich/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 200,
+          "frame": "blight_lich/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 200,
+          "frame": "blight_lich/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 200,
+          "frame": "blight_lich/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "blight_lich/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 260,
           "frame": "camp_fire/base",
           "key": "atlas"
@@ -434,6 +476,48 @@
         }
       ],
       "key": "camp_fire/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 900,
+          "frame": "elder_wyrm/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 900,
+          "frame": "elder_wyrm/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "elder_wyrm/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 240,
+          "frame": "elder_wyrm/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 240,
+          "frame": "elder_wyrm/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 240,
+          "frame": "elder_wyrm/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 240,
+          "frame": "elder_wyrm/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "elder_wyrm/walk",
       "repeat": -1
     },
     {
@@ -1922,6 +2006,48 @@
         }
       ],
       "key": "shaman/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 650,
+          "frame": "source_horror/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 650,
+          "frame": "source_horror/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "source_horror/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 170,
+          "frame": "source_horror/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 170,
+          "frame": "source_horror/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 170,
+          "frame": "source_horror/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 170,
+          "frame": "source_horror/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "source_horror/walk",
       "repeat": -1
     },
     {
