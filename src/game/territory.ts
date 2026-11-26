@@ -24,8 +24,10 @@ import { ENCAMPMENT_ID, encampment, type QuietLocation, type WorldState } from '
 export const TOWER_NAME = 'A watchtower'
 
 export type Material = 'gold' | 'iron' | 'timber' | 'silver' | 'stone' | 'salt' | 'copper' | 'crystal' | 'peat'
-  // The outer rings' ores and woods (stage 9): no use until stage 10; the trading post buys them.
+  // The outer rings' ores and woods (stage 9): they forge tiers 3 to 5 and raise the workshop to levels 4 to 6 (stage 10); the trading post buys them.
   | 'ironwood' | 'mithril' | 'elderwood' | 'adamant' | 'wyrmwood' | 'starmetal' | 'heartwood'
+  // Trophies (stage 10): forge the hide tiers; no site yields one (TROPHIES, encounters.ts; partners' goods).
+  | 'wolfhide' | 'wyvern_hide' | 'basilisk_scale' | 'drake_scale'
 export type Stock = Partial<Record<Material, number>>
 
 /** A held site is lost when its hex reaches this level, a fort's aside (`lossLevel`). */
@@ -51,6 +53,13 @@ export const WORKS_NAMES: Record<Material, string> = {
   timber: 'Lumber Camp', stone: 'Quarry', salt: 'Saltworks', peat: 'Peat Cuttings',
   mithril: 'Mine', adamant: 'Mine', starmetal: 'Mine',
   ironwood: 'Lumber Camp', elderwood: 'Lumber Camp', wyrmwood: 'Lumber Camp', heartwood: 'Lumber Camp',
+  // Never shown: no site yields a trophy.
+  wolfhide: 'Hunt', wyvern_hide: 'Hunt', basilisk_scale: 'Hunt', drake_scale: 'Hunt',
+}
+
+/** How stock text names a material: its id with `_` read as a space ('wyvern hide'). */
+export function materialName(material: Material): string {
+  return material.replaceAll('_', ' ')
 }
 
 /** What each resource yields, by its location's id. */

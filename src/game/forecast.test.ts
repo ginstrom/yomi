@@ -1,4 +1,7 @@
+import { createHash } from 'node:crypto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { maxHp } from '../character/character.ts'
+import { autoAdvance, levelUp, planFor } from '../character/progression.ts'
 import { mulberry32 } from '../combat/rng.ts'
 import { AUTO_POLICY, AUTO_ROUND_LIMIT, ENEMY_POLICY, playOut, playStep, type PlayOutOptions } from '../engine/autoPlay.ts'
 import { BattleEngine, type BattleEvent, type BattleSetup, type BattleSnapshot } from '../engine/battleEngine.ts'
@@ -19,7 +22,9 @@ import {
   type ForecastStart,
 } from './forecast.ts'
 import { newGame } from './gameState.ts'
-import { partyFighters, readyMadeParty } from './party.ts'
+import { partyFighters, readyMadeParty, type Party } from './party.ts'
+import { MATERIALS, type Tier } from '../inventory/catalog.ts'
+import { itemById } from '../inventory/inventory.ts'
 import type { MonsterLocation } from './worldMap.ts'
 
 const SEED = 7
@@ -334,4 +339,131 @@ describe('words', () => {
       'Estimate from 40 trial battles with the AI playing your side: it wins about 75% of them, and a hero dies in about 30%; 3 of 40 drag on past 50 rounds. Your own play may do better.',
     )
   })
+})
+
+/**
+ * The estimate fixture (long-campaign stage 10, step 07): estimates recorded
+ * from the code before any speed-up, which every speed-up must leave
+ * byte-identical. Each entry's `forecast` is `forecast(start, base, samples)`;
+ * its `logs` is a sha256 of every sample's full event log, played again by
+ * hand (`sampleByHand`'s rules), so a change to any roll, move or choice in
+ * any sample shows even where the tally does not. Parties are the ready-made
+ * three raised a level at a time along `planFor` (as debug `level n all auto`
+ * and the simulator's `raisedParty`), their worn weapon, shield and armour
+ * remade in the same family at the entry's tier (Fine above tier 1).
+ */
+describe('the estimate fixture (stage 10 step 07)', () => {
+  interface Entry {
+    level: number
+    tier: Tier
+    encounter: EncounterId
+    threat: number
+    base: number
+    samples: number
+    /** Steps the real battle (seed `base`) takes before the snapshot the estimate starts from; none for a world-map start. */
+    steps?: number
+    /** Every foe's hit points raised to this, so that samples stall. */
+    foeHp?: number
+    forecast: Forecast
+    logs: string
+  }
+
+  function partyAt(level: number, tier: Tier): Party {
+    const party = readyMadeParty()
+    for (const member of party) {
+      while (member.level < level) {
+        levelUp(member)
+        autoAdvance(member, planFor(member))
+      }
+      if (tier === 1) continue
+      for (const slot of ['mainHand', 'offHand', 'armor'] as const) {
+        const worn = member.equipment[slot]
+        if (!worn?.family) continue
+        const kind = MATERIALS.find((m) => m.id === worn.material)!.kind
+        const material = MATERIALS.find((m) => m.tier === tier && m.kind === kind)!
+        member.equipment[slot] = itemById(`${material.id}_${worn.family}@2`)!
+      }
+      member.hp = maxHp(member)
+    }
+    return party
+  }
+
+  function startOf(entry: Entry): ForecastStart {
+    const built = ENCOUNTERS[entry.encounter](partyFighters(partyAt(entry.level, entry.tier)), entry.threat).setup
+    const setup: BattleSetup = entry.foeHp
+      ? { ...built, units: built.units.map((u) => (u.side === 'enemy' ? { ...u, stats: { ...u.stats, maxHp: entry.foeHp! }, hp: entry.foeHp } : u)) }
+      : built
+    if (entry.steps === undefined) return { setup }
+    const engine = new BattleEngine(setup, { seed: entry.base, meta: { source: 'test' } })
+    const options = gameOptions(entry.base, AUTO_ROUND_LIMIT)
+    for (let i = 0; i < entry.steps; i++) playStep(engine, options)
+    return { snapshot: engine.snapshot() }
+  }
+
+  /** A sha256 of every sample's event log, in sample order. */
+  function logsDigest(start: ForecastStart, base: number, samples: number): string {
+    const hash = createHash('sha256')
+    for (let i = 0; i < samples; i++) {
+      const s = forecastSeed(base, i)
+      const engine =
+        'setup' in start
+          ? new BattleEngine(start.setup, { seed: s, meta: { source: 'forecast' } })
+          : BattleEngine.restore({ ...start.snapshot, rng: s })
+      const firstRound = 'setup' in start ? 1 : start.snapshot.round
+      playOut(engine, gameOptions(s, firstRound + AUTO_ROUND_LIMIT - 1))
+      hash.update(JSON.stringify(engine.getLog()))
+      hash.update('\n')
+    }
+    return hash.digest('hex')
+  }
+
+  const FIXTURE: Entry[] = [
+    { level: 1, tier: 1, encounter: 'goblin_raid', threat: 1, base: 1000, samples: 40, forecast: { samples: 40, wins: 40, heroLost: 0, stalled: 0 },
+      logs: '7c4ca1415c0593774e1ebcb399e74191dd4dcbd8364f7df933a8c6eb7e68c0e3' },
+    { level: 1, tier: 1, encounter: 'kobold_scouts', threat: 3, base: 1001, samples: 12, forecast: { samples: 12, wins: 12, heroLost: 0, stalled: 0 },
+      logs: 'cc799b1b5c1256d02066d2873e40ea86b965cccbb7681e1007d7e069311f3641' },
+    { level: 3, tier: 1, encounter: 'hobgoblin_warband', threat: 4, base: 1002, samples: 10, forecast: { samples: 10, wins: 8, heroLost: 4, stalled: 0 },
+      logs: 'fdc0755f0d71fb9aaf479d8ac27d289798cca283c5bb8268f6e29e48855bb5c2' },
+    { level: 4, tier: 1, encounter: 'troll_lair', threat: 3, base: 1003, samples: 10, forecast: { samples: 10, wins: 10, heroLost: 0, stalled: 0 },
+      logs: '7482a5830d15348fe2c706fd2bbef7ac519857f118e958b3cf2b6b075b123c08' },
+    { level: 5, tier: 2, encounter: 'bandit_camp', threat: 5, base: 1004, samples: 8, forecast: { samples: 8, wins: 8, heroLost: 0, stalled: 0 },
+      logs: 'f66227e52235c7f220c79f1beeefdccec21d9aad8e6fabef0f4dc5dcc0465774' },
+    { level: 6, tier: 2, encounter: 'spider_nest', threat: 6, base: 1005, samples: 8, forecast: { samples: 8, wins: 8, heroLost: 1, stalled: 0 },
+      logs: '9162a96f6e0e84b151b6edbece4344389c0d9b0e23194c652ab8b6ed9ec4fcba' },
+    { level: 8, tier: 2, encounter: 'salamander_pool', threat: 7, base: 1006, samples: 8, forecast: { samples: 8, wins: 8, heroLost: 0, stalled: 0 },
+      logs: 'e2d2d258cb5e5ac051c2f61323600422a33d30b226e882fcf379099e3b7bacb7' },
+    { level: 6, tier: 2, encounter: 'bandit_company', threat: 9, base: 1007, samples: 8, forecast: { samples: 8, wins: 0, heroLost: 8, stalled: 0 },
+      logs: '09c86e90b4e333b69f13389d07af4d3c99bf505e89129f5bbce530e4cab0dcf0' },
+    { level: 12, tier: 3, encounter: 'bandit_company', threat: 12, base: 1008, samples: 6, forecast: { samples: 6, wins: 1, heroLost: 6, stalled: 0 },
+      logs: 'f738e452745be0164c9d383ab1f23a8121da166c3f99454ced649feeda070897' },
+    { level: 10, tier: 3, encounter: 'source_guardians', threat: 10, base: 1009, samples: 6, forecast: { samples: 6, wins: 0, heroLost: 6, stalled: 0 },
+      logs: 'abe630899229d3e8ffe161db84f9ff4e170aa9a5d5c3fa401ab7b190ea16e79f' },
+    { level: 15, tier: 4, encounter: 'freebooter_host', threat: 15, base: 1010, samples: 40, forecast: { samples: 40, wins: 19, heroLost: 26, stalled: 0 },
+      logs: '8190b26dae9b809f78362148405a04df9dcb974b714ca1e796ec6e51b185922d' },
+    { level: 18, tier: 5, encounter: 'freebooter_host', threat: 18, base: 1011, samples: 6, forecast: { samples: 6, wins: 0, heroLost: 6, stalled: 0 },
+      logs: '537f0701d3cbd353e5106f30c7239d97f246ed7f7e20a792121f8320ca98d338' },
+    { level: 18, tier: 5, encounter: 'source_guardians', threat: 20, base: 1012, samples: 4, forecast: { samples: 4, wins: 4, heroLost: 0, stalled: 0 },
+      logs: '5f159dc3d28d746051d85d6a37b119cf7fd44199e4e21c8638491b43354c03a9' },
+    { level: 15, tier: 4, encounter: 'freebooter_host', threat: 15, base: 1013, samples: 8, steps: 6, forecast: { samples: 8, wins: 5, heroLost: 4, stalled: 0 },
+      logs: 'f2d0be96ff7d40532768189e6d7e25a9207150860fe07d9e254cf9e02c38c78c' },
+    { level: 6, tier: 2, encounter: 'spider_nest', threat: 6, base: 1014, samples: 8, steps: 15, forecast: { samples: 8, wins: 8, heroLost: 0, stalled: 0 },
+      logs: '78f8f2bcba1cbd49e159ba9450ba0bfc59c43dfa1d7d87fb0de4fa9cc53cac76' },
+    { level: 4, tier: 1, encounter: 'troll_lair', threat: 3, base: 1015, samples: 8, steps: 20, forecast: { samples: 8, wins: 8, heroLost: 0, stalled: 0 },
+      logs: 'f68319da5c8bb878f14e99d275cc96cdc7759975c1918fc38b79639375d2d99d' },
+    { level: 10, tier: 3, encounter: 'source_guardians', threat: 10, base: 1016, samples: 6, steps: 10, forecast: { samples: 6, wins: 0, heroLost: 6, stalled: 0 },
+      logs: '0fa7116c68b52bdee4a392520e317f2af15d25ff1359b90289ed6c2203ec6eb3' },
+    { level: 10, tier: 1, encounter: 'goblin_raid', threat: 1, base: 1017, samples: 4, foeHp: 3000, forecast: { samples: 4, wins: 0, heroLost: 0, stalled: 4 },
+      logs: '76e2e7b5a89eda99eacb5039b2dbd5b94d13afcc70be04a7b051b3b02e57d0eb' },
+  ]
+
+  it.each(FIXTURE.map((entry) => [`level ${entry.level}, tier ${entry.tier} vs ${entry.encounter} ${entry.threat}${entry.steps !== undefined ? `, ${entry.steps} steps in` : ''}${entry.foeHp ? ', foes unkillable' : ''}`, entry] as const))(
+    '%s',
+    (_name, entry) => {
+      const start = startOf(entry)
+      const base = 'snapshot' in start ? battleForecastBase(start.snapshot.events) : entry.base
+      expect(forecast(start, base, entry.samples)).toEqual(entry.forecast)
+      expect(logsDigest(start, base, entry.samples)).toBe(entry.logs)
+    },
+    60_000,
+  )
 })

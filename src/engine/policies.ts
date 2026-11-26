@@ -49,6 +49,13 @@ export interface PolicyContext {
   /** The policy chooses for the side whose turn it is (state.phase). */
   state: BattleState
   legal: readonly Action[]
+  /**
+   * The legal actions of one unit, end_turn left out: `legal`'s for that unit, in
+   * order, found without listing every unit's (`legalActions(unit)`). A policy that
+   * weighs one unit at a time reads this when given it, so that `legal` (a getter in
+   * `autoPlay`) need never be listed whole.
+   */
+  legalFor?: (unit: UnitId) => readonly Action[]
   /** Kept separate from the engine's combat RNG so policy choices don't shift dice rolls. */
   rng: RNG
 }
@@ -101,9 +108,10 @@ const END_TURN: Action = { type: 'end_turn' }
  * Taunted by a foe that stands narrows each step with a candidate on that
  * foe to those, and closes on it rather than the nearest.
  */
-const aggressive: Policy = ({ state, legal }) => {
+const aggressive: Policy = (context) => {
+  const { state } = context
   for (const self of state.units) {
-    const own = legal.filter((a) => a.type !== 'end_turn' && a.unit === self.id)
+    const own = context.legalFor ? context.legalFor(self.id) : context.legal.filter((a) => a.type !== 'end_turn' && a.unit === self.id)
     if (own.length === 0) continue
     const source = tauntSource(state, self)
     const casts = castsOf(state, self, own)

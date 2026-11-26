@@ -6,13 +6,13 @@ The measure is the share of 500 campaigns from seed 1 that beat the Source witho
 
 The bands, set by the user (the targets; keep them):
 
-| Measure | Band | Now (seed 1: stage 9, 8 or 7 where marked, else the skill trees' step 30) |
+| Measure | Band | Now (seed 1: stage 10, 8 or 7 where marked, else the skill trees' step 30) |
 | --- | --- | --- |
-| One party (`--parties 1`) | 215 to 250 | 288 (331 days, 18.8 battles, 1.2 dead; stage 9), accepted until stage 12 |
-| Default company | 220 to 260 | 289 (stage 9), accepted until stage 12 |
-| `--ready-level 10` | 370 to 420 | 409 (530 days; stage 9; stage 8's 433 was accepted up to 445) |
-| Heroes dead a campaign | at most 2.0 | 1.2 (stage 9) |
-| Days a campaign | 243 to 297 | 331 (stage 9), accepted until stage 12 |
+| One party (`--parties 1`) | 215 to 250 | 288 (331 days, 18.8 battles, 1.2 dead; stage 10, = stage 9), accepted until stage 12 |
+| Default company | 220 to 260 | 289 (stage 10, = stage 9), accepted until stage 12 |
+| `--ready-level 10` | 370 to 420 | 409 (533 days, 34.0 battles; stage 10; stage 8's 433 was accepted up to 445) |
+| Heroes dead a campaign | at most 2.0 | 1.2 (stage 10) |
+| Days a campaign | 243 to 297 | 331 (stage 10), accepted until stage 12 |
 | GR3 | at least 470 | 500 |
 | BC3 | 400 to 470 | 455 |
 | BC4 | 430 to 490 | 454 |
@@ -25,7 +25,7 @@ Accepted out of band (the user, stage 9 step 09): `one` 288, `company` 289 and `
 
 The waiting check (`--waiting`, stage 7's design): income a day campaigning must stay above the waiting twin's, or idling at home pays; stage 7 measured 1.3 against 1.0 a day (one party and the company alike), the twin never ahead in any campaign. The careful simulated party rarely builds past an outpost or raises the post past 2, so works, forts and market gold barely show in these figures.
 
-Also: TL5 0 (report-only), F1 to F3 500, 500, 463. Capstones barely show at level 7 or 10; `--ready-level 12` is where they do.
+Also: TL5 0 (report-only), F1 to F3 500, 500, 463. Far cells, report only (stage 10, bandits in tiers 3 to 5): BCO9 2, BCO12 0, FH15 0, FH18 0, SG20-18 28, SG20 71. The long campaign (100, `--log none`; stage 10): Source 1, fell 97, 1414 days, 42.3 battles (stage 9's step 01 baseline 15, 1272, 46.4); its kit lags `expectedKit` (accepted until stage 12). Capstones barely show at level 7 or 10; `--ready-level 12` is where they do.
 
 Path parity: every plan of `AUTO_PLANS` within 50 of its role's best at Bandit Camp threat 4, level 4. All hold but the evoker, 54 behind the healer (accepted). At levels 8 (Hobgoblin Warband) and 14 (Bandit Camp threat 7) gaps are reported, not gated; at 14 `rogue_archer` 75, cryomancer 59, saint 84 and arcanist 444 behind were accepted by the user.
 

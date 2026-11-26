@@ -1,5 +1,5 @@
 import { maxHp, maxMana, manaOf, type Character } from '../character/character.ts'
-import { gainXp, xpToNextLevel } from '../character/progression.ts'
+import { autoAdvance, gainXp, levelUp, planFor, xpToNextLevel } from '../character/progression.ts'
 import type { BattleState } from '../engine/battleEngine.ts'
 import { advanceRefusal, passDay, setOrder } from '../game/company.ts'
 import { MAX_BLIGHT, SPAWN_KINDS, boardIndex, type WorldEvent } from '../game/blight.ts'
@@ -24,6 +24,9 @@ import { describeWorldEvent, yieldSummary } from './worldEvents.ts'
  * Commands that change the game run only on the world map, which redraws and saves after
  * them: a battle's engine knows nothing of characters, so a change there would not reach it.
  */
+
+/** The highest level `level` reaches: the long campaign's cap. */
+const MAX_DEBUG_LEVEL = 20
 
 /** What a scene offers the debug console: its game, its battle if it fights one, and how it takes a change. */
 export interface DebugSource {
@@ -67,6 +70,7 @@ interface Command {
 const MATERIALS = Object.keys({
   gold: 0, iron: 0, timber: 0, silver: 0, stone: 0, salt: 0, copper: 0, crystal: 0, peat: 0,
   ironwood: 0, mithril: 0, elderwood: 0, adamant: 0, wyrmwood: 0, starmetal: 0, heartwood: 0,
+  wolfhide: 0, wyvern_hide: 0, basilisk_scale: 0, drake_scale: 0,
 } satisfies Record<Material, number>) as Material[]
 
 class DebugError extends Error {}
@@ -243,6 +247,33 @@ const COMMANDS: Record<string, Command> = {
       return members(partyOf(context), who).map((character) => {
         const gain = gainXp(character, xp)
         return `${character.name} gains ${gain.xp} xp${gain.levelsGained ? `, now level ${character.level}` : ''}.`
+      })
+    },
+  },
+  level: {
+    usage: 'level <n> [member|all] [auto] [@party]',
+    acts: true,
+    summary: 'Raise members straight to level n (at most 20), a level at a time; auto spends their points as the simulator does.',
+    changes: true,
+    run(args, context) {
+      // `auto` is the word alone; a member named "Auto..." is reached by number.
+      const auto = args.slice(1).includes('auto')
+      const [target, ...rest] = args.filter((arg, i) => i === 0 || arg !== 'auto')
+      const n = integer(target, 'the level')
+      if (n > MAX_DEBUG_LEVEL) throw new DebugError(`The level can be at most ${MAX_DEBUG_LEVEL}.`)
+      if (rest.length > 1) throw new DebugError('Usage: level <n> [member|all] [auto] [@party]')
+      const named = members(partyOf(context), rest[0])
+      for (const member of named) {
+        if (n <= member.level) throw new DebugError(`${member.name} is level ${member.level} already.`)
+      }
+      return named.map((member) => {
+        while (member.level < n) {
+          levelUp(member)
+          if (auto) autoAdvance(member, planFor(member))
+        }
+        member.xp = 0
+        const spent = auto ? ` Points spent along the ${planFor(member)} plan, ${counted(member.skillPoints, 'skill point')} and ${counted(member.perkPoints, 'perk point')} left.` : ''
+        return `${member.name} is now level ${n}.${spent}`
       })
     },
   },

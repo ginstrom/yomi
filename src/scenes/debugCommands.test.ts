@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { maxHp } from '../character/character.ts'
+import { autoAdvance, levelUp, planFor } from '../character/progression.ts'
 import { setOrder } from '../game/company.ts'
 import { newExpedition } from '../game/expedition.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
@@ -74,11 +75,82 @@ describe('debug commands', () => {
     expect(context.source!.game.parties[0].members[1].level).toBe(1)
   })
 
+  describe('level', () => {
+    const ready = (): DebugContext & { changed: ReturnType<typeof vi.fn> } => onWorldMap(newGame(readyMadeParty(), null, 7))
+    const membersOf = (context: DebugContext) => context.source!.game.parties[0].members
+
+    it('raises every member to the level, with experience 0', () => {
+      const context = ready()
+      const result = runCommand('level 15', context)
+      expect(result.changed).toBe(true)
+      expect(result.lines).toHaveLength(membersOf(context).length)
+      expect(result.lines[0]).toMatch(/is now level 15\.$/)
+      for (const member of membersOf(context)) {
+        expect(member.level).toBe(15)
+        expect(member.xp).toBe(0)
+      }
+    })
+
+    it('narrows by member number or name, and by @party', () => {
+      const context = ready()
+      runCommand('level 5 2', context)
+      expect(membersOf(context).map((m) => m.level)).toEqual([1, 5, ...membersOf(context).slice(2).map(() => 1)])
+      const name = membersOf(context)[0].name
+      runCommand(`level 4 ${name.slice(0, 3)} @first`, context)
+      expect(membersOf(context)[0].level).toBe(4)
+      expect(membersOf(context)[2].level).toBe(1)
+    })
+
+    it('with auto leaves each member as the simulator raised party would', () => {
+      const context = ready()
+      const result = runCommand('level 15 all auto', context)
+      expect(result.lines[0]).toMatch(/is now level 15/)
+      const expected = readyMadeParty()
+      for (const member of expected) {
+        while (member.level < 15) {
+          levelUp(member)
+          autoAdvance(member, planFor(member))
+        }
+      }
+      membersOf(context).forEach((member, i) => {
+        expect(member.level).toBe(expected[i].level)
+        expect(member.perks).toEqual(expected[i].perks)
+        expect(member.trained).toEqual(expected[i].trained)
+        expect(member.perkPoints).toBe(expected[i].perkPoints)
+        expect(member.skillPoints).toBe(expected[i].skillPoints)
+      })
+    })
+
+    it('does not read auto as a member name, but a number still reaches one', () => {
+      const context = ready()
+      runCommand('level 3 auto 1', context)
+      expect(membersOf(context)[0].level).toBe(3)
+      expect(membersOf(context)[1].level).toBe(1)
+    })
+
+    it('refuses without changing anything', () => {
+      const context = ready()
+      runCommand('level 5 1', context)
+      const before = JSON.stringify(membersOf(context))
+      const reasons = ['level 5', 'level 4 all', 'level 21', 'level x', 'level auto', 'level', 'level 9 7', 'level 9 nobody']
+      for (const line of reasons) {
+        const result = runCommand(line, context)
+        expect(result.changed, line).toBe(false)
+        expect(JSON.stringify(membersOf(context)), line).toBe(before)
+      }
+      expect(runCommand('level 5', context).lines).toEqual([`${membersOf(context)[0].name} is level 5 already.`])
+      expect(runCommand('level 21', context).lines[0]).toMatch(/20/)
+      expect(runCommand('help level', context).lines[0]).toMatch(/^level <n>/)
+    })
+  })
+
   it('adds to the stock, and checks the material', () => {
     const context = onWorldMap()
     expect(runCommand('stock gold 50', context)).toEqual({ lines: ['Stock: gold 50'], changed: true })
     expect(runCommand('stock gold -80', context).lines).toEqual(['Stock: gold 0'])
     expect(runCommand('stock unobtainium 5', context).lines[0]).toMatch(/No material "unobtainium"/)
+    expect(runCommand('stock wyvern_hide 5 drake_scale 2', context).changed).toBe(true)
+    expect(context.source!.game.world.stock).toMatchObject({ wyvern_hide: 5, drake_scale: 2 })
   })
 
   it('adds several material pairs at once, checking every pair before applying any', () => {
@@ -204,7 +276,9 @@ describe('debug commands', () => {
     const { baggage } = context.source!.game.parties[0]
     expect(runCommand('facility workshop 2', context).changed).toBe(true)
     expect(world.workshop).toBe(2)
-    expect(runCommand('facility workshop 4', context).lines[0]).toMatch(/from 0 to 3/)
+    expect(runCommand('facility workshop 6', context).changed).toBe(true)
+    expect(world.workshop).toBe(6)
+    expect(runCommand('facility workshop 7', context).lines[0]).toMatch(/from 0 to 6/)
     expect(runCommand('facility trading_post 0', context).lines[0]).toMatch(/from 1 to 6/)
     expect(runCommand('facility guild_hall 4', context).changed).toBe(true)
     expect(world.guildHall).toBe(4)

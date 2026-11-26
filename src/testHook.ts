@@ -299,13 +299,15 @@ export interface TradingPostProbe {
    * Every line of the tab, those of other pages not visible: an item's id when buying, else where it lies
    * (`baggage:<index>`, `pack:<member>:<index>`) or `material:<material>`; a click shows its details.
    */
-  rows: Array<ButtonProbe & { id: string; kind: 'item' | 'material' | 'rune'; price: number }>
+  rows: Array<ButtonProbe & { id: string; kind: 'item' | 'material' | 'rune' | 'good'; price: number; label: string }>
   /** The Buy tab's filter: the slot shown (or 'runes', the runes it sells, `rune:<key>`) and the family, null for all of the slot. Sell is not filtered; it lists the pouch's runes after the materials. */
-  filter: { slot: EquipmentSlot | 'runes'; family: FamilyId | null }
+  filter: { slot: EquipmentSlot | 'runes' | 'goods'; family: FamilyId | null }
   /** One for each slot the post sells for, in the order mainHand, offHand, armor, head, gloves, boots; empty on the Sell tab. */
   slotButtons: Array<ButtonProbe & { slot: EquipmentSlot }>
   /** The Buy tab's Runes filter, after the slot buttons; not visible on the Sell tab. */
   runesButton: ButtonProbe
+  /** The Buy tab's Goods filter (partners' goods, `good:<partner>:<material>` rows with Buy 1 on `confirm` and Buy 5 on `confirmAll`), after Runes; not visible below the Market Hall or on the Sell tab. */
+  goodsButton: ButtonProbe
   /** "All" (family null), then each family of the slot shown, in FAMILIES order; empty on the Sell tab. */
   familyButtons: Array<ButtonProbe & { family: FamilyId | null }>
   /** `confirm` buys or sells the line shown (a material two at a time); `confirmAll` sells all of a material. */
@@ -325,6 +327,8 @@ export interface TradingPostProbe {
    * the partner id whose road the minimap draws, or null.
    */
   routes: Array<{ partner: string; status: 'open' | 'raided' | 'closed'; line: string; open: ButtonProbe | null; selected: boolean }>
+  /** The Buy tab's inline refusal, top and bottom on screen; null with none (a refused click's message says it instead). */
+  refusalBox: { top: number; bottom: number } | null
   /** The refusal shown under the Routes tab's minimap for the chosen closed row, or null; never the same words as `message`. */
   routeRefusal: string | null
   /** The chosen row's notes under the minimap (`routeNotes`: why security is short of 100%, the good's condition). */
@@ -338,8 +342,8 @@ export interface CraftingProbe {
   actingFor: string
   /** 'field', or the workshop's level. */
   tier: 'field' | number
-  /** Modify (modifiers, the screen it opens on) or Runes (sockets and the pouch). */
-  tab: 'modify' | 'runes'
+  /** Modify (modifiers and Temper, the screen it opens on), Forge (the items the workshop forges) or Runes (sockets and the pouch). */
+  tab: 'modify' | 'forge' | 'runes'
   /** What the last action did, or why it was refused. */
   message: string
   /** Runes: what the item list says when the party has nothing with a socket (which gear has them); '' otherwise. */
@@ -353,9 +357,17 @@ export interface CraftingProbe {
   items: Array<ButtonProbe & { id: string; itemId: string }>
   /** The item clicked, by where it lies. */
   selected: string | null
-  /** The modifiers and grades on offer for it (`<modifier><grade>`), each greyed when it cannot be done now, with its button's words; empty on the Runes tab. */
+  /** The modifiers and grades on offer for it (`<modifier><grade>`), then for a tier-3+ item its temper options (`temper2`, `temper3`), each greyed when it cannot be done now, with its button's words; empty on the other tabs. */
   options: Array<ButtonProbe & { id: string; label: string }>
-  /** The option clicked (`<modifier><grade>`), or on the Runes tab the action (`embed:<key>`, `extract:<index>`, `fuse:<key>`); and the lines of its preview, its refusal last if any. */
+  /** Forge: the slot filter's buttons, and the slot showing. */
+  forgeSlots: Array<ButtonProbe & { slot: string }>
+  forgeSlot: string
+  /** Forge: every row of the slot showing, those of other pages not visible (family, material, tier, the cost in words, the domain's refusal or null; every visible row is enabled, a refused one shows its cost in the refused colour and opens to read why), what the list says when it has none, and the member compared against (an index into the party). */
+  forgeRows: Array<ButtonProbe & { id: string; family: string; material: string; tier: number; name: string; cost: string; refusal: string | null }>
+  forgeHint: string
+  members: Array<ButtonProbe & { index: number; name: string }>
+  member: number
+  /** The option clicked (`<modifier><grade>`, `temper<grade>`), on the Forge tab the row (`<family>:<material>`), or on the Runes tab the action (`embed:<key>`, `extract:<index>`, `fuse:<key>`); and the lines of its preview, its refusal last if any. */
   chosen: string | null
   preview: string[]
   /** Runes: the selected item's sockets, each its Extract button (greyed when refused, and for an empty socket not visible), with the rune in it. */
@@ -367,7 +379,10 @@ export interface CraftingProbe {
     work: ButtonProbe
     confirm: ButtonProbe
     modifyTab: ButtonProbe
+    forgeTab: ButtonProbe
     runesTab: ButtonProbe
+    /** Forge: forges the row chosen. */
+    forge: ButtonProbe
     prev: ButtonProbe
     next: ButtonProbe
     pouchPrev: ButtonProbe

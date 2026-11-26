@@ -16,7 +16,8 @@ import { encampment, encampmentName, type MonsterLocation, type PartnerLocation,
  * land is clean. Every partner is a clean source of `PARTNER_STRENGTH`
  * (blight.ts), silent or not, and is never held, never yields and is never
  * lost. Phaser-free; `updateTerritory` calls `partnerDay` once a world turn
- * and `tradeDay` after it.
+ * and `tradeDay` after it. `tradingPost.ts` imports this module back (the
+ * partners' goods), so it reads it only inside functions, never at load.
  *
  * A route (from trading post level 4, `ROUTE_SLOTS`) is a fixed road from the
  * encampment to a contacted partner (`roadTo`), paid for once (`routeCost`).

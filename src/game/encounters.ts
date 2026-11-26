@@ -14,6 +14,7 @@ import {
 import type { BattleSetup, UnitId, UnitSetup } from '../engine/battleEngine.ts'
 import { offsetToHex } from '../grid/hex.ts'
 import { BANDIT_ROLE, banditGear, banditStats } from './bandits.ts'
+import type { Material } from './territory.ts'
 
 /** A party member as it enters a battle: its stats, and the hit points it has left if wounded. */
 export interface Fighter {
@@ -60,6 +61,21 @@ export type FoeKind = MonsterKind | BanditKind
 
 /** What a unit is, for drawing it; the engine only knows its stats. */
 export type UnitKind = 'warrior' | FoeKind
+
+/** What beating one foe of a kind adds to the stock (gear-and-runes §4.3): the hide tiers' material. */
+export interface Trophy {
+  material: Material
+  amount: number
+}
+
+/**
+ * The trophy of each foe kind that leaves one, granted after a win
+ * (`takeTrophies`, loot.ts). Empty until stage 11 adds the kinds of gear
+ * §4.3's table: wolves and worgs wolfhide 1 a foe, wyverns wyvern hide 3,
+ * basilisks basilisk scale 3, young dragons drake scale 6, elder wyrms drake
+ * scale 10. Until then the trophies come only from partners' goods.
+ */
+export const TROPHIES: Partial<Record<FoeKind, Trophy>> = {}
 
 /**
  * The experience beating a level 1 unit of each kind is worth. An even match for a
@@ -422,7 +438,8 @@ export function banditCamp(party: readonly Fighter[], threat = 3): Encounter {
 
 /**
  * Bandits of the far rings, threats 8 to 13, in Masterwork steel and
- * ironwood: a Bandit Sergeant with axe and breastplate, a Crossbowman, a
+ * ironwood at 8, Fine mithril and elderwood at 9 to 11 and Fine adamant and
+ * wyrmwood at 12 and 13 (`banditGear`): a Bandit Sergeant with axe and breastplate, a Crossbowman, a
  * Hedge-Mage and an Archer.
  */
 export function banditCompany(party: readonly Fighter[], threat = 8): Encounter {
@@ -430,8 +447,9 @@ export function banditCompany(party: readonly Fighter[], threat = 8): Encounter 
 }
 
 /**
- * Bandits of the farthest rings, threats 14 to 20, in Masterwork steel and
- * ironwood: a Freebooter Captain with sword, shield and breastplate, a Brute,
+ * Bandits of the farthest rings, threats 14 to 20, in Fine adamant and
+ * wyrmwood to 17 and Masterwork starmetal and heartwood from 18
+ * (`banditGear`): a Freebooter Captain with sword, shield and breastplate, a Brute,
  * a Crossbowman and a Hedge-Mage, and from threat 17 an Archer.
  */
 export function freebooterHost(party: readonly Fighter[], threat = 14): Encounter {

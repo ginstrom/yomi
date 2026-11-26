@@ -45,20 +45,34 @@ export const ITEM_ICON_KEYS: Record<ItemIcon, string> = {
 export const ITEM_ICON_SCALE = 2
 
 /**
- * A tier-2 material's tint over its family's icon, by material id; tier 1 is
- * drawn untinted. Kept pale, as a tint multiplies the icon's colours and a
- * dark one muddies the metal.
+ * A tier-2 to -5 material's tint over its family's icon, by material id; tier 1
+ * is drawn untinted. Kept light, as a tint multiplies the icon's colours and a
+ * dark one muddies the metal; tier 2's are pale, and each kind's finer tiers
+ * are more saturated, in a hue of their own, so a ladder reads at list size.
  */
 export const MATERIAL_TINTS: Readonly<Record<string, number>> = {
   steel: 0xc8d8f0,
   ironwood: 0xd8c8b8,
   wolfhide: 0xd0d0d0,
   silk: 0xe8d8f8,
+  // Tiers 3 to 5 (stage 10).
+  mithril: 0x8fd8f0,
+  adamant: 0xc09cf0,
+  starmetal: 0xffe27a,
+  elderwood: 0xb4dca0,
+  wyrmwood: 0xe8a080,
+  heartwood: 0xffc860,
+  wyvern: 0x88d0b8,
+  basilisk: 0xb0c860,
+  drake: 0xff9080,
+  mithrilweave: 0xa8e8f8,
+  adamantweave: 0xd8a8f0,
+  starweave: 0xfff0a0,
 }
 
-/** The tint to draw `item`'s icon with: its material's at tier 2, else none. */
+/** The tint to draw `item`'s icon with: its material's from tier 2, else none. */
 export function iconTint(item: Item): number | undefined {
-  return item.tier === 2 && item.material !== undefined ? MATERIAL_TINTS[item.material] : undefined
+  return (item.tier ?? 1) >= 2 && item.material !== undefined ? MATERIAL_TINTS[item.material] : undefined
 }
 
 /** The texture key of each rune's icon; each is loaded from assets/sprites/<key>.png. */

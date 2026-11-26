@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { materialName, type Material } from '../game/territory.ts'
 import { describeCost } from '../game/buildings.ts'
 import { facilities, improveFacility, type FacilityId, type FacilityView } from '../game/encampment.ts'
 import type { Expedition } from '../game/expedition.ts'
@@ -17,6 +18,7 @@ import { tellStory } from './StoryScene.ts'
 import { SPRITE_ATLAS, spriteAnim, spriteFrame } from './unitLook.ts'
 import { overlayScale } from './overlayScale.ts'
 import { headerLines, measureCharWidth } from './headerLines.ts'
+import { notifyStock } from './stockNotice.ts'
 
 interface EncampmentData {
   game: GameState
@@ -168,6 +170,8 @@ export class EncampmentScene extends Phaser.Scene {
 
   private render(): void {
     this.frame.removeAll(true)
+    // On each render on purpose: render runs only on clicks, the header refresh is cheap, and this catches stock changes from any path (the debug console included).
+    notifyStock(this)
     this.controls = {}
     this.labelBoxes = {}
     this.detailLines = []
@@ -175,7 +179,7 @@ export class EncampmentScene extends Phaser.Scene {
     const { world } = this.gameState
     const stock = Object.entries(world.stock)
       .filter(([, amount]) => amount)
-      .map(([material, amount]) => `${amount} ${material}`)
+      .map(([material, amount]) => `${amount} ${materialName(material as Material)}`)
       .join(', ')
     this.frame.add([
       this.add.rectangle(CENTRE_X, FRAME_H / 2, FRAME_W, FRAME_H, 0x241d15, 0.98).setStrokeStyle(3, 0xc9a227),
@@ -281,7 +285,7 @@ export class EncampmentScene extends Phaser.Scene {
     }
     const level = facility.level > 0 ? `level ${facility.level} of ${facility.maxLevel}` : 'not built'
     const next = facility.next && facility.cost ? `Next: ${facility.next}  Cost: ${describeCost(facility.cost) || 'nothing'}.` : 'It is as great as it gets.'
-    const left = 40
+    const left = 32
     const title = `${facility.name}, ${level}`
     this.detailLines = [title]
     this.frame.add(this.add.text(left, DETAILS_Y - 16, title, { fontFamily: FONT, fontSize: '16px', color: GOLD }))

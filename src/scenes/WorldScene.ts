@@ -12,7 +12,7 @@ import { SAVE_FAILED_MESSAGE, SAVE_WARNED_KEY, deleteSlot, saveGame } from '../g
 import { craftTier } from '../game/crafting.ts'
 import { FORECAST_SLICE_MS, Forecaster, forecastHint, forecastLabel, worldForecastStart, workFor, type Forecast } from '../game/forecast.ts'
 import { isContacted, isSilent, partners } from '../game/trade.ts'
-import { daysToFall, improvementName, siteImprovement } from '../game/territory.ts'
+import { daysToFall, improvementName, materialName, siteImprovement, type Material } from '../game/territory.ts'
 import { UNEXPLORED, knownBlightedShare, visibleHexes } from '../game/vision.ts'
 import {
   encampment,
@@ -36,6 +36,7 @@ import {
 import { HexBoard, hexCorners, hexEquals, hexNeighbors, type Hex } from '../grid/hex.ts'
 import { buttonProbe, type WorldProbe } from '../testHook.ts'
 import type { CraftedData } from './CraftingScene.ts'
+import { STOCK_CHANGED } from './stockNotice.ts'
 import { pauseMusic, playCue, playCues, resumeMusic, startMusic, stopMusic } from './soundPlayer.ts'
 import { WORLD_SOUND_GAP_MS, buttonCue, reportEvents, worldSounds } from './sounds.ts'
 import { WORLD_LAYOUT, boardHexAt, boardHexCenter, boardPixelSize, type Point } from './boardGeometry.ts'
@@ -491,7 +492,9 @@ export class WorldScene extends Phaser.Scene {
     })
 
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this)
+    this.game.events.on(STOCK_CHANGED, this.refreshStatus, this)
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.game.events.off(STOCK_CHANGED, this.refreshStatus, this)
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this)
       this.input.setDefaultCursor('default')
       this.input.keyboard?.removeCapture('HOME')
@@ -1193,6 +1196,21 @@ export class WorldScene extends Phaser.Scene {
     return selectedParty(this.gameState, this.selectedParty)
   }
 
+  /** The header's stock panel: the blight, the stock and the last yield. Also redrawn while an overlay spends the stock. */
+  private refreshStatus(): void {
+    const world = this.world
+    const growth = Math.round((blightGrowth(world.turn) - 1) * 100)
+    const stock = Object.entries(world.stock)
+      .map(([material, amount]) => `${materialName(material as Material)} ${amount}`)
+      .join(', ')
+    this.statusLines = [
+      `Blighted ${Math.round(knownBlightedShare(world) * 100)}% of the land known${growth > 0 ? `, blight +${growth}%` : ''}${world.status === 'endless' ? ' (endless)' : ''}`,
+      `Stock: ${stock || 'nothing yet'}`,
+      ...(this.lastYield ? [this.lastYield] : []),
+    ]
+    this.fitStatus()
+  }
+
   /** Redraws everything that follows the world's state: the party, the header and which buttons show. */
   private refresh(): void {
     const world = this.world
@@ -1212,16 +1230,7 @@ export class WorldScene extends Phaser.Scene {
     this.refreshLabels()
 
     this.turnText.setText(`Turn ${world.turn}`)
-    const growth = Math.round((blightGrowth(world.turn) - 1) * 100)
-    const stock = Object.entries(world.stock)
-      .map(([material, amount]) => `${material} ${amount}`)
-      .join(', ')
-    this.statusLines = [
-      `Blighted ${Math.round(knownBlightedShare(world) * 100)}% of the land known${growth > 0 ? `, blight +${growth}%` : ''}${world.status === 'endless' ? ' (endless)' : ''}`,
-      `Stock: ${stock || 'nothing yet'}`,
-      ...(this.lastYield ? [this.lastYield] : []),
-    ]
-    this.fitStatus()
+    this.refreshStatus()
     this.column.refresh(this.active)
     this.partyList.refresh(this.listedParties(), this.selectedParty)
     for (const button of this.buttons) button.setVisible(here !== null && !this.walking && world.status !== 'lost')

@@ -190,7 +190,7 @@ export function runeStats(rune: RuneId, rank: Rank, cls: SlotClass): ItemStats {
   return RUNES[rune].effect[cls](rank)
 }
 
-export const SOCKETS_BY_TIER: Record<Tier, number> = { 1: 0, 2: 1 }
+export const SOCKETS_BY_TIER: Record<Tier, number> = { 1: 0, 2: 1, 3: 1, 4: 2, 5: 2 }
 export const MAX_SOCKETS = 3
 
 /**

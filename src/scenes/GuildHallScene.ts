@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { materialName, type Material } from '../game/territory.ts'
 import type { Character } from '../character/character.ts'
 import { canAdvance } from '../character/progression.ts'
 import type { CharacterDraft } from '../character/creation.ts'
@@ -197,7 +198,7 @@ export class GuildHallScene extends Phaser.Scene {
     const { world } = this.gameState
     const stock = Object.entries(world.stock)
       .filter(([, amount]) => amount)
-      .map(([material, amount]) => `${amount} ${material}`)
+      .map(([material, amount]) => `${amount} ${materialName(material as Material)}`)
       .join(', ')
     this.frame.add([
       this.add.rectangle(CENTRE_X, FRAME_H / 2, FRAME_W, FRAME_H, 0x241d15, 0.98).setStrokeStyle(3, 0xc9a227),

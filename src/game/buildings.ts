@@ -3,7 +3,7 @@ import { blightAt, type WorldEvent } from './blight.ts'
 import { act } from './company.ts'
 import type { Expedition } from './expedition.ts'
 import type { GameState } from './gameState.ts'
-import { capitalised, improvementName, isPluralName, siteImprovement, withArticle, type ImprovementLevel, type Material, type Stock } from './territory.ts'
+import { capitalised, improvementName, isPluralName, materialName, siteImprovement, withArticle, type ImprovementLevel, type Material, type Stock } from './territory.ts'
 import { ENCAMPMENT_ID, encampmentName, locationAt, monstersHere, worldActive, type QuietLocation, type WorldState } from './worldMap.ts'
 
 /**
@@ -45,7 +45,7 @@ export function spend(stock: Stock, cost: Stock): void {
 /** "10 timber, 5 stone". */
 export function describeCost(cost: Stock): string {
   return Object.entries(cost)
-    .map(([material, amount]) => `${amount} ${material}`)
+    .map(([material, amount]) => `${amount} ${materialName(material as Material)}`)
     .join(', ')
 }
 

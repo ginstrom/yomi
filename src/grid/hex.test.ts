@@ -283,3 +283,129 @@ describe('areaOf', () => {
     expect(line[0]).toEqual(hex(1, 0))
   })
 })
+
+/**
+ * `reachableHexes` as it stood before long-campaign stage 10 step 07 made it
+ * faster (2cdd885), copied unchanged: the reference the faster one must match
+ * hex for hex, path for path and in the map's order, ties included.
+ */
+function reachableHexesBefore(
+  start: Hex,
+  maxSteps: number,
+  passable: (h: Hex) => boolean,
+  provokers: (from: Hex, to: Hex) => readonly string[] = () => [],
+): Map<string, Hex[]> {
+  type Entry = { hex: Hex; path: Hex[]; provoked: ReadonlySet<string> }
+  const isSubset = (a: ReadonlySet<string>, b: ReadonlySet<string>) => [...a].every((id) => b.has(id))
+  const paths = new Map<string, Hex[]>()
+  const seen = new Set([hexKey(start)])
+  let frontier: Entry[] = [{ hex: start, path: [], provoked: new Set() }]
+  for (let step = 0; step < maxSteps && frontier.length > 0; step++) {
+    const next = new Map<string, Entry[]>()
+    for (const { hex: from, path, provoked } of frontier) {
+      for (const n of hexNeighbors(from)) {
+        const key = hexKey(n)
+        if (seen.has(key) || !passable(n)) continue
+        const leaving = new Set([...provoked, ...provokers(from, n)])
+        const kept = next.get(key) ?? []
+        if (kept.some((e) => isSubset(e.provoked, leaving))) continue
+        const better = kept.filter((e) => !isSubset(leaving, e.provoked))
+        next.set(key, [...better, { hex: n, path: [...path, n], provoked: leaving }])
+      }
+    }
+    for (const [key, kept] of next) {
+      seen.add(key)
+      const best = kept.reduce((a, b) => (b.provoked.size < a.provoked.size ? b : a))
+      paths.set(key, best.path)
+    }
+    frontier = [...next.values()].flat()
+  }
+  return paths
+}
+
+describe('reachableHexes against its version before stage 10 step 07', () => {
+  const board = new HexBoard({ cols: 14, rows: 10 })
+
+  /** Random walls and foes on the board, seeded; a start on an open hex. */
+  function field(seed: number) {
+    const rng = mulberry32(seed)
+    const wall = new Set(board.hexes.filter(() => rng() < 0.15).map(hexKey))
+    const open = board.hexes.filter((h) => !wall.has(hexKey(h)))
+    const start = open[Math.floor(rng() * open.length)]
+    const foes = Array.from({ length: 1 + Math.floor(rng() * 6) }, (_, i) => ({ id: `f${i}`, at: open[Math.floor(rng() * open.length)] }))
+    const passable = (h: Hex) => board.contains(h) && !wall.has(hexKey(h)) && !foes.some((f) => hexEquals(f.at, h))
+    return { rng, start, foes, passable }
+  }
+
+  it('gives the same paths in the same order with zones of control (foes provoked on leaving their side)', () => {
+    for (let seed = 1; seed <= 400; seed++) {
+      const { start, foes, passable } = field(seed)
+      const zones = (from: Hex, to: Hex) => foes.filter((f) => hexDistance(f.at, from) === 1 && hexDistance(f.at, to) > 1).map((f) => f.id)
+      for (const steps of [3, 6, 10]) {
+        expect([...reachableHexes(start, steps, passable, zones)]).toEqual([...reachableHexesBefore(start, steps, passable, zones)])
+      }
+    }
+  })
+
+  it('gives the same paths in the same order where routes tie: overlapping, repeated and unordered ids on many steps', () => {
+    let ties = 0
+    for (let seed = 1; seed <= 400; seed++) {
+      const { rng, start, passable } = field(seed)
+      // Each step provokes a fixed, seeded handful of a few ids (some twice, in any order), so many
+      // routes reach a hex with sets of the same size that are not subsets of each other.
+      const ids = ['a', 'b', 'c', 'd']
+      const salt = Math.floor(rng() * 1e9)
+      const provokers = (from: Hex, to: Hex) => {
+        const pick = mulberry32((hexIndexOf(from) * 31 + hexIndexOf(to) * 7 + salt) >>> 0)
+        return ids.filter(() => pick() < 0.3).concat(pick() < 0.2 ? ['a'] : [])
+      }
+      for (const steps of [4, 8]) {
+        const expected = reachableHexesBefore(start, steps, passable, provokers)
+        expect([...reachableHexes(start, steps, passable, provokers)]).toEqual([...expected])
+        ties += countTies(start, steps, passable, provokers)
+      }
+    }
+    // The ties are there to be broken: hexes reached by two or more kept routes of the fewest provoked.
+    expect(ties).toBeGreaterThan(1000)
+  })
+
+  it('gives the same as before with no provokers (the world map and the default)', () => {
+    for (let seed = 1; seed <= 100; seed++) {
+      const { start, passable } = field(seed)
+      expect([...reachableHexes(start, 12, passable)]).toEqual([...reachableHexesBefore(start, 12, passable)])
+    }
+  })
+})
+
+function hexIndexOf(h: Hex): number {
+  return (h.q + 100) * 1000 + (h.r + 100)
+}
+
+/** Hexes where, in the version before, two or more kept routes share the fewest provoked ids (a tie the reduce breaks). */
+function countTies(start: Hex, maxSteps: number, passable: (h: Hex) => boolean, provokers: (from: Hex, to: Hex) => readonly string[]): number {
+  type Entry = { hex: Hex; provoked: ReadonlySet<string> }
+  const isSubset = (a: ReadonlySet<string>, b: ReadonlySet<string>) => [...a].every((id) => b.has(id))
+  const seen = new Set([hexKey(start)])
+  let frontier: Entry[] = [{ hex: start, provoked: new Set() }]
+  let ties = 0
+  for (let step = 0; step < maxSteps && frontier.length > 0; step++) {
+    const next = new Map<string, Entry[]>()
+    for (const { hex: from, provoked } of frontier) {
+      for (const n of hexNeighbors(from)) {
+        const key = hexKey(n)
+        if (seen.has(key) || !passable(n)) continue
+        const leaving = new Set([...provoked, ...provokers(from, n)])
+        const kept = next.get(key) ?? []
+        if (kept.some((e) => isSubset(e.provoked, leaving))) continue
+        next.set(key, [...kept.filter((e) => !isSubset(leaving, e.provoked)), { hex: n, provoked: leaving }])
+      }
+    }
+    for (const [key, kept] of next) {
+      seen.add(key)
+      const fewest = Math.min(...kept.map((e) => e.provoked.size))
+      if (kept.filter((e) => e.provoked.size === fewest).length > 1) ties++
+    }
+    frontier = [...next.values()].flat()
+  }
+  return ties
+}

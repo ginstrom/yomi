@@ -346,7 +346,13 @@ describe.each([
       expect(foes.map((u) => encounter.kinds[u.id])).toEqual(kinds.slice(0, foes.length))
       for (const u of foes) {
         const kind = encounter.kinds[u.id] as BanditKind
-        expect(u.stats).toEqual({ ...banditStats(BANDIT_ROLE[kind], threat, { tier: 2, grade: 3 }), name: u.stats.name })
+        // Masterwork steel at 8; long-campaign stage 10: Fine mithril at 9 to 11, Fine adamant at 12 to 17, Masterwork starmetal from 18.
+        const gear =
+          threat >= 18 ? ({ tier: 5, grade: 3 } as const)
+          : threat >= 12 ? ({ tier: 4, grade: 2 } as const)
+          : threat >= 9 ? ({ tier: 3, grade: 2 } as const)
+          : ({ tier: 2, grade: 3 } as const)
+        expect(u.stats).toEqual({ ...banditStats(BANDIT_ROLE[kind], threat, gear), name: u.stats.name })
       }
     }
     expect(enemies(band.min)[0].stats.name).toBe(names[0])

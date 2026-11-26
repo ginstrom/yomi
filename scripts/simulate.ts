@@ -27,7 +27,7 @@ import { POLICIES, isPolicyName, type PolicyName } from '../src/engine/policies.
 import { autoAdvance, levelUp, planFor, PLAN_IDS, type PlanId } from '../src/character/progression.ts'
 import type { Character } from '../src/character/character.ts'
 import { calling, capstoneOf, type PathId } from '../src/character/trees.ts'
-import type { PerkId } from '../src/character/perks.ts'
+import { attributesOf, type PerkId } from '../src/character/perks.ts'
 import { SKILL_IDS, type SkillId } from '../src/character/skills.ts'
 import { ABILITY_IDS, type AbilityId } from '../src/combat/abilities.ts'
 import { ENCOUNTERS, heroId, xpReward, type EncounterId } from '../src/game/encounters.ts'
@@ -51,7 +51,7 @@ import {
   towerHexRefusal,
 } from '../src/game/buildings.ts'
 import { ABANDON_AFTER, GUARD_RADIUS, ROUTE_TIMBER, isContacted, openRoute, openRouteRefusal, partners, raiders, roadTo, routeLimit, routeOf } from '../src/game/trade.ts'
-import { WORKSHOP_COSTS, craft, craftRefusal, craftTier, highestGrade, upgradeWorkshop } from '../src/game/crafting.ts'
+import { FORGE_LEVEL, WORKSHOP_COSTS, craft, craftRefusal, craftTier, forge, forgeCost, forgeOptions, highestGrade, temper, temperCost, temperRefusal, upgradeWorkshop, type ForgeOption } from '../src/game/crafting.ts'
 import { MAX_PARTIES, presenceOf, type DayAction, type Expedition } from '../src/game/expedition.ts'
 import { newGame, partyById, type GameState } from '../src/game/gameState.ts'
 import {
@@ -105,14 +105,15 @@ import {
   type WorldState,
 } from '../src/game/worldMap.ts'
 import { HexBoard, hexDistance, hexEquals, type Hex } from '../src/grid/hex.ts'
-import type { FamilyId } from '../src/inventory/catalog.ts'
+import type { FamilyId, Tier } from '../src/inventory/catalog.ts'
+import type { ItemStats } from '../src/inventory/inventory.ts'
 import { GRADES, type Grade } from '../src/inventory/grades.ts'
-import { baseItem, craftedItem, itemById, type EquipmentSlot, type Item } from '../src/inventory/inventory.ts'
+import { baseItem, craftedItem, itemById, strengthShortfall, type EquipmentSlot, type Item } from '../src/inventory/inventory.ts'
 import { MODIFIERS, type ModifierId } from '../src/inventory/modifiers.ts'
-import { RANKS, pouchCount, pouchKeys, runeFits, runeKey, slotClass, socketsOf, type RuneId, type RuneKey, type SlotClass } from '../src/inventory/runes.ts'
+import { RANKS, pouchCount, pouchKeys, runeFits, runeKey, slotClass, socketsOf, type Rank, type RuneId, type RuneKey, type SlotClass } from '../src/inventory/runes.ts'
 import { clampHp, maxHp } from '../src/character/character.ts'
-import { replaceAt, type ItemPlace } from '../src/game/itemPlace.ts'
-import { takeRunes } from '../src/game/loot.ts'
+import { removeAt, replaceAt, type ItemPlace } from '../src/game/itemPlace.ts'
+import { takeRunes, takeTrophies } from '../src/game/loot.ts'
 import { embed, extract, extractCost, extractRefusal, fuse, fuseCost, fuseRefusal, embedCost } from '../src/game/runecraft.ts'
 import { buyRune, buyRuneRefusal, runePrice, runeWares } from '../src/game/tradingPost.ts'
 
@@ -477,6 +478,8 @@ export interface CampaignRecord {
   socketsFilled: number
   /** Gold spent on runes: buying, fusing, embedding and extracting. */
   goldOnRunes: number
+  /** Gold spent forging and tempering at the workshop (tiers 3 to 5). */
+  goldOnForging: number
   /** Each member's level when the campaign ended. */
   finalLevels: number[]
   /** The vanguard's heroes at the end: how many have each path as a calling (the deepest, a tie counting every tied path), and how many hold each capstone. */
@@ -486,6 +489,10 @@ export interface CampaignRecord {
   deathsAtLevel: number[]
   /** For 5, 10, 15 and 20: how many battles had been fought when the party's lowest level first reached it; absent if never. */
   battlesToLevel: Partial<Record<LevelMark, number>>
+  /** At the same moments as `battlesToLevel`: each of the party's members' kit (`kitNote`); absent if never. */
+  kitAtLevel: Partial<Record<LevelMark, KitNote[]>>
+  /** The marks of `kitAtLevel` reached with the workshop able to forge (level `FORGE_LEVEL[3]`, 4, or more); absent while none (report only). */
+  forgeReadyAt?: LevelMark[]
   /** By role: battles fought, battles lost (each a party wiped), and each party's member levels at the end, in list order. */
   roles: Record<Role, { battles: number; wipes: number; finalLevels: number[][] }>
   /** Parties wiped out in a lost battle, of any role. */
@@ -506,6 +513,75 @@ export type Role = 'vanguard' | 'guard'
 /** The levels a campaign's record notes the battles to. */
 export const LEVEL_MARKS = [5, 10, 15, 20] as const
 export type LevelMark = (typeof LEVEL_MARKS)[number]
+
+/** What the careful party arms a hero as (gear §5.8): by the hero's first tagged skill. */
+export type KitRole = 'fighter' | 'archer' | 'mage'
+
+const KIT_ROLES: readonly KitRole[] = ['fighter', 'archer', 'mage']
+const KIT_ROLE: Record<SkillId, KitRole> = { melee: 'fighter', archery: 'archer', magic: 'mage' }
+
+/** A hero's kit role: its first tagged skill, melee a fighter, archery an archer, magic a mage (a recruit's is its pre-roll's). */
+export function kitRole(character: Character): KitRole {
+  return KIT_ROLE[character.tagged[0] ?? 'melee']
+}
+
+/** The kit a hero of a level should have (gear §5.8): its main hand's tier, and ranges of grade, runes filled across its worn gear and their rank. */
+export interface ExpectedKit {
+  tier: Tier
+  grades: readonly [Grade, Grade]
+  sockets: readonly [number, number]
+  ranks: readonly [Rank, Rank]
+}
+
+const EXPECTED_KIT: readonly ExpectedKit[] = [
+  { tier: 1, grades: [1, 2], sockets: [0, 0], ranks: [1, 1] },
+  { tier: 2, grades: [2, 3], sockets: [1, 2], ranks: [1, 2] },
+  { tier: 3, grades: [2, 2], sockets: [2, 3], ranks: [2, 2] },
+  { tier: 4, grades: [2, 3], sockets: [3, 4], ranks: [2, 3] },
+  { tier: 5, grades: [3, 3], sockets: [4, 6], ranks: [3, 4] },
+]
+
+/**
+ * Gear §5.8's expected kit at `level` (below 1 as 1, above 20 as 20), the same
+ * for every role: levels 1–4, 5–8, 9–12, 13–16 and 17–20 a row each. The
+ * yardstick the record's kit is printed against.
+ */
+export function expectedKit(level: number): ExpectedKit {
+  const clamped = Math.min(20, Math.max(1, Math.floor(level)))
+  return EXPECTED_KIT[Math.floor((clamped - 1) / 4)]
+}
+
+/** One hero's kit as the record notes it: its role, its main hand's tier (0 for an enchanted item or none) and the runes across its worn gear. */
+export interface KitNote {
+  role: KitRole
+  tier: number
+  sockets: number
+}
+
+/** The kit of `character` now, for the record. */
+export function kitNote(character: Character): KitNote {
+  const main = character.equipment.mainHand
+  return { role: kitRole(character), tier: (main && baseItem(main) && main.tier) || 0, sockets: runesWorn(character) }
+}
+
+/**
+ * Notes each mark of `LEVEL_MARKS` the party's lowest level reaches for the
+ * first time: the battles fought so far and each member's kit, and, when the
+ * `workshop` can forge then, the mark in `forgeReadyAt` (report only).
+ */
+export function noteMarks(record: CampaignRecord, members: Party, battles: number, workshop: number): void {
+  for (const mark of LEVEL_MARKS) {
+    if (record.battlesToLevel[mark] !== undefined || lowestLevel(members) < mark) continue
+    record.battlesToLevel[mark] = battles
+    record.kitAtLevel[mark] = members.map(kitNote)
+    if (workshop >= FORGE_LEVEL[3]) (record.forgeReadyAt ??= []).push(mark)
+  }
+}
+
+/** The runes embedded across a hero's worn gear. */
+function runesWorn(character: Character): number {
+  return Object.values(character.equipment).reduce((n, item) => n + (item?.runes?.length ?? 0), 0)
+}
 
 export interface Campaign {
   battles: LoggedEvent[][]
@@ -632,6 +708,8 @@ export interface Trade {
   runesFused: number
   runesEmbedded: number
   goldOnRunes: number
+  /** Gold spent forging and tempering. */
+  goldOnForging: number
   /** The `route_opened` events of the routes opened, for the run to tally. */
   events: WorldEvent[]
 }
@@ -650,12 +728,180 @@ export const PREFERRED_MODIFIERS: Readonly<Partial<Record<FamilyId, readonly Mod
   battle_axe: ['light', 'bearded'],
   greatsword: ['balanced'],
   bow: ['recurve', 'long'],
+  // Stage 10's forged crossbow (decision 13, a first value): Long is the one modifier that fits it, the bow's second.
+  crossbow: ['long'],
   shield: ['braced'],
   breastplate: ['reinforced'],
 }
 
-/** The slots whose gear the careful party buys better grades of and crafts: its weapon, shield and armour. */
+/** The slots whose gear the careful party buys better grades of at the trading post: its weapon, shield and armour. */
 const GEAR_SLOTS: readonly EquipmentSlot[] = ['mainHand', 'offHand', 'armor']
+
+/** Every slot the careful party crafts on and fills sockets in: the trading post's three, then the small slots it forges (stage 10). */
+const WORN_SLOTS: readonly EquipmentSlot[] = [...GEAR_SLOTS, 'head', 'gloves', 'boots']
+
+/** The order the careful party forges and tempers in (gear §5.8 step 2): every member's main hand, then body armour, shield and the small slots. */
+export const FORGE_SLOTS: readonly EquipmentSlot[] = ['mainHand', 'armor', 'offHand', 'head', 'gloves', 'boots']
+
+/** The lead foe's resistance from which the careful party's fighter wants the war hammer (decision 13). */
+export const HAMMER_RESISTANCE = 4
+
+/**
+ * The resistance of the lead foe (the first enemy unit) of `target`'s
+ * encounter, built for `party` at the target's threat; 0 without a target.
+ * Building an encounter draws nothing.
+ */
+export function leadFoeResistance(party: Expedition, target: MonsterLocation | null): number {
+  if (!target) return 0
+  const { setup } = ENCOUNTERS[target.encounter](partyFighters(party.members), target.threat)
+  return setup.units.find((unit) => unit.side === 'enemy')?.stats.resistance ?? 0
+}
+
+/**
+ * How the careful party ranks body armour and the small slots' families
+ * (decision 13): armour class, plus 5 for each point of resistance, plus the
+ * to-hit bonus. An armour of `apPenalty` is never wanted (a lost action point
+ * each turn outweighs it), nor one whose strength the wearer lacks.
+ */
+export function armourScore(stats: ItemStats): number {
+  return (stats.acBonus ?? 0) + 5 * (stats.resistance ?? 0) + (stats.toHit ?? 0)
+}
+
+/**
+ * Whether the careful party's policy (gear §5.8 step 1, tier 3 and up) wants
+ * `hero` in `family` in `slot`, at an item of these `stats`:
+ * - the main hand: the fighter a longsword, or a war hammer when the lead foe's
+ *   resistance (`leadResistance`) is `HAMMER_RESISTANCE` or more; the archer a
+ *   crossbow; the mage a staff (the main hand's strength is not weighed: the
+ *   ready-made fighter and Garrick, the one melee pre-roll besides, carry any hammer);
+ * - the off hand: the fighter's shield; the archer's and mage's hands are full;
+ * - body armour: the mage's robe; the others any family whose strength they have
+ *   and which costs no action point (ranked by `armourScore`);
+ * - the small slots: the mage's hide (cap, gloves, boots); the others any family
+ *   whose strength they have (ranked by `armourScore`).
+ */
+export function wantsFamily(hero: Character, slot: EquipmentSlot, family: FamilyId, stats: ItemStats, leadResistance: number): boolean {
+  const role = kitRole(hero)
+  const strong = strengthShortfall(attributesOf(hero).strength, stats) === 0
+  switch (slot) {
+    case 'mainHand':
+      if (role === 'archer') return family === 'crossbow'
+      if (role === 'mage') return family === 'staff'
+      return family === (leadResistance >= HAMMER_RESISTANCE ? 'war_hammer' : 'longsword')
+    case 'offHand':
+      return role === 'fighter' && family === 'shield'
+    case 'armor':
+      return role === 'mage' ? family === 'robe' : strong && !stats.apPenalty
+    default:
+      return role === 'mage' ? ['cap', 'gloves', 'boots'].includes(family) : strong
+  }
+}
+
+/**
+ * The item the careful party would forge for `member`'s `slot` now (gear §5.8
+ * steps 1 and 2, tiers 3 to 5): of the families it wants (`wantsFamily`), the
+ * forge option the stock affords of the highest tier, then the best
+ * `armourScore`, then the first in `forgeOptions`' order. Null when none is
+ * affordable, or when it is not of a higher tier than the worn item (none
+ * counting 0): a family switch, such as the fighter's longsword and war hammer
+ * as the lead foe's resistance crosses `HAMMER_RESISTANCE` between visits,
+ * waits for the next tier, so the weapon never flips back and forth.
+ */
+export function forgeChoice(game: GameState, party: Expedition, member: number, slot: EquipmentSlot, leadResistance: number): ForgeOption | null {
+  const hero = party.members[member]
+  const worn = hero.equipment[slot]
+  // A two-handed weapon leaves no hand for a shield.
+  if (slot === 'offHand' && hero.equipment.mainHand?.stats?.twoHanded) return null
+  let best: ForgeOption | null = null
+  for (const option of forgeOptions(game, party, slot)) {
+    if (option.refusal !== null || !wantsFamily(hero, slot, option.family, option.item.stats ?? {}, leadResistance)) continue
+    const better = !best || option.tier > best.tier || (option.tier === best.tier && armourScore(option.item.stats ?? {}) > armourScore(best.item.stats ?? {}))
+    if (better) best = option
+  }
+  if (!best) return null
+  const wornTier = (worn && baseItem(worn) && worn.tier) || 0
+  return best.tier > wornTier ? best : null
+}
+
+/**
+ * Puts `item` on `member` in `slot`, the worn one (and, for a two-handed main
+ * hand, the shield) into the baggage to be sold: each old item's runes taken
+ * out first where the workshop can, else sold with it. Returns the gold spent
+ * taking runes out.
+ */
+function wear(game: GameState, party: Expedition, member: number, slot: EquipmentSlot, item: Item): number {
+  const hero = party.members[member]
+  let gold = 0
+  const takeOff = (from: EquipmentSlot) => {
+    for (let old = hero.equipment[from]; old?.runes?.length; old = hero.equipment[from]) {
+      const place = { from: 'worn', party: party.id, member, slot: from, itemId: old.id } as const
+      if (extractRefusal(game, place, 0) !== null) break
+      gold += extractCost(old.runes[0]).gold ?? 0
+      extract(game, place, 0)
+    }
+    return hero.equipment[from]
+  }
+  if (slot === 'mainHand' && item.stats?.twoHanded && hero.equipment.offHand) {
+    const shield = takeOff('offHand')!
+    removeAt(game, { from: 'worn', party: party.id, member, slot: 'offHand', itemId: shield.id })
+    party.baggage.push(shield)
+  }
+  const old = takeOff(slot)
+  if (old) {
+    replaceAt(game, { from: 'worn', party: party.id, member, slot, itemId: old.id }, item)
+    party.baggage.push(old)
+  } else {
+    const before = maxHp(hero)
+    hero.equipment[slot] = item
+    clampHp(hero, before)
+  }
+  return gold
+}
+
+/**
+ * Forges for every member, slot by slot in `FORGE_SLOTS` order (each slot for
+ * every member in party order before the next), what `forgeChoice` picks, and
+ * wears it, the old item to the baggage. Returns the forge gold spent and the
+ * gold spent taking runes out.
+ */
+export function forgeGear(game: GameState, party: Expedition, leadResistance: () => number): { gold: number; runeGold: number; forged: number } {
+  const done = { gold: 0, runeGold: 0, forged: 0 }
+  if (craftTier(game.world, party) === 'field' || forgeOptions(game, party).length === 0) return done
+  const lead = leadResistance()
+  for (const slot of FORGE_SLOTS) {
+    for (const member of party.members.keys()) {
+      const choice = forgeChoice(game, party, member, slot, lead)
+      if (!choice || forge(game, party, choice.family, choice.material) !== null) continue
+      done.gold += forgeCost(choice.family, choice.material).gold ?? 0
+      done.forged++
+      done.runeGold += wear(game, party, member, slot, party.baggage.pop()!)
+    }
+  }
+  return done
+}
+
+/**
+ * Tempers every member's worn tier-3+ items, slot by slot in `FORGE_SLOTS`
+ * order (every main hand first), each to the best grade the stock affords.
+ * Returns the gold spent.
+ */
+export function temperGear(game: GameState, party: Expedition): number {
+  let gold = 0
+  for (const slot of FORGE_SLOTS) {
+    for (const [member, hero] of party.members.entries()) {
+      const item = hero.equipment[slot]
+      if (!item) continue
+      for (const grade of [...GRADES].reverse()) {
+        const place = { from: 'worn', party: party.id, member, slot, itemId: item.id } as const
+        if (temperRefusal(game, place, grade) !== null) continue
+        gold += temperCost(item, grade).gold ?? 0
+        temper(game, place, grade)
+        break
+      }
+    }
+  }
+  return gold
+}
 
 /** How a modifier at a grade ranks for an item: lower is better; an item without one ranks last. */
 function modifierRank(family: FamilyId | undefined, mod: { id: ModifierId; grade: Grade } | undefined): number {
@@ -674,7 +920,7 @@ function modifierRank(family: FamilyId | undefined, mod: { id: ModifierId; grade
 function eachWantedCraft(game: GameState, party: Expedition, done: () => boolean, attempt: (place: ItemPlace, modifier: ModifierId, grade: Grade) => boolean): void {
   const tier = craftTier(game.world, party)
   for (const [member, hero] of party.members.entries()) {
-    for (const slot of GEAR_SLOTS) {
+    for (const slot of WORN_SLOTS) {
       const item = hero.equipment[slot]
       const base = item && baseItem(item)
       if (!item || !base || done()) continue
@@ -778,19 +1024,22 @@ export function runecraftGear(game: GameState, party: Expedition): { embedded: n
   const done = { embedded: 0, fused: 0, bought: 0, gold: 0 }
   const { world } = game
   if (craftTier(world, party) === 'field') return done
-  for (const key of pouchKeys(game.runes)) {
-    if (!key.endsWith('1')) continue
-    while (fuseRefusal(game, party, key) === null) {
-      done.gold += fuseCost(key).gold ?? 0
-      fuse(game, party, key)
-      done.fused++
+  // Each rank in turn, from the Lesser up, so that a rune fused to rank 2 may be fused again where the workshop allows.
+  for (const rank of RANKS) {
+    for (const key of pouchKeys(game.runes)) {
+      if (!key.endsWith(String(rank))) continue
+      while (fuseRefusal(game, party, key) === null) {
+        done.gold += fuseCost(key).gold ?? 0
+        fuse(game, party, key)
+        done.fused++
+      }
     }
   }
   const sold = runeWares(world)
   const claimed: Partial<Record<RuneKey, number>> = {}
   const unclaimed = (key: RuneKey) => pouchCount(game.runes, key) - (claimed[key] ?? 0)
   for (const hero of party.members) {
-    for (const slot of GEAR_SLOTS) {
+    for (const slot of WORN_SLOTS) {
       const item = hero.equipment[slot]
       if (!item) continue
       const kinds = RUNE_ORDER[slotClass(slot)]
@@ -809,7 +1058,7 @@ export function runecraftGear(game: GameState, party: Expedition): { embedded: n
     }
   }
   for (const [member, hero] of party.members.entries()) {
-    for (const slot of GEAR_SLOTS) {
+    for (const slot of WORN_SLOTS) {
       for (let item = hero.equipment[slot]; item && (item.runes?.length ?? 0) < socketsOf(item); item = hero.equipment[slot]) {
         const key = nextRune(item, RUNE_ORDER[slotClass(slot)], (k) => pouchCount(game.runes, k))
         if (!key || embed(game, { from: 'worn', party: party.id, member, slot, itemId: item.id }, key).refusal !== null) break
@@ -840,21 +1089,29 @@ export function lodgeCap(world: WorldState): number {
   return world.routes.length > 0 ? MAX_LODGE_LEVEL : ROAD_LODGE_LEVEL - 1
 }
 
+/** Stock the careful party never sells as surplus: the ores and woods of tiers 3 to 5, and the trophies, which forging, tempering and the workshop's levels spend. */
+export const NEVER_SOLD: ReadonlySet<Material> = new Set<Material>([
+  'mithril', 'adamant', 'starmetal', 'elderwood', 'wyrmwood', 'heartwood', 'wolfhide', 'wyvern_hide', 'basilisk_scale', 'drake_scale',
+])
+
 /**
  * At the encampment, after the guild hall: sells the baggage (the careful
  * party fights without loot, so all of it is surplus) and the materials
- * beyond `materialNeeds`; raises the trading post, the workshop and the
+ * beyond `materialNeeds` (never those of `NEVER_SOLD`); raises the trading post, the workshop and the
  * infirmary as the stock allows; opens routes to the contacted partners
- * (`routeChoices`); raises the Builders' Lodge (to `lodgeCap`); buys each member the best grade it can of
- * its weapon, shield and armour, the old one sold (its runes taken out first
- * where the workshop can, else sold with it); fuses, buys and embeds runes (`runecraftGear`);
- * crafts the best it can on them (`craftGear`); and raises the shrine with
- * what is left.
+ * (`routeChoices`); raises the Builders' Lodge (to `lodgeCap`); forges, from a
+ * level 4 workshop, the families of each member's role at tiers 3 to 5 (`forgeGear`);
+ * buys each member the best grade it can of its weapon, shield and armour of
+ * tiers 1 and 2 (the dearest of the worn family the post sells), the old one sold (its runes taken out first
+ * where the workshop can, else sold with it); tempers the tier-3+ gear (`temperGear`);
+ * fuses, buys and embeds runes (`runecraftGear`); crafts the best it can on
+ * the gear (`craftGear`); and raises the shrine with what is left.
+ * `target` is the party's next target, read for the fighter's war hammer.
  */
-export function visitFacilities(game: GameState, party: Expedition, parties = 1): Trade {
+export function visitFacilities(game: GameState, party: Expedition, parties = 1, target: () => MonsterLocation | null = () => nextTarget(game.world, party)): Trade {
   const { world } = game
   const trade: Trade = {
-    goldOnGear: 0, goldFromSales: 0, crafted: 0, tierTwoBought: 0, runesBought: 0, runesFused: 0, runesEmbedded: 0, goldOnRunes: 0, events: [],
+    goldOnGear: 0, goldFromSales: 0, crafted: 0, tierTwoBought: 0, runesBought: 0, runesFused: 0, runesEmbedded: 0, goldOnRunes: 0, goldOnForging: 0, events: [],
   }
   const gold = () => world.stock.gold ?? 0
   const sellAll = () => {
@@ -868,7 +1125,7 @@ export function visitFacilities(game: GameState, party: Expedition, parties = 1)
   for (const [material, amount] of Object.entries(world.stock) as [Material, number][]) {
     const surplus = amount - (needs[material] ?? 0)
     const lots = surplus - (surplus % 2)
-    if (material !== 'gold' && lots >= 2 && sellMaterial(game, party, material, lots) === null) trade.goldFromSales += lots / 2
+    if (material !== 'gold' && !NEVER_SOLD.has(material) && lots >= 2 && sellMaterial(game, party, material, lots) === null) trade.goldFromSales += lots / 2
   }
   while (raiseTradingPost(game, party) === null);
   while (upgradeWorkshop(game, party) === null);
@@ -879,14 +1136,20 @@ export function visitFacilities(game: GameState, party: Expedition, parties = 1)
   }
   // Last of the buildings for the gold; to 2, and to 3 (its roads) once a route is open.
   while (game.world.lodge < lodgeCap(world) && raiseLodge(game, party) === null);
+  // Tiers 3 to 5 at the workshop first, by role (decision 12: from tier 3 only).
+  const forged = forgeGear(game, party, () => leadFoeResistance(party, target()))
+  trade.goldOnForging += forged.gold
+  trade.goldOnRunes += forged.runeGold
   for (const [member, hero] of party.members.entries()) {
     for (const slot of GEAR_SLOTS) {
       const worn = hero.equipment[slot]
       const base = worn && baseItem(worn)
       if (!worn || !base) continue
       if (!worn.family) continue
+      // The post sells tiers 1 and 2 only: a forged item has no price there, and nothing it sells is better.
+      const wornPrice = buyPrice(craftedItem(base, worn.grade ?? 1))
+      if (wornPrice === null) continue
       // The dearest item of the family the post sells that costs more than the worn one (modifier aside); a tie goes to the later, the higher tier or grade.
-      const wornPrice = buyPrice(craftedItem(base, worn.grade ?? 1))!
       let bought: Item | undefined
       for (const candidate of wares(world, { family: worn.family })) {
         const price = buyPrice(candidate)!
@@ -897,19 +1160,12 @@ export function visitFacilities(game: GameState, party: Expedition, parties = 1)
       if (bought.tier === 2) trade.tierTwoBought += 1
       party.baggage.pop()
       // The old item's runes come back to the pouch where the workshop can take them out; any left are sold with it.
-      for (let old = worn; old.runes?.length; old = hero.equipment[slot]!) {
-        const place = { from: 'worn', party: party.id, member, slot, itemId: old.id } as const
-        if (extractRefusal(game, place, 0) !== null) break
-        trade.goldOnRunes += extractCost(old.runes[0]).gold ?? 0
-        extract(game, place, 0)
-      }
-      const old = hero.equipment[slot]!
-      replaceAt(game, { from: 'worn', party: party.id, member, slot, itemId: old.id }, bought)
-      party.baggage.push(old)
+      trade.goldOnRunes += wear(game, party, member, slot, bought)
     }
   }
-  // What was replaced is sold before the runes and the crafts, which the gold may pay for.
+  // What was replaced is sold before the tempering, the runes and the crafts, which the gold may pay for.
   sellAll()
+  trade.goldOnForging += temperGear(game, party)
   const runes = runecraftGear(game, party)
   trade.runesBought += runes.bought
   trade.runesFused += runes.fused
@@ -1188,8 +1444,8 @@ export function startCampaign(campaign: number, seed: number, args: CliArgs, fir
     outcome: 'timeout', days: 0, battles: 0, spawns: 0, captured: 0, lost: 0, blighted: 0, healedHp: 0, campDays: 0,
     towersBuilt: 0, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0,
     tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 0, fieldCraftDays: 0,
-    runesFound: 0, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0,
-    finalLevels: [], callings: {}, capstones: {}, deathsAtLevel: [], battlesToLevel: {},
+    runesFound: 0, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, goldOnForging: 0,
+    finalLevels: [], callings: {}, capstones: {}, deathsAtLevel: [], battlesToLevel: {}, kitAtLevel: {},
     roles: { vanguard: { battles: 0, wipes: 0, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } },
     wipes: 0, promotions: 0, vanguardWalkDays: 0, vanguardWalkHomeDays: 0, guardBattles: 0,
     improvementsBuilt: [0, 0, 0], improvementLevels: [0, 0, 0, 0], lodgeLevel: 0, goldBySource: { sites: 0, market: 0, routes: 0, sales: 0 },
@@ -1696,10 +1952,10 @@ function fightAt(run: CampaignRun, party: Expedition, target: MonsterLocation): 
   // The fallen are buried before the experience is given, so each keeps the level it died at.
   record.deathsAtLevel.push(...dead.map((member) => member.level))
   for (const member of members) autoAdvance(member, playerPlan(run.args.plans, member))
-  for (const mark of LEVEL_MARKS) {
-    if (record.battlesToLevel[mark] === undefined && lowestLevel(members) >= mark) record.battlesToLevel[mark] = battles.length
-  }
+  noteMarks(record, members, battles.length, game.world.workshop)
   record.runesFound += takeRunes(game, target.threat, target.encounter, battleSeed).length
+  // None drop this stage (decision 8): `TROPHIES` is empty until stage 11.
+  takeTrophies(game, encounter.kinds)
   clearLocation(game, target.id)
   return 'won'
 }
@@ -1752,7 +2008,7 @@ export function strongestParty(parties: readonly Expedition[]): Expedition {
 
 /** The runes in the worn gear of every member of `parties`. */
 function socketsFilled(parties: readonly Expedition[]): number {
-  return parties.flatMap((party) => party.members).reduce((n, member) => n + Object.values(member.equipment).reduce((m, item) => m + (item?.runes?.length ?? 0), 0), 0)
+  return parties.flatMap((party) => party.members).reduce((n, member) => n + runesWorn(member), 0)
 }
 
 /**
@@ -1777,7 +2033,7 @@ export function carryOut(run: CampaignRun, party: Expedition, decision: Decision
         run.roles.set(formed.party.id, 'guard')
         run.plans.set(formed.party.id, newPlan())
       }
-      const trade = visitFacilities(game, party, run.args.parties)
+      const trade = visitFacilities(game, party, run.args.parties, () => nextTarget(world, party, run.args.readyLevel, takenTargets(run, party)))
       record.goldOnGear += trade.goldOnGear
       record.goldFromSales += trade.goldFromSales
       record.tierTwoBought += trade.tierTwoBought
@@ -1785,6 +2041,7 @@ export function carryOut(run: CampaignRun, party: Expedition, decision: Decision
       record.runesBought += trade.runesBought
       record.runesFused += trade.runesFused
       record.goldOnRunes += trade.goldOnRunes
+      record.goldOnForging += trade.goldOnForging
       tally(run, trade.events)
       return null
     }
@@ -2340,6 +2597,16 @@ export interface CampaignSummary {
   avgRunesFused: number
   avgSocketsFilled: number
   avgGoldOnRunes: number
+  /** Gold spent forging and tempering, a campaign. */
+  avgGoldOnForging: number
+  /**
+   * For each mark, the campaigns whose party reached it (`kitAtLevel`) and, by
+   * kit role, the mean main-hand tier and runes worn of the members of that
+   * role then (a role no member had is absent).
+   */
+  kit: KitSummary[]
+  /** As `kit`, over only the campaigns whose workshop could forge when their party reached the mark (`forgeReadyAt`; report only). */
+  kitForgeReady: KitSummary[]
   /** The party's lowest and highest level at the end, on average; a campaign with no one left is left out. */
   avgLowestFinalLevel: number
   avgHighestFinalLevel: number
@@ -2411,7 +2678,6 @@ export function summarizeCampaigns(events: readonly LoggedEvent[], records: read
   const avg = (of: (record: CampaignRecord) => number) => records.reduce((sum, r) => sum + of(r), 0) / campaigns
   const outcomes: Record<CampaignOutcome, number> = { source: 0, fallen: 0, encampment: 0, timeout: 0 }
   for (const record of records) outcomes[record.outcome]++
-  const mean = (values: readonly number[]) => (values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0)
   const ended = records.filter((r) => r.finalLevels.length > 0)
   const deaths = new Map<number, number>()
   for (const level of records.flatMap((r) => r.deathsAtLevel)) deaths.set(level, (deaths.get(level) ?? 0) + 1)
@@ -2468,6 +2734,9 @@ export function summarizeCampaigns(events: readonly LoggedEvent[], records: read
     avgRunesFused: avg((r) => r.runesFused),
     avgSocketsFilled: avg((r) => r.socketsFilled),
     avgGoldOnRunes: avg((r) => r.goldOnRunes),
+    avgGoldOnForging: avg((r) => r.goldOnForging),
+    kit: LEVEL_MARKS.map((level) => kitSummary(records, level)),
+    kitForgeReady: LEVEL_MARKS.map((level) => kitSummary(records.filter((r) => r.forgeReadyAt?.includes(level)), level)),
     avgLowestFinalLevel: mean(ended.map((r) => Math.min(...r.finalLevels))),
     avgHighestFinalLevel: mean(ended.map((r) => Math.max(...r.finalLevels))),
     deathsByLevel: [...deaths.entries()].sort(([a], [b]) => a - b).map(([level, deaths]) => ({ level, deaths })),
@@ -2510,6 +2779,46 @@ export function tradeLine(
     `Trade: ${n(summary.avgPartnersContacted)} partners contacted; routes ${n(summary.avgRoutesOpened)} opened, ${n(summary.avgRoutesRaided)} raided, ${n(summary.avgRoutesAbandoned)} abandoned a campaign; ` +
     `${n(summary.avgRouteRaidsTold)} raids told, ${n(summary.avgRouteFlickers)} flickers (raided again within ${ABANDON_AFTER * YIELD_DAYS} days of safe), ${n(summary.avgRoutesRaidedLong)} routes raided ${ABANDON_AFTER}+ yield days and kept`
   )
+}
+
+/** A mark's kit: the campaigns whose party reached it and, by kit role, the mean main-hand tier and runes worn of the members of that role then. */
+export interface KitSummary {
+  level: LevelMark
+  campaigns: number
+  roles: Partial<Record<KitRole, { tier: number; sockets: number }>>
+}
+
+/** The mean of `values`, 0 for none. */
+const mean = (values: readonly number[]) => (values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0)
+
+/** The kit at `level` over `records` (those that reached it). */
+function kitSummary(records: readonly CampaignRecord[], level: LevelMark): KitSummary {
+  const reached = records.flatMap((r) => (r.kitAtLevel[level] ? [r.kitAtLevel[level]] : []))
+  const roles: KitSummary['roles'] = {}
+  for (const role of KIT_ROLES) {
+    const notes = reached.flat().filter((note) => note.role === role)
+    if (notes.length > 0) roles[role] = { tier: mean(notes.map((n) => n.tier)), sockets: mean(notes.map((n) => n.sockets)) }
+  }
+  return { level, campaigns: reached.length, roles }
+}
+
+/**
+ * The summary's kit lines, two a mark some campaign reached: each role's mean
+ * main-hand tier and runes worn then, against `expectedKit`'s tier and runes;
+ * then the same over the forge-ready campaigns only, n of the N reaching it.
+ */
+export function kitLines(summary: Pick<CampaignSummary, 'kit' | 'kitForgeReady'>): string[] {
+  const byRole = ({ roles }: KitSummary) => KIT_ROLES.flatMap((role) => (roles[role] ? [`${role} tier ${roles[role].tier.toFixed(1)}, ${roles[role].sockets.toFixed(1)} runes`] : [])).join('; ')
+  return summary.kit
+    .filter(({ campaigns }) => campaigns > 0)
+    .flatMap((kit) => {
+      const expected = expectedKit(kit.level)
+      const ready = summary.kitForgeReady.find((k) => k.level === kit.level)!
+      return [
+        `Kit at ${kit.level} (${kit.campaigns} campaigns): ${byRole(kit)}; expected tier ${expected.tier}, ${expected.sockets[0]}–${expected.sockets[1]} runes`,
+        `Kit at ${kit.level}, forge-ready campaigns: ${ready.campaigns > 0 ? byRole(ready) : 'none'} (${ready.campaigns} of ${kit.campaigns})`,
+      ]
+    })
 }
 
 /** The summary's walking line: the vanguard's walked days a campaign, and those walking home. */
@@ -2610,7 +2919,7 @@ function main(): void {
   if (args.tradingPost !== null) console.log(`Trading post started at level ${args.tradingPost} (--trading-post): a measuring run, read against no band`)
   if (args.waiting) console.log(waitingLine(summary))
   console.log(
-    `Trading post, workshop, infirmary: levels ${summary.avgTradingPostLevel.toFixed(1)}, ${summary.avgWorkshopLevel.toFixed(1)}, ${summary.avgInfirmaryLevel.toFixed(1)} at the end; ${summary.avgGoldOnGear.toFixed(0)} gold on gear and ${summary.avgGoldFromSales.toFixed(0)} from sales, ${summary.avgCrafted.toFixed(1)} items crafted (${summary.avgFieldCraftDays.toFixed(1)} days in the field) a campaign`,
+    `Trading post, workshop, infirmary: levels ${summary.avgTradingPostLevel.toFixed(1)}, ${summary.avgWorkshopLevel.toFixed(1)}, ${summary.avgInfirmaryLevel.toFixed(1)} at the end; ${summary.avgGoldOnGear.toFixed(0)} gold on gear, ${summary.avgGoldOnForging.toFixed(0)} on forging and tempering and ${summary.avgGoldFromSales.toFixed(0)} from sales, ${summary.avgCrafted.toFixed(1)} items crafted (${summary.avgFieldCraftDays.toFixed(1)} days in the field) a campaign`,
   )
   console.log(`Tier-2 items bought: ${summary.avgTierTwoBought.toFixed(1)} a campaign`)
   console.log(
@@ -2629,6 +2938,7 @@ function main(): void {
   console.log(
     `Battles to level ${summary.toLevel.map(({ level, campaigns, avgBattles }) => `${level}: ${campaigns > 0 ? avgBattles.toFixed(1) : '—'} (${campaigns} campaigns)`).join('; ')}`,
   )
+  for (const line of kitLines(summary)) console.log(line)
   console.log(
     `Company (${args.parties} ${args.parties === 1 ? 'party' : 'parties'} allowed, the hall raised to ${hallCap(args.parties)} at most): ${summary.avgWipes.toFixed(1)} parties wiped, ${summary.avgPromotions.toFixed(1)} promotions, ${summary.avgVanguardWalkHomeDays.toFixed(1)} days the vanguard walked home and ${summary.avgGuardBattles.toFixed(1)} guard battles a campaign; the hall at level 4 or more at the end in ${summary.hallFour} campaigns, 5 in ${summary.hallFive}`,
   )

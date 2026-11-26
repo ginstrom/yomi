@@ -46,7 +46,7 @@ describe('the encampment', () => {
 
   it('builds and raises the trading post, workshop and infirmary for their shown costs', () => {
     const game = newGame(undefined, null, 1, 'Hearthold')
-    game.world.stock = { gold: 1000, iron: 100, timber: 100, stone: 100, copper: 100, crystal: 100, peat: 100, salt: 100, silver: 100 }
+    game.world.stock = { gold: 2000, iron: 100, timber: 100, stone: 100, copper: 100, crystal: 100, peat: 100, salt: 100, silver: 100, mithril: 100, adamant: 100, starmetal: 100 }
     for (const id of ['trading_post', 'workshop', 'infirmary'] as const) {
       while (view(game, id).action) {
         const before = { ...game.world.stock }
@@ -58,7 +58,8 @@ describe('the encampment', () => {
         }
       }
     }
-    expect([game.world.tradingPost, game.world.workshop, game.world.infirmary]).toEqual([6, 3, 3])
+    expect([game.world.tradingPost, game.world.workshop, game.world.infirmary]).toEqual([6, 6, 3])
+    expect(view(game, 'workshop').maxLevel).toBe(6)
     expect(view(game, 'trading_post').maxLevel).toBe(6)
     expect(view(game, 'trading_post').effect).toContain('brings 5 gold every 5 days')
     expect(view(game, 'workshop').opens).toBe(true)
@@ -77,10 +78,13 @@ describe('the encampment', () => {
       'Sells plain, Fine and Masterwork gear, and Lesser runes.',
       "Sells plain, Fine and Masterwork gear, in iron and steel, and runes of the first two ranks; brings 2 gold every 5 days, half while Hearthold's land is tainted.",
     ])
-    expect(effects('workshop', [1, 2, 3])).toEqual([
+    expect(effects('workshop', [1, 2, 3, 4, 5, 6])).toEqual([
       'Makes the field modifiers, and Bearded, Keen and Braced, at grade 1. Sets runes, and fuses three Lesser runes into one.',
       'Makes Light, Long and Reinforced too, at up to grade 2. Takes runes out again, for a fee.',
-      'Makes every modifier at up to grade 3.',
+      'Makes every modifier at up to grade 3. Tempers forged gear to Fine and Masterwork.',
+      'Forges mithril, elderwood and wyvern-hide gear. Fuses runes up to Greater.',
+      'Forges adamant, wyrmwood and basilisk-scale gear. Fuses runes up to Grand.',
+      'Forges starmetal, heartwood and drake-scale gear.',
     ])
   })
 
@@ -138,7 +142,10 @@ describe('the trading post as a market', () => {
     expect([1, 2, 3, 4, 5, 6].map((level) => at(level).name)).toEqual(['Trading Post', 'Trading Post', 'Trading Post', 'Market', 'Market Hall', 'Trading House'])
     expect(at(5).effect).toContain('brings 3 gold every 5 days')
     expect(at(3).effect).not.toContain('gold every')
-    expect(at(4).next).toContain('3 gold every 5 days')
+    expect(at(4).next).toBe("Adds partners' goods and 3 gold every 5 days.")
+    expect(at(5).effect).toContain("runes of the first two ranks and partners' goods; brings")
+    expect(at(6).effect).toContain("runes of the first two ranks and partners' goods; brings")
+    expect(at(4).effect).not.toContain('partners')
     expect(at(6).next).toBeNull()
   })
 
@@ -164,7 +171,7 @@ describe('the trading post as a market', () => {
       'Adds Fine gear and Lesser runes.',
       'Adds Masterwork gear.',
       'Adds iron and steel gear, runes of the second rank and 2 gold every 5 days.',
-      'Brings 3 gold every 5 days, up from 2.',
+      "Adds partners' goods and 3 gold every 5 days.",
       'Brings 5 gold every 5 days, up from 3.',
     ])
   })

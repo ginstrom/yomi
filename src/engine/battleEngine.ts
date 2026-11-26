@@ -36,6 +36,7 @@ import {
   hexDirectionTowards,
   hexDistance,
   hexEquals,
+  hexIndex,
   hexKey,
   reachableHexes,
   type AreaShape,
@@ -977,6 +978,20 @@ export interface AreaSpec {
   radius?: number
 }
 
+/**
+ * Whether a hex lies in the area of `area` from `origin` aimed at `at` (`areaOf`):
+ * a burst is every hex within its radius of `at`, so it is answered by distance
+ * alone; a cone or a line by its hexes.
+ */
+function areaCovers(area: AreaSpec, origin: Hex, at: Hex): (h: Hex) => boolean {
+  if (area.shape === 'burst') {
+    const radius = area.radius ?? 0
+    return (h) => hexDistance(h, at) <= radius
+  }
+  const covered = new Set(areaOf(area.shape, origin, at, area.range, area.radius ?? 0).map(hexKey))
+  return (h) => covered.has(hexKey(h))
+}
+
 /** The standing units an area of `area` from `caster` aimed at `at` touches, in roster order: everyone if `hostile`, else the caster's side. */
 export function areaTouches<U extends Placed>(
   units: readonly U[],
@@ -985,8 +1000,8 @@ export function areaTouches<U extends Placed>(
   at: Hex,
   hostile: boolean,
 ): U[] {
-  const covered = new Set(areaOf(area.shape, caster.position, at, area.range, area.radius ?? 0).map(hexKey))
-  return units.filter((u) => u.hp > 0 && covered.has(hexKey(u.position)) && (hostile || u.side === caster.side))
+  const inside = areaCovers(area, caster.position, at)
+  return units.filter((u) => u.hp > 0 && (hostile || u.side === caster.side) && inside(u.position))
 }
 
 /** The area of an ability as a unit of `attackRange` aims it: its shape, its range (the weapon's for `weaponRange`) and radius. */
@@ -1027,6 +1042,11 @@ export function castTouches<U extends Placed>(units: readonly U[], caster: Place
   const center = aimHex(units, aim)
   if (!center) return []
   return areaTouches(units, caster, { shape, range, radius }, center, hostile)
+}
+
+/** Whether a step from `hex` to `to` leaves `foe`'s side: from beside it to a hex not beside it. */
+function leavesSideOf(foe: Placed, hex: Hex, to: Hex): boolean {
+  return hexDistance(foe.position, hex) === 1 && hexDistance(foe.position, to) > 1
 }
 
 /**
@@ -1229,16 +1249,20 @@ export class BattleEngine {
           if (this.canAttack(actor, foe)) actions.push({ type: 'attack', unit: actor.id, target: foe.id })
         }
       }
+      // Nothing changes while the actions are listed, so the actor's stats are read once
+      // and each aim checked as canCast and canAim would after their own checks of the same.
+      const stats = this.statsOf(actor)
       for (const spell of actor.stats.magic?.spells ?? []) {
         if (!this.canPayFor(actor, spell)) continue
+        const range = spellRange(stats, spell)
         if (SPELLS[spell].target === 'area') {
           const centres = SPELLS[spell].range === 0 ? [actor.position] : this.board.hexes
           for (const at of centres) {
-            if (this.canCast(actor, spell, { at })) actions.push({ type: 'cast', unit: actor.id, spell, at })
+            if (this.castAimSuits(actor, spell, { at }, range)) actions.push({ type: 'cast', unit: actor.id, spell, at })
           }
         } else {
           for (const u of this.units) {
-            if (this.canCast(actor, spell, { target: u.id })) actions.push({ type: 'cast', unit: actor.id, spell, target: u.id })
+            if (this.castAimSuits(actor, spell, { target: u.id }, range)) actions.push({ type: 'cast', unit: actor.id, spell, target: u.id })
           }
         }
       }
@@ -1247,7 +1271,7 @@ export class BattleEngine {
         const area = ABILITIES[ability].area
         if (area) {
           for (const at of area.centredOnSelf ? [actor.position] : this.board.hexes) {
-            if (this.canAim(actor, ability, at)) actions.push({ type: 'ability', unit: actor.id, ability, at })
+            if (this.areaAimSuits(actor, ability, at, stats.attackRange)) actions.push({ type: 'ability', unit: actor.id, ability, at })
           }
           continue
         }
@@ -1711,10 +1735,15 @@ export class BattleEngine {
    * a cone or line, and the area touches a standing foe (`abilityTouches`).
    */
   private canAim(actor: UnitRecord, ability: AbilityId, at: Hex): boolean {
-    const area = ABILITIES[ability]?.area
-    if (!area || !this.canUse(actor, ability) || !this.board.contains(at)) return false
+    if (!ABILITIES[ability]?.area || !this.canUse(actor, ability)) return false
+    return this.areaAimSuits(actor, ability, at, this.statsOf(actor).attackRange)
+  }
+
+  /** `canAim` past its checks of the ability and its use, for an actor whose attack range (`statsOf`) is `attackRange`. */
+  private areaAimSuits(actor: UnitRecord, ability: AbilityId, at: Hex, attackRange: number): boolean {
+    const area = ABILITIES[ability].area!
+    if (!this.board.contains(at)) return false
     if (area.centredOnSelf && !hexEquals(at, actor.position)) return false
-    const { attackRange } = this.statsOf(actor)
     const { range } = abilityArea(ability, attackRange)!
     const distance = hexDistance(at, actor.position)
     if (distance > range || (area.shape !== 'burst' && distance < 1)) return false
@@ -1742,9 +1771,12 @@ export class BattleEngine {
    * must hold a standing foe.
    */
   private canCast(actor: UnitRecord, spell: SpellId, aim: CastAim): boolean {
-    if (!this.canPayFor(actor, spell)) return false
+    return this.canPayFor(actor, spell) && this.castAimSuits(actor, spell, aim, spellRange(this.statsOf(actor), spell))
+  }
+
+  /** `canCast` past its check that the actor can pay, for a spell whose range (`spellRange` of the actor's `statsOf`) is `range`. */
+  private castAimSuits(actor: UnitRecord, spell: SpellId, aim: CastAim, range: number): boolean {
     const { target: kind, hostile, shape = 'burst' } = SPELLS[spell]
-    const range = spellRange(this.statsOf(actor), spell)
     if (kind === 'area') {
       if (!('at' in aim) || !this.board.contains(aim.at)) return false
       const distance = hexDistance(aim.at, actor.position)
@@ -1771,18 +1803,14 @@ export class BattleEngine {
 
   /** Foes that would strike `mover` for stepping from `hex` to `to`: those it leaves the side of. */
   private reactorsAt(mover: UnitRecord, hex: Hex, to: Hex): UnitRecord[] {
+    return this.units.filter((u) => this.canReact(u, mover) && leavesSideOf(u, hex, to))
+  }
+
+  /** Whether `foe` could strike `mover` for leaving its side, wherever they stand: `reactorsAt` but for the hexes. */
+  private canReact(foe: UnitRecord, mover: UnitRecord): boolean {
     // Tumble slips through every zone of control.
-    if (mover.stats.traits?.includes('tumble')) return []
-    return this.units.filter(
-      (u) =>
-        u.side !== mover.side &&
-        u.hp > 0 &&
-        u.reactionReady &&
-        !isHelpless(u) &&
-        isMelee(u.stats) &&
-        hexDistance(u.position, hex) === 1 &&
-        hexDistance(u.position, to) > 1,
-    )
+    if (mover.stats.traits?.includes('tumble')) return false
+    return foe.side !== mover.side && foe.hp > 0 && foe.reactionReady && !isHelpless(foe) && isMelee(foe.stats)
   }
 
   /**
@@ -1850,12 +1878,15 @@ export class BattleEngine {
    */
   private reachable(actor: UnitRecord): Map<string, Hex[]> {
     if (isImmobile(actor)) return new Map()
-    const blocked = (h: Hex) => this.units.some((u) => u !== actor && u.hp > 0 && hexEquals(u.position, h))
+    // Nothing changes during the search: who stands where, and which foes could
+    // react (`reactorsAt` but for where they stand), are read once.
+    const standing = new Set(this.units.filter((u) => u !== actor && u.hp > 0).map((u) => hexIndex(u.position)))
+    const ready = this.units.filter((u) => this.canReact(u, actor))
     return reachableHexes(
       actor.position,
       Math.floor(actor.ap / MOVE_AP_COST_PER_HEX),
-      (h) => this.board.contains(h) && !blocked(h),
-      (from, to) => this.reactorsAt(actor, from, to).map((u) => u.id),
+      (h) => this.board.contains(h) && !standing.has(hexIndex(h)),
+      (from, to) => ready.filter((u) => leavesSideOf(u, from, to)).map((u) => u.id),
     )
   }
 

@@ -2,7 +2,9 @@ import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import { mulberry32 } from '../combat/rng.ts'
 import { RUNE_IDS } from '../inventory/runes.ts'
-import { FAVOURED_CHANCE, lootRng, rollRunes, takeRunes } from './loot.ts'
+import type { UnitId } from '../engine/battleEngine.ts'
+import { TROPHIES, type FoeKind, type Trophy, type UnitKind } from './encounters.ts'
+import { FAVOURED_CHANCE, lootRng, rollRunes, takeRunes, takeTrophies, trophiesFor } from './loot.ts'
 import { newGame } from './gameState.ts'
 import { SOURCE_THREAT } from './worldMap.ts'
 
@@ -133,5 +135,34 @@ describe('rune loot', () => {
     let found = takeRunes(game, 4, 'goblin_raid', 1)
     for (let seed = 2; found[0] !== 'venom2'; seed++) found = takeRunes(game, 4, 'goblin_raid', seed)
     expect(game.runes.venom2).toBeGreaterThanOrEqual(2)
+  })
+})
+
+describe('trophies', () => {
+  const table: Partial<Record<FoeKind, Trophy>> = { troll: { material: 'wyvern_hide', amount: 3 }, salamander: { material: 'drake_scale', amount: 6 } }
+
+  it('sums each foe its kind\'s trophy from a table, a hero and a kind without one giving nothing', () => {
+    expect(trophiesFor(['troll'], table)).toEqual({ wyvern_hide: 3 })
+    expect(trophiesFor(['troll', 'troll', 'salamander', 'goblin', 'warrior'], table)).toEqual({ wyvern_hide: 6, drake_scale: 6 })
+    expect(trophiesFor(['warrior', 'goblin'], table)).toEqual({})
+    expect(trophiesFor(['troll', 'salamander'], {})).toEqual({})
+  })
+
+  it('adds the foes\' trophies to the stock and returns them, drawing nothing', () => {
+    const game = newGame(undefined, null, 1)
+    game.world.stock = { gold: 5, wyvern_hide: 1 }
+    const rng = JSON.stringify(game.world)
+    const kinds: Record<UnitId, UnitKind> = { hero_0: 'warrior', foe_0: 'troll', foe_1: 'troll', foe_2: 'goblin' }
+    expect(takeTrophies(game, kinds, table)).toEqual({ wyvern_hide: 6 })
+    expect(game.world.stock).toEqual({ gold: 5, wyvern_hide: 7 })
+    expect(JSON.stringify({ ...game.world, stock: { gold: 5, wyvern_hide: 1 } })).toBe(rng)
+  })
+
+  it('takes nothing this stage: the table is empty until stage 11', () => {
+    expect(TROPHIES).toEqual({})
+    const game = newGame(undefined, null, 1)
+    const before = JSON.stringify(game)
+    expect(takeTrophies(game, { foe_0: 'troll', foe_1: 'bandit_brute' })).toEqual({})
+    expect(JSON.stringify(game)).toBe(before)
   })
 })

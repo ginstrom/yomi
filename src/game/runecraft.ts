@@ -39,7 +39,7 @@ export const EMBED_GOLD_PER_RANK = 5
 export const FUSE_GOLD_PER_RANK = 10
 export const EXTRACT_GOLD_PER_RANK = 10
 export const FUSE_COUNT = 3
-/** The workshop level that fuses to each rank; 4 and 5 are stage 10's levels, beyond MAX_WORKSHOP_LEVEL (3), so they are always refused for now. */
+/** The workshop level that fuses to each rank: rank 3 (Greater) at level 4 and rank 4 (Grand) at level 5, stage 10's levels. */
 export const FUSE_LEVELS: Record<2 | 3 | 4, number> = { 2: 1, 3: 4, 4: 5 }
 export const EXTRACT_LEVEL = 2
 

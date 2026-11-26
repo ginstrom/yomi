@@ -5,11 +5,15 @@ import { selectedParty, type GameState } from '../game/gameState.ts'
 import { homeParty } from '../game/guildHall.ts'
 import { actingFor } from './encampmentView.ts'
 import { placeKey, type ItemPlace } from '../game/itemPlace.ts'
-import type { Material } from '../game/territory.ts'
+import { materialName, type Material } from '../game/territory.ts'
 import {
+  GOODS_LEVEL,
+  GOOD_PRICE,
   MATERIALS_PER_GOLD,
   RUNE_RANK_LEVELS,
   buy,
+  buyGood,
+  buyGoodRefusal,
   buyPrice,
   buyRefusal,
   buyRune,
@@ -36,6 +40,7 @@ import { ITEM_ICON_KEYS, RUNE_ICON_KEYS, SOCKET_PIP_KEYS, iconTint } from './ite
 import type { Rect } from './mapScroll.ts'
 import { addPanelButton, fitText } from './panelButton.ts'
 import { runeEffectLines, runeSocketLine } from './runecraftView.ts'
+import { GOOD_AMOUNTS, NO_GOODS, buyLabel, goodRows } from './goodsView.ts'
 import { createPips } from './socketPips.ts'
 import { overlayScale } from './overlayScale.ts'
 import { ROUTE_ROWS, minimapBoard, minimapPoints, routeNotes, routeOffer, routeRows, routeState, type RouteRow } from './routesTab.ts'
@@ -43,6 +48,7 @@ import { describeWorldEvent } from './worldEvents.ts'
 import { ROAD_COLORS } from './roadsView.ts'
 import { encampment, encampmentName } from '../game/worldMap.ts'
 import { openRoute, openRouteRefusal, routeLimit } from '../game/trade.ts'
+import { notifyStock } from './stockNotice.ts'
 
 interface TradingPostData {
   game: GameState
@@ -63,8 +69,8 @@ const SLOT_BUTTONS: ReadonlyArray<readonly [EquipmentSlot, string]> = [
 ]
 
 interface Filter {
-  /** A slot's gear, or 'runes', the runes the post sells. */
-  slot: EquipmentSlot | 'runes'
+  /** A slot's gear, 'runes', the runes the post sells, or 'goods', the partners' goods of the Market Hall. */
+  slot: EquipmentSlot | 'runes' | 'goods'
   family: FamilyId | null
 }
 const OPENING_FILTER: Filter = { slot: 'mainHand', family: null }
@@ -72,7 +78,7 @@ const OPENING_FILTER: Filter = { slot: 'mainHand', family: null }
 /** A line of the list: an item or a rune for sale or to sell, or a material to sell. */
 interface Row {
   id: string
-  kind: 'item' | 'material' | 'rune'
+  kind: 'item' | 'material' | 'rune' | 'good'
   label: string
   /** Under the name: the item's stats, and whose it is when selling. */
   detail: string
@@ -107,6 +113,8 @@ const DETAILS_W = FRAME_W - DETAILS_X - 24
 const CONFIRM_Y = 432
 const CONFIRM_ALL_Y = CONFIRM_Y - 40
 const REFUSAL_Y = 380
+/** The Goods filter's two buttons are stacked; its refusal sits above both, its bottom edge here. */
+const GOODS_REFUSAL_BOTTOM = CONFIRM_ALL_Y - 20
 const MESSAGE_Y = 462
 /** The minimap stack's lowest point: above a message line of up to two lines centred on `MESSAGE_Y`. */
 const STACK_BOTTOM = MESSAGE_Y - 20
@@ -159,6 +167,7 @@ export class TradingPostScene extends Phaser.Scene {
   private rowAt = new Map<string, Point>()
   private slotAt = new Map<EquipmentSlot, Point>()
   private runesAt: Point | null = null
+  private goodsAt: Point | null = null
   private familyAt = new Map<FamilyId | null, Point>()
   /** The Routes tab's chosen partner; the first row when none is (or it is gone). */
   private routeChosen: string | null = null
@@ -170,6 +179,8 @@ export class TradingPostScene extends Phaser.Scene {
   /** The notes drawn under the minimap (`routeNotes`). */
   private routeNotes: string[] = []
   private messageHeight = 0
+  /** The inline refusal's top and bottom in the frame, for the probe; null with none drawn. */
+  private refusalBox: { top: number; bottom: number } | null = null
   /** The bottom of the stack under the minimap, in the frame's units, or null with none drawn. */
   private routeStackBottom: number | null = null
 
@@ -223,11 +234,12 @@ export class TradingPostScene extends Phaser.Scene {
       details: row ? this.details(row) : [],
       filter: { ...this.filter },
       slotButtons: SLOT_BUTTONS.filter(([slot]) => this.slotAt.has(slot)).map(([slot]) => ({ ...onScreen(this.slotAt.get(slot)!), visible: true, enabled: true, slot })),
+      goodsButton: this.goodsAt ? { ...onScreen(this.goodsAt), visible: true, enabled: true } : { x: 0, y: 0, visible: false, enabled: false },
       runesButton: this.runesAt ? { ...onScreen(this.runesAt), visible: true, enabled: true } : { x: 0, y: 0, visible: false, enabled: false },
       familyButtons: [...this.familyAt].map(([family, at]) => ({ ...onScreen(at), visible: true, enabled: true, family })),
       rows: this.rows().map((r) => {
         const at = this.rowAt.get(r.id)
-        return { ...onScreen(at ?? { x: 0, y: 0 }), visible: !!at, enabled: !!at, id: r.id, kind: r.kind, price: r.price }
+        return { ...onScreen(at ?? { x: 0, y: 0 }), visible: !!at, enabled: !!at, id: r.id, kind: r.kind, price: r.price, label: r.label }
       }),
       buttons: {
         buyTab: control('buyTab'),
@@ -246,6 +258,7 @@ export class TradingPostScene extends Phaser.Scene {
         open: open ? { ...onScreen(open), visible: true, enabled: openEnabled, width: OPEN_W * this.frame.scale } : null,
         selected,
       })),
+      refusalBox: this.refusalBox ? { top: y + this.refusalBox.top * scale, bottom: y + this.refusalBox.bottom * scale } : null,
       routeRefusal: this.routeRefusal,
       routeNotes: [...this.routeNotes],
       routeStack:
@@ -278,6 +291,9 @@ export class TradingPostScene extends Phaser.Scene {
     const { slot, family } = this.filter
     if (this.tab === 'routes') return []
     if (this.tab === 'buy') {
+      if (slot === 'goods') {
+        return goodRows(game.world).map((good) => ({ id: good.id, kind: 'good', label: good.label, detail: '', price: GOOD_PRICE, material: good.material, ap: TYPICAL_AP }))
+      }
       if (slot === 'runes') {
         return runeWares(game.world).map((key) => ({ id: `rune:${key}`, kind: 'rune', label: runeName(key), detail: '', price: runePrice(key), rune: key, ap: TYPICAL_AP }))
       }
@@ -301,7 +317,7 @@ export class TradingPostScene extends Phaser.Scene {
       .map(([material, amount]) => ({
         id: `material:${material}`,
         kind: 'material',
-        label: `${amount} ${material}`,
+        label: `${amount} ${materialName(material as Material)}`,
         detail: `${MATERIALS_PER_GOLD} for 1 gold`,
         price: 1,
         material: material as Material,
@@ -324,6 +340,7 @@ export class TradingPostScene extends Phaser.Scene {
 
   /** The details of the line clicked: the item's stats and what it costs or fetches. */
   private details(row: Row): string[] {
+    if (row.kind === 'good') return [`The stock holds ${this.gameState.world.stock[row.material!] ?? 0} ${materialName(row.material!)}.`, 'Bought into the stock, to forge with.']
     if (row.kind === 'material') {
       const lots = Math.floor(row.amount! / MATERIALS_PER_GOLD)
       return [`The stock holds ${row.label}.`, `The post pays 1 gold for every ${MATERIALS_PER_GOLD}: ${lots} gold for all of it.`]
@@ -337,14 +354,18 @@ export class TradingPostScene extends Phaser.Scene {
 
   private render(): void {
     this.frame.removeAll(true)
+    // On each render on purpose: render runs only on clicks, the header refresh is cheap, and this catches stock changes from any path (the debug console included).
+    notifyStock(this)
     this.controls = {}
     this.routeLines = []
     this.routeRefusal = null
     this.routeNotes = []
+    this.refusalBox = null
     this.routeStackBottom = null
     this.rowAt = new Map()
     this.slotAt = new Map()
     this.runesAt = null
+    this.goodsAt = null
     this.familyAt = new Map()
     const { world } = this.gameState
     const rows = this.rows()
@@ -371,7 +392,9 @@ export class TradingPostScene extends Phaser.Scene {
           ? 'Nothing to sell: worn gear must be taken off first.'
           : this.filter.slot === 'runes'
             ? `A level ${RUNE_RANK_LEVELS[1]} trading post sells runes.`
-            : 'The post sells nothing of this kind yet.'
+            : this.filter.slot === 'goods'
+              ? NO_GOODS
+              : 'The post sells nothing of this kind yet.'
       this.frame.add(this.add.text(LIST_X + 8, this.listTop, none, { fontFamily: FONT, fontSize: '13px', color: DIM }))
     }
     if (pages > 1) {
@@ -387,7 +410,8 @@ export class TradingPostScene extends Phaser.Scene {
 
   /** The Buy tab's filter: a button for each slot, and under them "All" and the slot's families. */
   private drawFilter(): void {
-    const slotW = FILTER_W / (SLOT_BUTTONS.length + 1)
+    const goods = this.gameState.world.tradingPost >= GOODS_LEVEL
+    const slotW = FILTER_W / (SLOT_BUTTONS.length + (goods ? 2 : 1))
     SLOT_BUTTONS.forEach(([slot, label], i) => {
       const at = { x: LIST_X + slotW * (i + 0.5), y: SLOT_Y, width: slotW - 6, height: 24 }
       this.slotAt.set(slot, at)
@@ -396,7 +420,12 @@ export class TradingPostScene extends Phaser.Scene {
     const runesAt = { x: LIST_X + slotW * (SLOT_BUTTONS.length + 0.5), y: SLOT_Y, width: slotW - 6, height: 24 }
     this.runesAt = runesAt
     this.filterButton(runesAt, 'Runes', () => this.setFilter({ slot: 'runes', family: null }), this.filter.slot === 'runes', 'ui.tab')
-    if (this.filter.slot === 'runes') return
+    if (goods) {
+      const goodsAt = { x: LIST_X + slotW * (SLOT_BUTTONS.length + 1.5), y: SLOT_Y, width: slotW - 6, height: 24 }
+      this.goodsAt = goodsAt
+      this.filterButton(goodsAt, 'Goods', () => this.setFilter({ slot: 'goods', family: null }), this.filter.slot === 'goods', 'ui.tab')
+    }
+    if (this.filter.slot === 'runes' || this.filter.slot === 'goods') return
     const familyW = FILTER_W / FAMILIES_PER_ROW
     const families: Array<[FamilyId | null, string]> = [[null, 'All'], ...FAMILIES.filter((f) => f.slot === this.filter.slot).map((f): [FamilyId, string] => [f.id, f.name])]
     families.forEach(([family, label], i) => {
@@ -434,7 +463,8 @@ export class TradingPostScene extends Phaser.Scene {
       this.frame.add([icon, ...createPips(this, row.item, LIST_X + 12, centre.y, 1)])
     }
     if (row.rune) this.frame.add(this.add.image(LIST_X + 12, centre.y, RUNE_ICON_KEYS[parseRuneKey(row.rune)!.id]))
-    const price = this.tab === 'buy' ? `${row.price}g` : row.kind === 'material' ? `${row.price}g/${MATERIALS_PER_GOLD}` : row.kind === 'rune' ? `+${row.price}g each` : `+${row.price}g`
+    // A good's label already says its price.
+    const price = row.kind === 'good' ? '' : this.tab === 'buy' ? `${row.price}g` : row.kind === 'material' ? `${row.price}g/${MATERIALS_PER_GOLD}` : row.kind === 'rune' ? `+${row.price}g each` : `+${row.price}g`
     const priceText = this.add.text(LIST_X + LIST_W - 8, centre.y, price, { fontFamily: FONT, fontSize: '12px', color: GOLD }).setOrigin(1, 0.5)
     const label = this.add.text(LIST_X + 26, centre.y, row.label, { fontFamily: FONT, fontSize: '12px', color: marked ? GOLD : TEXT }).setOrigin(0, 0.5)
     fitText(label, LIST_W - 26 - priceText.width - 16)
@@ -445,7 +475,8 @@ export class TradingPostScene extends Phaser.Scene {
   private drawDetails(row: Row | null): void {
     const style = { fontFamily: FONT, fontSize: '12px', color: TEXT, wordWrap: { width: DETAILS_W } }
     if (!row) {
-      const hint = this.tab === 'buy' ? 'Click an item to see its stats and price.' : 'Click an item or a material to see what it fetches.'
+      const hint =
+        this.tab === 'buy' ? (this.filter.slot === 'goods' ? 'Click a good to see who sells it and its price.' : 'Click an item to see its stats and price.') : 'Click an item or a material to see what it fetches.'
       this.frame.add(this.add.text(DETAILS_X, this.listTop, hint, { ...style, color: DIM }))
       return
     }
@@ -457,9 +488,26 @@ export class TradingPostScene extends Phaser.Scene {
       this.add.text(DETAILS_X, summary.y + Math.max(summary.height, 14) + 8, this.details(row).join('\n'), { ...style, lineSpacing: 4 }),
     ])
     const at = (y: number): Rect => ({ x: DETAILS_X + DETAILS_W / 2, y, width: DETAILS_W, height: 32 })
-    if (this.tab === 'buy') {
+    if (row.kind === 'good') {
+      const [one, many] = GOOD_AMOUNTS
+      const refusals = GOOD_AMOUNTS.map((amount) => buyGoodRefusal(this.gameState, this.expedition, row.material!, amount))
+      const shown = refusals.find((r) => r !== null)
+      // The message line says it too after a refused click: one copy.
+      if (shown && !refusals.includes(this.message)) {
+        const text = this.add.text(DETAILS_X, GOODS_REFUSAL_BOTTOM, shown, { ...style, color: REFUSED }).setOrigin(0, 1)
+        this.frame.add(text)
+        this.refusalBox = { top: text.y - text.height, bottom: text.y }
+      }
+      // Deliberately the reverse of the names' order: Buy 1 (`confirm`) sits on the upper row, at CONFIRM_ALL_Y, and Buy 5 (`confirmAll`) below it, at CONFIRM_Y.
+      this.button('confirmAll', at(CONFIRM_Y), buyLabel(many), () => this.onBuyGood(row, many), refusals[1] === null)
+      this.button('confirm', at(CONFIRM_ALL_Y), buyLabel(one), () => this.onBuyGood(row, one), refusals[0] === null)
+    } else if (this.tab === 'buy') {
       const refusal = row.rune ? buyRuneRefusal(this.gameState, this.expedition, row.rune) : buyRefusal(this.gameState, this.expedition, row.id)
-      if (refusal) this.frame.add(this.add.text(DETAILS_X, REFUSAL_Y, refusal, { ...style, color: REFUSED }))
+      if (refusal && refusal !== this.message) {
+        const text = this.add.text(DETAILS_X, REFUSAL_Y, refusal, { ...style, color: REFUSED })
+        this.frame.add(text)
+        this.refusalBox = { top: text.y, bottom: text.y + text.height }
+      }
       this.button('confirm', at(CONFIRM_Y), `Buy for ${row.price} gold`, () => (row.rune ? this.onBuyRune(row) : this.onBuy(row)), refusal === null)
     } else if (row.kind === 'rune') {
       this.button('confirm', at(CONFIRM_Y), `Sell one for ${row.price} gold`, () => this.onSellRune(row))
@@ -663,6 +711,11 @@ export class TradingPostScene extends Phaser.Scene {
     this.act(buy(this.gameState, this.expedition, row.id), `Bought the ${row.label} for ${row.price} gold. It is in the baggage.`, true)
   }
 
+  /** Buys `amount` of the good into the stock; the line stays selected. */
+  private onBuyGood(row: Row, amount: number): void {
+    this.act(buyGood(this.gameState, this.expedition, row.material!, amount), `Bought ${amount} ${materialName(row.material!)} for ${amount * GOOD_PRICE} gold.`, true)
+  }
+
   private onBuyRune(row: Row): void {
     this.act(buyRune(this.gameState, this.expedition, row.rune!), `Bought the ${row.label} for ${row.price} gold. It is in the rune pouch.`, true)
   }
@@ -679,7 +732,7 @@ export class TradingPostScene extends Phaser.Scene {
 
   private onSellMaterial(row: Row, amount: number): void {
     const left = row.amount! - amount
-    this.act(sellMaterial(this.gameState, this.expedition, row.material!, amount), `Sold ${amount} ${row.material} for ${amount / MATERIALS_PER_GOLD} gold.`, left >= MATERIALS_PER_GOLD)
+    this.act(sellMaterial(this.gameState, this.expedition, row.material!, amount), `Sold ${amount} ${materialName(row.material!)} for ${amount / MATERIALS_PER_GOLD} gold.`, left >= MATERIALS_PER_GOLD)
   }
 
   /** Back to the encampment, the trading post's details showing. */

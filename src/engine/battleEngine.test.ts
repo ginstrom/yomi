@@ -1852,6 +1852,19 @@ describe('areaTouches', () => {
     expect(ids(areaTouches(units, caster, { shape: 'cone', range: 6 }, hex(1, 0), true))).toEqual(['far', 'ally', 'foe'])
   })
 
+  it("touches on a burst exactly the standing units on areaOf's hexes, by distance (stage 10 step 07)", () => {
+    const around = Array.from({ length: 81 }, (_, i) => unit(`u${i}`, i % 2 ? 'enemy' : 'player', (i % 9) - 4, Math.floor(i / 9) - 4, i % 7 ? 5 : 0))
+    for (const radius of [0, 1, 2, 3]) {
+      for (const at of [hex(0, 0), hex(2, -1), hex(-3, 4)]) {
+        const covered = new Set(areaOf('burst', caster.position, at, 9, radius).map(hexKey))
+        for (const hostile of [true, false]) {
+          const expected = around.filter((u) => u.hp > 0 && covered.has(hexKey(u.position)) && (hostile || u.side === caster.side))
+          expect(ids(areaTouches(around, caster, { shape: 'burst', range: 9, radius }, at, hostile))).toEqual(ids(expected))
+        }
+      }
+    }
+  })
+
   it('touches the standing units on a line, the caster excluded', () => {
     const line = { shape: 'line', range: 5 } as const
     expect(ids(areaTouches(units, caster, line, hex(1, 0), true))).toEqual(['far', 'ally'])

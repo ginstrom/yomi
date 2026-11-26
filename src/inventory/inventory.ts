@@ -211,7 +211,7 @@ function plainItem(family: FamilyDef, material: MaterialDef): Item {
     name: named?.name ?? `${material.name} ${family.name}`,
     slot: family.slot,
     description: family.description,
-    stats: tierStats(family.stats, gearClass(family.slot), material.tier),
+    stats: tierStats(family.stats, gearClass(family.slot), material),
     icon: family.icon,
     family: family.id,
     material: material.id,
@@ -222,8 +222,9 @@ function plainItem(family: FamilyDef, material: MaterialDef): Item {
 /**
  * Every plain item, which the trading post sells at a grade and crafting
  * modifies (docs/designs/long-campaign/stage-03-gear-families.md): each family
- * of the catalog in each material of its kind, in `FAMILIES` order, tier 1
- * before tier 2. Enchanted items stand outside the ladder.
+ * of the catalog in each material of its kind, in `FAMILIES` order, then
+ * `MATERIALS` order (tiers 1 to 5): 28 families × 5 tiers, 140 items.
+ * Enchanted items stand outside the ladder.
  */
 export const BASE_ITEMS: readonly Item[] = FAMILIES.flatMap((family) =>
   MATERIALS.filter((material) => material.kind === family.kind).map((material) => plainItem(family, material)),

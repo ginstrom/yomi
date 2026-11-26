@@ -1,8 +1,10 @@
 import type { RNG } from '../combat/combat.ts'
 import { mulberry32 } from '../combat/rng.ts'
 import { RUNE_IDS, addToPouch, runeKey, type Rank, type RuneId, type RuneKey } from '../inventory/runes.ts'
-import type { EncounterId } from './encounters.ts'
+import type { UnitId } from '../engine/battleEngine.ts'
+import { TROPHIES, type EncounterId, type FoeKind, type Trophy, type UnitKind } from './encounters.ts'
 import type { GameState } from './gameState.ts'
+import type { Stock } from './territory.ts'
 import { SOURCE_THREAT } from './worldMap.ts'
 
 /**
@@ -14,7 +16,8 @@ import { SOURCE_THREAT } from './worldMap.ts'
  * a second at half, of rank 2 or 3; 14 up to the Source's, two of rank 2 to
  * 4; the Source's threat, three of rank 3 or 4. The Source rolls its threat's
  * row, so near home (threat 5) it rolls threat 5's. Each rune draws its kind
- * and then its rank. Items are `takeLoot`'s, not this.
+ * and then its rank. Items are `takeLoot`'s, not this. Trophies (stage 10) are
+ * granted after a win too, by kind and with no draw (`takeTrophies`).
  */
 
 /** Mixed into the battle's seed for the rune stream. A fixed constant: changing it changes every game's loot. */
@@ -84,5 +87,24 @@ export function rollRunes(threat: number, encounter: EncounterId, rng: RNG): Run
 export function takeRunes(game: GameState, threat: number, encounter: EncounterId, battleSeed: number): RuneKey[] {
   const found = rollRunes(threat, encounter, lootRng(battleSeed))
   for (const key of found) addToPouch(game.runes, key)
+  return found
+}
+
+/** The trophies of a won battle's foes: each foe its kind's trophy in `table`, summed; a hero ('warrior') leaves none. Draws nothing. */
+export function trophiesFor(kinds: Iterable<UnitKind>, table: Partial<Record<FoeKind, Trophy>> = TROPHIES): Stock {
+  const found: Stock = {}
+  for (const kind of kinds) {
+    const trophy = kind === 'warrior' ? undefined : table[kind]
+    if (trophy) found[trophy.material] = (found[trophy.material] ?? 0) + trophy.amount
+  }
+  return found
+}
+
+/** Adds the trophies of a won battle's foes (every unit of `kinds` not a hero) to the stock and returns what it added. Draws nothing. */
+export function takeTrophies(game: GameState, kinds: Record<UnitId, UnitKind>, table: Partial<Record<FoeKind, Trophy>> = TROPHIES): Stock {
+  const found = trophiesFor(Object.values(kinds), table)
+  for (const [material, amount] of Object.entries(found) as Array<[keyof Stock, number]>) {
+    game.world.stock[material] = (game.world.stock[material] ?? 0) + amount
+  }
   return found
 }

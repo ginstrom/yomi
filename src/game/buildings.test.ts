@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { hexDistance, type Hex } from '../grid/hex.ts'
+import { materialName } from './territory.ts'
 import { IMPROVEMENT_STRENGTH, SHRINE_STRENGTH, TOWER_STRENGTH, boardIndex, netInfluence } from './blight.ts'
 import {
   IMPROVEMENT_COSTS,
@@ -60,6 +61,13 @@ describe('the stock', () => {
     spend(stock, TOWER_COST)
     expect(stock).toEqual({ iron: 0, gold: 3, timber: 3 })
     expect(describeCost(TOWER_COST)).toBe('10 iron, 5 gold')
+  })
+
+  it('names a material by materialName in a cost: a trophy reads with a space', () => {
+    expect(materialName('wyvern_hide')).toBe('wyvern hide')
+    expect(materialName('drake_scale')).toBe('drake scale')
+    expect(materialName('mithril')).toBe('mithril')
+    expect(describeCost({ gold: 30, wyvern_hide: 8 })).toBe('30 gold, 8 wyvern hide')
   })
 })
 

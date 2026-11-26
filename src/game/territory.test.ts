@@ -317,6 +317,7 @@ describe('improvements (economy A1)', () => {
       timber: 'Lumber Camp', stone: 'Quarry', salt: 'Saltworks', peat: 'Peat Cuttings',
       mithril: 'Mine', adamant: 'Mine', starmetal: 'Mine',
       ironwood: 'Lumber Camp', elderwood: 'Lumber Camp', wyrmwood: 'Lumber Camp', heartwood: 'Lumber Camp',
+      wolfhide: 'Hunt', wyvern_hide: 'Hunt', basilisk_scale: 'Hunt', drake_scale: 'Hunt',
     })
   })
 

@@ -27,9 +27,9 @@ function home(id = 'iron_sword@3', workshop = 2): { game: GameState; place: Item
 }
 
 describe('where sockets come from', () => {
-  it('is worked out from socketsOf: the tier-2 materials, Masterwork and the socketed uniques', () => {
+  it('is worked out from socketsOf: tiers 2 to 5, the tier-2 materials, Masterwork and the socketed uniques', () => {
     expect(socketSources()).toEqual({
-      tiers: [2],
+      tiers: [2, 3, 4, 5],
       materials: ['steel', 'ironwood', 'wolfhide', 'silk'],
       grades: ['Masterwork'],
       uniques: ['Wand of Storms', 'Emberblade', 'Hawkeye Bow'],
@@ -37,11 +37,11 @@ describe('where sockets come from', () => {
   })
   it('tells the party with nothing socketed which gear has sockets', () => {
     expect(noSocketsHint()).toBe(
-      'Nothing the party has takes a rune. Sockets come on steel, ironwood, wolfhide and silk gear, on Masterwork gear and on the Wand of Storms, Emberblade and Hawkeye Bow.',
+      'Nothing the party has takes a rune. Sockets come on steel, ironwood, wolfhide and silk gear and anything finer, on Masterwork gear and on the Wand of Storms, Emberblade and Hawkeye Bow.',
     )
   })
   it('tells a rune\'s reader that it goes in a socketed item', () => {
-    expect(runeSocketLine()).toBe('Set in a socketed item: tier-2 or Masterwork gear.')
+    expect(runeSocketLine()).toBe('Set in a socketed item: tier-2 and finer or Masterwork gear.')
   })
 })
 

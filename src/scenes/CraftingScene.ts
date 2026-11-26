@@ -3,7 +3,9 @@ import { deriveCombatStats } from '../character/character.ts'
 import { attributeLevel } from '../character/perks.ts'
 import type { WorldEvent } from '../game/blight.ts'
 import { describeCost } from '../game/buildings.ts'
-import { craft, craftTier, craftables, highestGrade, options, type CraftOption } from '../game/crafting.ts'
+import { craft, craftTier, craftables, forge, highestGrade, options, temper, type CraftOption } from '../game/crafting.ts'
+import { MATERIALS } from '../inventory/catalog.ts'
+import { materialName, type Material } from '../game/territory.ts'
 import type { Expedition } from '../game/expedition.ts'
 import { selectedParty, type GameState } from '../game/gameState.ts'
 import { homeParty } from '../game/guildHall.ts'
@@ -11,7 +13,7 @@ import { actingFor } from './encampmentView.ts'
 import { itemAt, placeKey, type ItemPlace } from '../game/itemPlace.ts'
 import { embed, extract, fuse, socketables } from '../game/runecraft.ts'
 import { gradeNumeral } from '../inventory/grades.ts'
-import { EQUIPMENT_SLOT_LABELS, type Item } from '../inventory/inventory.ts'
+import { EQUIPMENT_SLOT_LABELS, type EquipmentSlot, type Item } from '../inventory/inventory.ts'
 import { MODIFIERS } from '../inventory/modifiers.ts'
 import { parseRuneKey, type RuneKey } from '../inventory/runes.ts'
 import type { ButtonProbe, CraftingProbe } from '../testHook.ts'
@@ -21,6 +23,8 @@ import { TYPICAL_AP, compareLines, fieldCraftSummary } from './gearCompare.ts'
 import { ITEM_ICON_KEYS, RUNE_COLOURS, RUNE_ICON_KEYS, SOCKET_PIP_KEYS, cssColour, iconTint } from './itemIcons.ts'
 import type { Rect } from './mapScroll.ts'
 import { addPanelButton, fitText } from './panelButton.ts'
+import { FORGE_SLOTS, FORGE_SLOT_LABELS, forgeHint, forgedMessage, forgePreview, hasTemperRow, forgeRows, temperChoices, temperPreview, memberNumbers, type ForgeRow, type TemperChoice } from './forgeView.ts'
+import { headerLines } from './headerLines.ts'
 import { buttonCue, refusalCue, runeCue } from './sounds.ts'
 import {
   actionId,
@@ -37,6 +41,7 @@ import {
 } from './runecraftView.ts'
 import { createPips } from './socketPips.ts'
 import { overlayScale } from './overlayScale.ts'
+import { notifyStock } from './stockNotice.ts'
 
 interface CraftingData {
   game: GameState
@@ -76,13 +81,26 @@ const OPTION_H = 20
 const MESSAGE_Y = 440
 const BUTTON_Y = 474
 
+/** The Forge tab: the slot filter over the rows (one fewer than a plain list's), and the member picker's buttons. */
+const FORGE_ROWS = 9
+const FORGE_TOP = LIST_TOP + 30
+const SLOT_W = 60
+const MEMBER_W = 88
+const MEMBER_H = 20
+/** The stock line's width in characters before it is cut ("+N more"). */
+const STOCK_CHARS = 86
+/** Characters of the header line the stock list does not get: "Stock: " (7) and, with several home parties, "For: <party>.  " (about 13). */
+const STOCK_PREFIX_CHARS = 20
+/** The stock the screen always names, in this order; any other material held follows. */
+const STOCK_SHOWN = ['gold', 'iron', 'timber', 'copper', 'crystal'] as const
+
 const FONT = 'monospace'
 const GOLD = '#e8c766'
 const DIM = '#8a7a5a'
 const TEXT = '#d8c9a3'
 const REFUSED = '#ffb74d'
 
-type Tab = 'modify' | 'runes'
+type Tab = 'modify' | 'forge' | 'runes'
 
 /**
  * Crafting: the workshop's screen, entered from the encampment, and the
@@ -108,6 +126,8 @@ export class CraftingScene extends Phaser.Scene {
   private pouchPage = 0
   private selected: string | null = null
   private chosen: string | null = null
+  private forgeSlot: EquipmentSlot = 'mainHand'
+  private forgeMember = 0
   private message = ''
   private bg!: Phaser.GameObjects.Rectangle
   private frame!: Phaser.GameObjects.Container
@@ -115,6 +135,10 @@ export class CraftingScene extends Phaser.Scene {
   private itemAt = new Map<string, Point>()
   private optionAt = new Map<string, { at: Point; enabled: boolean; label: string }>()
   private socketAt = new Map<number, { at: Point; enabled: boolean }>()
+  private slotAt = new Map<EquipmentSlot, Point>()
+  private forgeRowAt = new Map<string, { at: Point; row: ForgeRow }>()
+  private memberAt = new Map<number, Point>()
+  private forgeEmpty = ''
   private pouchAt = new Map<RuneKey, { row: Point; embed: { at: Point; enabled: boolean }; fuse: { at: Point; enabled: boolean } }>()
   /** The hover panel over a pouch row: what the rune does where it may sit. */
   private tip: Phaser.GameObjects.Container | null = null
@@ -141,6 +165,8 @@ export class CraftingScene extends Phaser.Scene {
     this.pouchPage = 0
     this.selected = null
     this.chosen = null
+    this.forgeSlot = 'mainHand'
+    this.forgeMember = 0
     this.message = ''
     this.bg = this.add.rectangle(0, 0, 1, 1, 0x000000, 0.7).setOrigin(0).setInteractive()
     this.frame = this.add.container(0, 0)
@@ -167,10 +193,14 @@ export class CraftingScene extends Phaser.Scene {
     const runes = this.tab === 'runes'
     const option = this.currentOptions().find((o) => optionKey(o) === this.chosen)
     const item = this.selectedPlace()
+    const forgeRow = this.tab === 'forge' ? this.forgeRowsNow().find((r) => r.id === this.chosen) : undefined
+    const temperChoice = this.chosenTemper()
     const action = runes && this.chosen ? parseActionId(this.chosen) : null
     const listed = runes
       ? socketables(this.gameState, this.expedition).map(({ place, item }) => ({ place, item, refusal: null }))
-      : craftables(this.gameState, this.expedition)
+      : this.tab === 'forge'
+        ? []
+        : craftables(this.gameState, this.expedition)
     const runeItem = runes && item ? itemAt(this.gameState, item) : null
     return {
       actingFor: this.expedition.id,
@@ -181,7 +211,35 @@ export class CraftingScene extends Phaser.Scene {
       tooltip: this.tipLines,
       selected: this.selected,
       chosen: this.chosen,
-      preview: action ? this.runePreview(action) : option && item ? this.preview(item, option) : [],
+      preview: action
+        ? this.runePreview(action)
+        : forgeRow
+          ? this.forgeLines(forgeRow)
+          : temperChoice && item
+            ? this.temperLines(item, temperChoice)
+            : option && item
+              ? this.preview(item, option)
+              : [],
+      forgeSlots: this.tab === 'forge' ? FORGE_SLOTS.map((slot) => ({ ...shown({ at: this.slotAt.get(slot)!, enabled: true }), slot })) : [],
+      forgeSlot: this.forgeSlot,
+      forgeRows: (this.tab === 'forge' ? this.forgeRowsNow() : []).map((row) => {
+        const at = this.forgeRowAt.get(row.id)?.at
+        return {
+          ...onScreen(at ?? { x: 0, y: 0 }),
+          visible: !!at,
+          enabled: !!at,
+          id: row.id,
+          family: row.family,
+          material: row.material,
+          tier: row.tier,
+          name: row.name,
+          cost: row.costText,
+          refusal: row.refusal,
+        }
+      }),
+      forgeHint: this.forgeEmpty,
+      members: [...this.memberAt].map(([index, at]) => ({ ...onScreen(at), visible: true, enabled: true, index, name: this.expedition.members[index].name })),
+      member: this.forgeMember,
       items: listed.map(({ place, item, refusal }) => {
         const at = this.itemAt.get(placeKey(place))
         return { ...onScreen(at ?? { x: 0, y: 0 }), visible: !!at, enabled: !!at && refusal === null, id: placeKey(place), itemId: item.id }
@@ -199,6 +257,8 @@ export class CraftingScene extends Phaser.Scene {
         work: control('work'),
         confirm: control('confirm'),
         modifyTab: control('modifyTab'),
+        forgeTab: control('forgeTab'),
+        forge: control('forge'),
         runesTab: control('runesTab'),
         prev: control('prev'),
         next: control('next'),
@@ -227,6 +287,28 @@ export class CraftingScene extends Phaser.Scene {
   private currentOptions(): CraftOption[] {
     const place = this.tab === 'modify' ? this.selectedPlace() : null
     return place ? options(this.gameState, place) : []
+  }
+
+  /** The temper option chosen on the Modify tab, or null. */
+  private chosenTemper(): TemperChoice | null {
+    const place = this.tab === 'modify' ? this.selectedPlace() : null
+    return (place && temperChoices(this.gameState, place).find((c) => c.id === this.chosen)) || null
+  }
+
+  private forgeRowsNow(): ForgeRow[] {
+    return forgeRows(this.gameState, this.expedition, this.forgeSlot)
+  }
+
+  /** The preview of a forge row against the member picked, its refusal last. */
+  private forgeLines(row: ForgeRow): string[] {
+    const member = this.expedition.members[this.forgeMember] ?? this.expedition.members[0]
+    return [...forgePreview(this.gameState, row, member), ...(row.refusal ? [row.refusal] : [])]
+  }
+
+  private temperLines(place: ItemPlace, choice: TemperChoice): string[] {
+    const item = itemAt(this.gameState, place)!
+    const { ap, strength } = place.from === 'baggage' ? { ap: TYPICAL_AP, strength: undefined } : memberNumbers(this.expedition.members[place.member])
+    return [...temperPreview(item, choice, ap, strength), ...(choice.refusal ? [choice.refusal] : [])]
   }
 
   /** The AP of whoever holds the item at `place`, which tells its attacks a turn. */
@@ -260,10 +342,16 @@ export class CraftingScene extends Phaser.Scene {
 
   private render(): void {
     this.frame.removeAll(true)
+    // On each render on purpose: render runs only on clicks, the header refresh is cheap, and this catches stock changes from any path (the debug console included).
+    notifyStock(this)
     this.controls = {}
     this.itemAt = new Map()
     this.optionAt = new Map()
     this.socketAt = new Map()
+    this.slotAt = new Map()
+    this.forgeRowAt = new Map()
+    this.memberAt = new Map()
+    this.forgeEmpty = ''
     this.pouchAt = new Map()
     this.tip = null
     this.tipLines = []
@@ -275,19 +363,27 @@ export class CraftingScene extends Phaser.Scene {
       tier === 'field'
         ? fieldCraftSummary()
         : `Level ${tier}: modifiers up to grade ${gradeNumeral(highestGrade(tier))}, at once.`
-    const stock = (['gold', 'iron', 'timber', 'copper', 'crystal'] as const).map((m) => `${world.stock[m] ?? 0} ${m}`).join(', ')
+    // Gold, then the materials the workshop forges with (so a long line never cuts them), then the rest of the five, then any other held.
+    const forged = [...new Set(MATERIALS.flatMap((m) => (m.stock ? [m.stock] : [])))].filter((m) => (world.stock[m] ?? 0) > 0)
+    const extra = (Object.keys(world.stock) as Material[]).filter((m) => !(STOCK_SHOWN as readonly string[]).includes(m) && !forged.includes(m) && (world.stock[m] ?? 0) > 0)
+    // The five a modifier asks for are always named; when every material held will not fit one line, those not held give way.
+    const named = (all: Material[]) => all.map((m) => `${world.stock[m] ?? 0} ${materialName(m)}`).join(', ')
+    const every = [STOCK_SHOWN[0], ...forged, ...STOCK_SHOWN.slice(1), ...extra]
+    const stock = named(every).length > STOCK_CHARS - STOCK_PREFIX_CHARS ? named(every.filter((m) => (world.stock[m] ?? 0) > 0)) : named(every)
     this.frame.add([
       this.add.rectangle(CENTRE_X, FRAME_H / 2, FRAME_W, FRAME_H, 0x241d15, 0.98).setStrokeStyle(3, 0xc9a227),
       this.add.text(CENTRE_X, TITLE_Y, title, { fontFamily: FONT, fontSize: '28px', color: GOLD, fontStyle: 'bold' }).setOrigin(0.5),
       this.add.text(CENTRE_X, TITLE_Y + 26, about, { fontFamily: FONT, fontSize: '12px', color: DIM }).setOrigin(0.5),
-      this.add.text(CENTRE_X, TITLE_Y + 42, `${this.resumeTo ? '' : actingFor(this.gameState, this.expedition)}Stock: ${stock}`, { fontFamily: FONT, fontSize: '12px', color: DIM }).setOrigin(0.5),
+      this.add.text(CENTRE_X, TITLE_Y + 42, headerLines([`${this.resumeTo ? '' : actingFor(this.gameState, this.expedition)}Stock: ${stock}`], STOCK_CHARS, 1, 0).join('\n'), { fontFamily: FONT, fontSize: '12px', color: DIM }).setOrigin(0.5),
       this.add
         .text(CENTRE_X, MESSAGE_Y, this.message, { fontFamily: FONT, fontSize: '13px', color: TEXT, align: 'center', wordWrap: { width: FRAME_W - 40 } })
         .setOrigin(0.5),
     ])
     this.button('modifyTab', { x: 140, y: TAB_Y, width: 120, height: 28 }, 'Modify', () => this.show('modify'), true, this.tab === 'modify')
-    this.button('runesTab', { x: 280, y: TAB_Y, width: 120, height: 28 }, 'Runes', () => this.show('runes'), true, this.tab === 'runes')
+    this.button('forgeTab', { x: 280, y: TAB_Y, width: 120, height: 28 }, 'Forge', () => this.show('forge'), true, this.tab === 'forge')
+    this.button('runesTab', { x: 420, y: TAB_Y, width: 120, height: 28 }, 'Runes', () => this.show('runes'), true, this.tab === 'runes')
     if (this.tab === 'runes') this.renderRunes()
+    else if (this.tab === 'forge') this.renderForge()
     else this.renderModify()
     this.button('close', { x: CENTRE_X, y: BUTTON_Y, width: 160, height: 36 }, 'Close', () => this.close())
   }
@@ -309,6 +405,67 @@ export class CraftingScene extends Phaser.Scene {
       this.button('next', { x: LIST_X + LIST_W - 60, y: PAGE_Y, width: 100, height: 26 }, 'Next', () => this.turnPage(1), this.page < pages - 1)
     }
     this.drawOptions()
+  }
+
+  /** The Forge tab: a slot filter over the rows the workshop forges, on the left; the member compared against, the row's preview and Forge it, on the right. */
+  private renderForge(): void {
+    FORGE_SLOTS.forEach((slot, i) => {
+      const at = { x: LIST_X + SLOT_W / 2 + i * (SLOT_W + 4), y: LIST_TOP + 11, width: SLOT_W, height: 22 }
+      this.slotAt.set(slot, { x: at.x, y: at.y })
+      addPanelButton(this, this.frame, at, FORGE_SLOT_LABELS[slot]!, () => this.time.delayedCall(0, () => this.pickSlot(slot)), { marked: slot === this.forgeSlot, fontSize: 11, cue: 'ui.tab' })
+    })
+    const rows = this.forgeRowsNow()
+    const pages = Math.max(1, Math.ceil(rows.length / FORGE_ROWS))
+    this.page = Math.min(this.page, pages - 1)
+    rows.slice(this.page * FORGE_ROWS, (this.page + 1) * FORGE_ROWS).forEach((row, i) => this.drawForgeRow(row, FORGE_TOP + i * ROW_H))
+    if (rows.length === 0) {
+      this.forgeEmpty = forgeHint(this.gameState)
+      this.frame.add(this.add.text(LIST_X + 8, FORGE_TOP, this.forgeEmpty, { fontFamily: FONT, fontSize: '12px', color: DIM, wordWrap: { width: LIST_W - 16 }, lineSpacing: 3 }))
+    }
+    if (pages > 1) {
+      this.button('prev', { x: LIST_X + 60, y: PAGE_Y, width: 100, height: 26 }, 'Prev', () => this.turnPage(-1), this.page > 0)
+      this.frame.add(this.add.text(LIST_X + LIST_W / 2, PAGE_Y, `Page ${this.page + 1} of ${pages}`, { fontFamily: FONT, fontSize: '12px', color: DIM }).setOrigin(0.5))
+      this.button('next', { x: LIST_X + LIST_W - 60, y: PAGE_Y, width: 100, height: 26 }, 'Next', () => this.turnPage(1), this.page < pages - 1)
+    }
+    // The member whose worn gear the row is set against.
+    this.frame.add(this.add.text(OPTIONS_X, LIST_TOP, 'Compare with what is worn by:', { fontFamily: FONT, fontSize: '11px', color: GOLD }))
+    this.expedition.members.forEach((member, i) => {
+      const at = { x: OPTIONS_X + MEMBER_W / 2 + (i % 3) * (MEMBER_W + 4), y: LIST_TOP + 28 + Math.floor(i / 3) * (MEMBER_H + 2), width: MEMBER_W, height: MEMBER_H }
+      this.memberAt.set(i, { x: at.x, y: at.y })
+      addPanelButton(this, this.frame, at, member.name, () => this.time.delayedCall(0, () => this.pickMember(i)), { marked: i === this.forgeMember, fontSize: 10, cue: 'ui.tab' })
+    })
+    const below = LIST_TOP + 28 + Math.ceil(this.expedition.members.length / 3) * (MEMBER_H + 2) + 8
+    const style = { fontFamily: FONT, fontSize: '12px', color: TEXT, wordWrap: { width: OPTIONS_W } }
+    const row = rows.find((r) => r.id === this.chosen)
+    if (!row) {
+      this.frame.add(this.add.text(OPTIONS_X, below, 'Click an item to see what it changes.', { ...style, color: DIM }))
+      return
+    }
+    this.frame.add(this.add.text(OPTIONS_X, below, forgePreview(this.gameState, row, this.expedition.members[this.forgeMember] ?? this.expedition.members[0]).join('\n'), { ...style, fontSize: '11px', lineSpacing: 3 }))
+    if (row.refusal) this.frame.add(this.add.text(OPTIONS_X, PAGE_Y - 22, row.refusal, { ...style, fontSize: '11px', color: REFUSED }).setOrigin(0, 1))
+    this.button('forge', { x: OPTIONS_X + OPTIONS_W / 2, y: PAGE_Y, width: OPTIONS_W, height: 30 }, 'Forge it', () => this.onForge(row), row.refusal === null)
+  }
+
+  /** A line of the Forge list: its icon, name and cost; one the stock or the workshop cannot pay shows its cost in the refusal's colour but still opens to read why. */
+  private drawForgeRow(row: ForgeRow, y: number): void {
+    const marked = row.id === this.chosen
+    const centre = { x: LIST_X + LIST_W / 2, y: y + ROW_H / 2 }
+    this.forgeRowAt.set(row.id, { at: centre, row })
+    const back = this.add.rectangle(centre.x, centre.y, LIST_W, ROW_H - 2, marked ? 0x3a2f1c : 0x1b1712, 0.95).setStrokeStyle(1, marked ? 0xc9a227 : 0x3a3024)
+    back.setInteractive({ useHandCursor: true })
+    back.on('pointerover', () => !marked && back.setFillStyle(0x2c2418, 0.95))
+    back.on('pointerout', () => !marked && back.setFillStyle(0x1b1712, 0.95))
+    back.on('pointerdown', () => {
+      playCue(this, 'ui.click')
+      this.time.delayedCall(0, () => this.choose(row.id))
+    })
+    const icon = this.add.image(LIST_X + 12, centre.y, ITEM_ICON_KEYS[row.item.icon])
+    const tint = iconTint(row.item)
+    if (tint !== undefined) icon.setTint(tint)
+    const cost = this.add.text(LIST_X + LIST_W - 6, centre.y, row.costText, { fontFamily: FONT, fontSize: '10px', color: row.refusal ? REFUSED : DIM }).setOrigin(1, 0.5)
+    const name = this.add.text(LIST_X + 26, centre.y, row.name, { fontFamily: FONT, fontSize: '11px', color: marked ? GOLD : TEXT }).setOrigin(0, 0.5)
+    fitText(name, LIST_W - 26 - cost.width - 12)
+    this.frame.add([back, icon, name, cost])
   }
 
   /** The Runes tab: the items with a socket over the pouch, on the left; the sockets of the one clicked and the action's preview, on the right. */
@@ -494,18 +651,39 @@ export class CraftingScene extends Phaser.Scene {
       return
     }
     const all = this.currentOptions()
+    // A tier-3+ item may be tempered: its options sit side by side on the first row, above the modifiers.
+    const tempers = temperChoices(this.gameState, place)
+    // The row and its two slots stay where they are once a grade is gone (Fine's slot empties, Masterwork's stays), so the next click lands on the option it was aimed at.
+    const tempering = hasTemperRow(this.gameState, place)
+    tempers.forEach((choice) => {
+      const width = (OPTIONS_W - 4) / 2
+      const at: Rect = { x: OPTIONS_X + width / 2 + (choice.grade - 2) * (width + 4), y: LIST_TOP + OPTION_H / 2, width, height: OPTION_H - 2 }
+      this.optionAt.set(choice.id, { at, enabled: choice.refusal === null, label: choice.label })
+      addPanelButton(this, this.frame, at, choice.label, () => this.time.delayedCall(0, () => this.choose(choice.id)), { marked: choice.id === this.chosen, dimmed: choice.refusal !== null, fontSize: 10 })
+    })
+    const top = LIST_TOP + (tempering ? OPTION_H + 2 : 0)
+    // Beside the temper row there is no room for a line a grade: a tier-3+ item's modifiers sit three to a row.
+    const cols = tempering ? 3 : 1
+    const colW = (OPTIONS_W - 4 * (cols - 1)) / cols
     all.forEach((option, i) => {
       const key = optionKey(option)
-      const at: Rect = { x: OPTIONS_X + OPTIONS_W / 2, y: LIST_TOP + i * OPTION_H + OPTION_H / 2, width: OPTIONS_W, height: OPTION_H - 2 }
+      const at: Rect = { x: OPTIONS_X + colW / 2 + (i % cols) * (colW + 4), y: top + Math.floor(i / cols) * OPTION_H + OPTION_H / 2, width: colW, height: OPTION_H - 2 }
       // The name alone, which fits its button however long the modifier's words; the preview says what it does.
       const label = `${option.modifier.name} ${gradeNumeral(option.grade)}`
       this.optionAt.set(key, { at, enabled: true, label })
       addPanelButton(this, this.frame, at, label, () => this.time.delayedCall(0, () => this.choose(key)), { marked: key === this.chosen, fontSize: 11 })
     })
     const option = all.find((o) => optionKey(o) === this.chosen)
-    const previewY = LIST_TOP + all.length * OPTION_H + 10
+    const previewY = top + Math.ceil(all.length / cols) * OPTION_H + 10
+    const temperChoice = tempers.find((c) => c.id === this.chosen)
+    if (temperChoice) {
+      this.frame.add(this.add.text(OPTIONS_X, previewY, this.temperLines(place, { ...temperChoice, refusal: null }).join('\n'), { ...style, fontSize: '11px', lineSpacing: 3 }))
+      if (temperChoice.refusal) this.frame.add(this.add.text(OPTIONS_X, PAGE_Y - 22, temperChoice.refusal, { ...style, fontSize: '11px', color: REFUSED }).setOrigin(0, 1))
+      this.button('work', { x: OPTIONS_X + OPTIONS_W / 2, y: PAGE_Y, width: OPTIONS_W, height: 30 }, 'Temper it', () => this.onTemper(place, temperChoice), temperChoice.refusal === null)
+      return
+    }
     if (!option) {
-      this.frame.add(this.add.text(OPTIONS_X, previewY, 'Click a modifier to see what it changes.', { ...style, color: DIM }))
+      this.frame.add(this.add.text(OPTIONS_X, previewY, all.length || tempers.length ? 'Click an option to see what it changes.' : 'Nothing can be made of it here.', { ...style, color: DIM }))
       return
     }
     this.frame.add(this.add.text(OPTIONS_X, previewY, this.preview(place, option).join('\n'), { ...style, fontSize: '11px', lineSpacing: 3 }))
@@ -516,7 +694,7 @@ export class CraftingScene extends Phaser.Scene {
   private button(key: keyof CraftingProbe['buttons'], at: Rect, label: string, onClick: () => void, enabled = true, marked = false): void {
     this.controls[key] = { at, enabled }
     // A confirm sounds its own outcome (`onRune`, `onWork`); the tabs a tab; the rest a click or a back.
-    const cue = key === 'confirm' || key === 'work' ? null : key === 'modifyTab' || key === 'runesTab' ? 'ui.tab' : buttonCue(label)
+    const cue = key === 'confirm' || key === 'work' || key === 'forge' ? null : key === 'modifyTab' || key === 'forgeTab' || key === 'runesTab' ? 'ui.tab' : buttonCue(label)
     // Next tick: the redraw a click leads to destroys the button whose handler this runs in.
     addPanelButton(this, this.frame, at, label, () => this.time.delayedCall(0, onClick), { enabled: enabled || cue === null, dimmed: cue === null && !enabled, marked, fontSize: 13, cue })
   }
@@ -549,6 +727,19 @@ export class CraftingScene extends Phaser.Scene {
   private choose(key: string): void {
     this.chosen = key
     this.message = ''
+    this.render()
+  }
+
+  private pickSlot(slot: EquipmentSlot): void {
+    this.forgeSlot = slot
+    this.page = 0
+    this.chosen = null
+    this.message = ''
+    this.render()
+  }
+
+  private pickMember(index: number): void {
+    this.forgeMember = index
     this.render()
   }
 
@@ -592,6 +783,29 @@ export class CraftingScene extends Phaser.Scene {
     this.message = doneMessage(action, result.item, rune)
     // The item is where the old one was, under a new id: keep it selected.
     this.selected = placeKey({ ...place, itemId: result.item.id })
+    this.chosen = null
+    this.render()
+  }
+
+  /** Forges the row's item into the baggage. */
+  private onForge(row: ForgeRow): void {
+    const refusal = forge(this.gameState, this.expedition, row.family, row.material)
+    playCue(this, refusalCue(refusal, 'world.craft'))
+    this.message = refusal ?? forgedMessage(row)
+    this.render()
+  }
+
+  /** Tempers the item to the choice's grade, in its place. */
+  private onTemper(place: ItemPlace, choice: TemperChoice): void {
+    const refusal = temper(this.gameState, place, choice.grade)
+    playCue(this, refusalCue(refusal, 'world.craft'))
+    if (refusal) {
+      this.message = refusal
+      this.render()
+      return
+    }
+    this.message = `Made the ${choice.result.name}.`
+    this.selected = placeKey({ ...place, itemId: choice.result.id })
     this.chosen = null
     this.render()
   }

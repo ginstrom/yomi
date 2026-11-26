@@ -34,6 +34,9 @@ export function hexDirection(from: Hex, to: Hex): number | null {
 /** A stable string form, for use as a Map/Set key. */
 export const hexKey = (h: Hex): string => `${h.q},${h.r}`
 
+/** A number for a hex, distinct for every hex within 32767 of the origin in q and r: a cheaper key than `hexKey` inside a search. */
+export const hexIndex = (h: Hex): number => (h.q + 0x8000) * 0x10000 + (h.r + 0x8000)
+
 export const hexEquals = (a: Hex, b: Hex): boolean => a.q === b.q && a.r === b.r
 
 export const hexAdd = (a: Hex, b: Hex): Hex => hex(a.q + b.q, a.r + b.r)
@@ -172,33 +175,47 @@ export function reachableHexes(
   /** Ids of whoever is provoked by stepping from `from` to `to`; each counts once per route. */
   provokers: (from: Hex, to: Hex) => readonly string[] = () => [],
 ): Map<string, Hex[]> {
-  type Entry = { hex: Hex; path: Hex[]; provoked: ReadonlySet<string> }
-  const isSubset = (a: ReadonlySet<string>, b: ReadonlySet<string>) => [...a].every((id) => b.has(id))
+  // A route is kept as its last hex and the route before it, and spelled out only for the
+  // one each hex keeps; a route that provokes no one new shares its predecessor's set.
+  type Entry = { hex: Hex; prev: Entry | null; provoked: ReadonlySet<string> }
+  const isSubset = (a: ReadonlySet<string>, b: ReadonlySet<string>) => {
+    if (a.size > b.size) return false
+    for (const id of a) if (!b.has(id)) return false
+    return true
+  }
+  const pathOf = (entry: Entry): Hex[] => {
+    const path: Hex[] = []
+    for (let at: Entry | null = entry; at.prev !== null; at = at.prev) path.push(at.hex)
+    return path.reverse()
+  }
   const paths = new Map<string, Hex[]>()
-  const seen = new Set([hexKey(start)])
-  let frontier: Entry[] = [{ hex: start, path: [], provoked: new Set() }]
+  const seen = new Set([hexIndex(start)])
+  let frontier: Entry[] = [{ hex: start, prev: null, provoked: new Set() }]
   // Breadth-first, one ring of path length at a time, so every path is shortest
   // and the provoked ids only have to break ties within a ring. Sets don't add
   // up like numbers: a route that has provoked {x} may end up cheaper than one
   // that provoked {y} if the rest of the way passes x again. So each hex keeps
   // every route whose provoked ids aren't a superset of another route's there.
   for (let step = 0; step < maxSteps && frontier.length > 0; step++) {
-    const next = new Map<string, Entry[]>()
-    for (const { hex: from, path, provoked } of frontier) {
+    const next = new Map<number, Entry[]>()
+    for (const entry of frontier) {
+      const { hex: from, provoked } = entry
       for (const n of hexNeighbors(from)) {
-        const key = hexKey(n)
+        const key = hexIndex(n)
         if (seen.has(key) || !passable(n)) continue
-        const leaving = new Set([...provoked, ...provokers(from, n)])
+        const added = provokers(from, n)
+        const leaving = added.every((id) => provoked.has(id)) ? provoked : new Set([...provoked, ...added])
         const kept = next.get(key) ?? []
         if (kept.some((e) => isSubset(e.provoked, leaving))) continue
         const better = kept.filter((e) => !isSubset(leaving, e.provoked))
-        next.set(key, [...better, { hex: n, path: [...path, n], provoked: leaving }])
+        better.push({ hex: n, prev: entry, provoked: leaving })
+        next.set(key, better)
       }
     }
     for (const [key, kept] of next) {
       seen.add(key)
       const best = kept.reduce((a, b) => (b.provoked.size < a.provoked.size ? b : a))
-      paths.set(key, best.path)
+      paths.set(hexKey(best.hex), pathOf(best))
     }
     frontier = [...next.values()].flat()
   }

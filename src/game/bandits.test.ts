@@ -13,22 +13,22 @@ const T2 = { tier: 2, grade: 2 } as const
 
 const ROLES: readonly BanditRole[] = ['cutthroat', 'archer', 'brute', 'mage', 'captain', 'crossbowman']
 
-/** The gear table by family: the tier-1 id and the tier-2 id of each item a role holds. Every item is plain and takes the grade. */
-const ID = (tier: Tier, one: string, two: string) => itemById(tier === 1 ? one : two)!
+/** The gear table by family: the id of each item a role holds at each tier, the family's tier-1 id at tier 1. Every item is plain and takes the grade. */
+const METAL = ['iron', 'steel', 'mithril', 'adamant', 'starmetal'] as const
+const WOOD = ['yew', 'ironwood', 'elderwood', 'wyrmwood', 'heartwood'] as const
+const ID = (tier: Tier, materials: readonly string[], family: string, tier1?: string) =>
+  itemById(tier === 1 && tier1 ? tier1 : `${materials[tier - 1]}_${family}`)!
 const GEAR: Record<BanditRole, (tier: Tier) => { mainHand: Item; offHand?: Item; armor?: Item }> = {
-  cutthroat: (t) => ({ mainHand: ID(t, 'iron_dagger', 'steel_dagger') }),
-  archer: (t) => ({ mainHand: ID(t, 'yew_bow', 'ironwood_bow') }),
-  brute: (t) => ({
-    mainHand: ID(t, 'iron_battle_axe', 'steel_battle_axe'),
-    armor: ID(t, 'iron_breastplate', 'steel_breastplate'),
-  }),
-  mage: (t) => ({ mainHand: ID(t, 'spark_wand', 'ironwood_wand') }),
+  cutthroat: (t) => ({ mainHand: ID(t, METAL, 'dagger') }),
+  archer: (t) => ({ mainHand: ID(t, WOOD, 'bow') }),
+  brute: (t) => ({ mainHand: ID(t, METAL, 'battle_axe'), armor: ID(t, METAL, 'breastplate') }),
+  mage: (t) => ({ mainHand: ID(t, WOOD, 'wand', 'spark_wand') }),
   captain: (t) => ({
-    mainHand: ID(t, 'iron_sword', 'steel_longsword'),
-    offHand: ID(t, 'oak_shield', 'ironwood_shield'),
-    armor: ID(t, 'iron_breastplate', 'steel_breastplate'),
+    mainHand: ID(t, METAL, 'longsword', 'iron_sword'),
+    offHand: ID(t, WOOD, 'shield', 'oak_shield'),
+    armor: ID(t, METAL, 'breastplate'),
   }),
-  crossbowman: (t) => ({ mainHand: ID(t, 'yew_crossbow', 'ironwood_crossbow') }),
+  crossbowman: (t) => ({ mainHand: ID(t, WOOD, 'crossbow') }),
 }
 
 /** A hero built by hand the way bandits.ts says it builds a bandit: draft, gear, levels, then one autoAdvance. */
@@ -130,25 +130,57 @@ describe('banditStats', () => {
 })
 
 describe('banditGear', () => {
-  it('is tier 1 Fine at threats 3 and 5, plain at 4, tier 2 Fine at 6 and 7, and Masterwork steel from threat 8', () => {
-    expect([3, 4, 5, 6, 7, 8, 13, 20].map(banditGear)).toEqual([
+  it('is tier 1 Fine at threats 3 and 5, plain at 4, tier 2 Fine at 6 and 7, Masterwork steel at 8, then Fine mithril, Fine adamant and Masterwork starmetal by ring', () => {
+    expect([3, 4, 5, 6, 7, 8, 9, 11, 12, 17, 18, 20].map(banditGear)).toEqual([
       { tier: 1, grade: 2 },
       { tier: 1, grade: 1 },
       { tier: 1, grade: 2 },
       { tier: 2, grade: 2 },
       { tier: 2, grade: 2 },
       { tier: 2, grade: 3 },
-      { tier: 2, grade: 3 },
-      { tier: 2, grade: 3 },
+      { tier: 3, grade: 2 },
+      { tier: 3, grade: 2 },
+      { tier: 4, grade: 2 },
+      { tier: 4, grade: 2 },
+      { tier: 5, grade: 3 },
+      { tier: 5, grade: 3 },
     ])
   })
 
-  it('builds a bandit of each role at level 20 in Masterwork steel, as a hero built the same way', () => {
+  it('dresses every role at every tier in plain items of one family, each id an item', () => {
     for (const role of ROLES) {
-      const stats = banditStats(role, 20, banditGear(20))
-      expect(stats, role).toEqual(deriveCombatStats(heroLike(role, 20, 2, 3)))
-      expect(stats.weapon, role).toMatch(/^Masterwork (Steel|Ironwood) /)
+      for (const tier of [1, 2, 3, 4, 5] as const) {
+        for (const item of Object.values(GEAR[role](tier))) {
+          expect(item, `${role} ${tier}`).toBeDefined()
+          expect(item.tier, item.id).toBe(tier)
+        }
+        const stats = banditStats(role, 3, { tier, grade: 1 })
+        expect(stats.weapon, `${role} ${tier}`).toBe(GEAR[role](tier).mainHand.name)
+      }
     }
+  })
+
+  it('builds bandits at threats 9, 12 and 18 in Fine mithril, Fine adamant and Masterwork starmetal, as heroes built the same way', () => {
+    for (const [threat, tier, grade, words] of [
+      [9, 3, 2, /^Fine (Mithril|Elderwood) /],
+      [12, 4, 2, /^Fine (Adamant|Wyrmwood) /],
+      [18, 5, 3, /^Masterwork (Starmetal|Heartwood) /],
+    ] as const) {
+      for (const role of ROLES) {
+        const stats = banditStats(role, threat, banditGear(threat))
+        expect(stats, `${role} ${threat}`).toEqual(deriveCombatStats(heroLike(role, threat, tier, grade)))
+        expect(stats.weapon, `${role} ${threat}`).toMatch(words)
+      }
+    }
+  })
+
+  it('shows tier 3 in the brute\'s stats at threat 9', () => {
+    const steel = banditStats('brute', 9, { tier: 2, grade: 2 })
+    const mithril = banditStats('brute', 9, { tier: 3, grade: 2 })
+    expect(mithril.damage.bonus).toBe(steel.damage.bonus + 2)
+    expect(mithril.resistance).toBe(steel.resistance)
+    expect(mithril.ac).toBe(steel.ac + 2)
+    expect(mithril.weapon).toBe('Fine Mithril Battle Axe')
   })
 })
 

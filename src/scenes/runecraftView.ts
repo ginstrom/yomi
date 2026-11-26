@@ -34,7 +34,7 @@ import { TYPICAL_AP, compareLines } from './gearCompare.ts'
  * number is runecraft.ts's; this only words them.
  */
 
-/** Which gear has sockets, as socketsOf decides: the tiers and materials whose plain items have one, the grades that add one, the uniques with one. */
+/** Which gear has sockets, as socketsOf decides: the tiers whose plain items have one, the materials of the lowest of them (every finer one has one too), the grades that add one, the uniques with one. */
 export interface SocketSources {
   tiers: number[]
   materials: string[]
@@ -50,9 +50,10 @@ export function socketSources(): SocketSources {
   const socketed = BASE_ITEMS.filter((item) => socketsOf(item) > 0)
   const bare = BASE_ITEMS.find((item) => socketsOf(item) === 0)
   const adds = (grade: Grade) => !!bare && grade > 1 && socketsOf(itemById(`${bare.id}@${grade}`)!) > 0
+  const tiers = [...new Set(socketed.map((item) => item.tier!))].sort((a, b) => a - b)
   sources = {
-    tiers: [...new Set(socketed.map((item) => item.tier!))].sort((a, b) => a - b),
-    materials: MATERIALS.filter((m) => socketed.some((item) => item.material === m.id)).map((m) => m.name.toLowerCase()),
+    tiers,
+    materials: MATERIALS.filter((m) => m.tier === tiers[0] && socketed.some((item) => item.material === m.id)).map((m) => m.name.toLowerCase()),
     grades: GRADES.filter(adds).map((grade) => GRADE_DEFS[grade].prefix.trim()),
     uniques: MAGIC_ITEMS.filter((item) => socketsOf(item) > 0).map((item) => item.name),
   }
@@ -65,9 +66,9 @@ const listed = (words: readonly string[], last = 'and'): string =>
 
 /** The Runes tab's line when the party has nothing with a socket: which gear has them. */
 export function noSocketsHint(): string {
-  const { materials, grades, uniques } = socketSources()
+  const { tiers, materials, grades, uniques } = socketSources()
   const where = [
-    ...(materials.length ? [`${listed(materials)} gear`] : []),
+    ...(materials.length ? [`${listed(materials)} gear${tiers.length > 1 ? ' and anything finer' : ''}`] : []),
     ...grades.map((grade) => `${grade} gear`),
     ...(uniques.length ? [`the ${listed(uniques)}`] : []),
   ].map((place) => `on ${place}`)
@@ -77,7 +78,8 @@ export function noSocketsHint(): string {
 /** A rune's tooltip line (the trading post's, the pouch's): where a rune goes, in short. */
 export function runeSocketLine(): string {
   const { tiers, grades } = socketSources()
-  return `Set in a socketed item: ${listed([...tiers.map((tier) => `tier-${tier}`), ...grades], 'or')} gear.`
+  const tier = tiers.length ? [`tier-${tiers[0]}${tiers.length > 1 ? ' and finer' : ''}`] : []
+  return `Set in a socketed item: ${listed([...tier, ...grades], 'or')} gear.`
 }
 
 /** What the player may do on the Runes tab: set a rune from the pouch, take one out of the item selected, or fuse three. */

@@ -16,7 +16,12 @@ import { GUARD_RADIUS, ROUTE_TIMBER, isContacted, roadTo, routeLimit, type Trade
 import { HexBoard } from '../src/grid/hex.ts'
 import { advance, formParty, moveHero, type DayReport } from '../src/game/company.ts'
 import { MAX_PARTIES, presenceOf, type Expedition } from '../src/game/expedition.ts'
-import { craft } from '../src/game/crafting.ts'
+import { craft, temperCost } from '../src/game/crafting.ts'
+import { MAX_SHRINE_LEVEL } from '../src/game/buildings.ts'
+import { MAX_INFIRMARY_LEVEL } from '../src/game/infirmary.ts'
+import { baseItem, type EquipmentSlot, type Item } from '../src/inventory/inventory.ts'
+
+const GEAR_SLOT_NAMES = ['mainHand', 'offHand', 'armor'] as const
 import type { FamilyId } from '../src/inventory/catalog.ts'
 import { itemById, unruned } from '../src/inventory/inventory.ts'
 import { modifiersFor } from '../src/inventory/modifiers.ts'
@@ -68,6 +73,18 @@ import {
   PREFERRED_MODIFIERS,
   RUNE_ORDER,
   runecraftGear,
+  expectedKit,
+  kitLines,
+  kitNote,
+  noteMarks,
+  kitRole,
+  armourScore,
+  forgeChoice,
+  forgeGear,
+  FORGE_SLOTS,
+  HAMMER_RESISTANCE,
+  leadFoeResistance,
+  wantsFamily,
   visitGuildHall,
   carryOut,
   decide,
@@ -1110,13 +1127,19 @@ describe('the trading post and crafting in a campaign', () => {
     })
   })
 
-  it('keeps none of the outer rings\' materials (stage 9), so the careful party sells them', () => {
+  it('counts of the outer rings\' materials only the workshop\'s levels 4 to 6 ores as needs (stage 10; `NEVER_SOLD` keeps the rest of tiers 3 to 5 besides)', () => {
     const outer = ['ironwood', 'mithril', 'elderwood', 'adamant', 'wyrmwood', 'starmetal', 'heartwood'] as const
-    for (const shape of [{}, { tradingPost: 6, workshop: 3, shrine: 3, infirmary: 3, lodge: 3, guildHall: 5 }]) {
+    const kept = (needs: Stock) => Object.fromEntries(outer.map((material) => [material, needs[material] ?? 0]))
+    const none = { ironwood: 0, mithril: 0, elderwood: 0, adamant: 0, wyrmwood: 0, starmetal: 0, heartwood: 0 }
+    for (const [shape, expected] of [
+      [{}, { ...none, mithril: 20, adamant: 20, starmetal: 10 }],
+      [{ tradingPost: 6, workshop: 3, shrine: 3, infirmary: 3, lodge: 3, guildHall: 5 }, { ...none, mithril: 20, adamant: 20, starmetal: 10 }],
+      [{ workshop: 5 }, { ...none, starmetal: 10 }],
+      [{ workshop: 6 }, none],
+    ] as const) {
       const game = newGame(undefined, null, 1)
       Object.assign(game.world, shape)
-      const needs = materialNeeds(game, 3)
-      for (const material of outer) expect(needs[material] ?? 0, material).toBe(0)
+      expect(kept(materialNeeds(game, 3)), JSON.stringify(shape)).toEqual(expected)
     }
   })
 
@@ -1178,7 +1201,7 @@ describe('the trading post and crafting in a campaign', () => {
   })
 
   it('prefers, family by family, only modifiers that fit the family', () => {
-    expect(Object.keys(PREFERRED_MODIFIERS)).toEqual(['dagger', 'shortsword', 'longsword', 'battle_axe', 'greatsword', 'bow', 'shield', 'breastplate'])
+    expect(Object.keys(PREFERRED_MODIFIERS)).toEqual(['dagger', 'shortsword', 'longsword', 'battle_axe', 'greatsword', 'bow', 'crossbow', 'shield', 'breastplate'])
     for (const [family, preferred] of Object.entries(PREFERRED_MODIFIERS)) {
       const fitting = modifiersFor(family as FamilyId).map((m) => m.id)
       for (const id of preferred!) expect(fitting, `${family} ${id}`).toContain(id)
@@ -1233,6 +1256,308 @@ describe('summarizeCampaigns, the runes', () => {
       avgGoldOnRunes: 20,
     })
   }, 20_000)
+})
+
+describe('the kit: roles, the expected kit and the record', () => {
+  it('reads a hero\'s kit role from its first tagged skill: the ready-made three are a fighter, an archer and a mage', () => {
+    expect(readyMadeParty().map(kitRole)).toEqual(['fighter', 'archer', 'mage'])
+    const [fighter] = readyMadeParty()
+    expect(kitRole({ ...fighter, tagged: ['magic', 'melee'] })).toBe('mage')
+  })
+
+  it('gives gear §5.8\'s expected kit by level, the same for every role', () => {
+    const row = (tier: number, grades: number[], sockets: number[], ranks: number[]) => ({ tier, grades, sockets, ranks })
+    const rows = [
+      row(1, [1, 2], [0, 0], [1, 1]),
+      row(2, [2, 3], [1, 2], [1, 2]),
+      row(3, [2, 2], [2, 3], [2, 2]),
+      row(4, [2, 3], [3, 4], [2, 3]),
+      row(5, [3, 3], [4, 6], [3, 4]),
+    ]
+    expect([1, 5, 9, 13, 17, 20].map((level) => expectedKit(level))).toEqual([...rows, rows[4]])
+    expect([4, 8, 12, 16].map((level) => expectedKit(level).tier)).toEqual([1, 2, 3, 4])
+    expect(expectedKit(0)).toEqual(rows[0])
+    expect(expectedKit(25)).toEqual(rows[4])
+  })
+
+  it('notes the party\'s kit wherever it notes the battles to a level', () => {
+    const { record } = runCampaign(3, 1, EARLY_ONE, 0)
+    expect(Object.keys(record.battlesToLevel).length).toBeGreaterThan(0)
+    expect(Object.keys(record.kitAtLevel)).toEqual(Object.keys(record.battlesToLevel))
+    for (const notes of Object.values(record.kitAtLevel)) {
+      expect(notes.length).toBeGreaterThan(0)
+      for (const note of notes) {
+        expect(['fighter', 'archer', 'mage']).toContain(note.role)
+        expect(note.tier).toBeGreaterThanOrEqual(1)
+        expect(note.sockets).toBeGreaterThanOrEqual(0)
+      }
+    }
+    expect(record.goldOnForging).toBe(0)
+  }, 20_000)
+
+  it('notes an enchanted or empty main hand as tier 0, and counts the runes across the worn gear', () => {
+    const [fighter, , mage] = readyMadeParty()
+    fighter.equipment.mainHand = itemById('steel_longsword@3#ember1')!
+    fighter.equipment.armor = itemById('iron_breastplate@3#stone1')!
+    expect(kitNote(fighter)).toEqual({ role: 'fighter', tier: 2, sockets: 2 })
+    delete mage.equipment.mainHand
+    expect(kitNote(mage)).toEqual({ role: 'mage', tier: 0, sockets: 0 })
+    mage.equipment.mainHand = itemById('emberblade')!
+    expect(kitNote(mage).tier).toBe(0)
+  })
+
+  it('averages the kit by mark and role and the forging gold, and prints a Kit line against the expected kit', () => {
+    const base = { ...runCampaign(3, 1, EARLY_ONE, 0).record }
+    const records = [
+      {
+        ...base,
+        goldOnForging: 60,
+        kitAtLevel: {
+          5: [{ role: 'fighter' as const, tier: 2, sockets: 1 }, { role: 'archer' as const, tier: 1, sockets: 0 }],
+          10: [{ role: 'fighter' as const, tier: 3, sockets: 3 }],
+        },
+      },
+      { ...base, goldOnForging: 0, kitAtLevel: { 5: [{ role: 'fighter' as const, tier: 1, sockets: 0 }, { role: 'mage' as const, tier: 1, sockets: 2 }] } },
+    ]
+    const summary = summarizeCampaigns([], records)
+    expect(summary.avgGoldOnForging).toBe(30)
+    expect(summary.kit).toEqual([
+      { level: 5, campaigns: 2, roles: { fighter: { tier: 1.5, sockets: 0.5 }, archer: { tier: 1, sockets: 0 }, mage: { tier: 1, sockets: 2 } } },
+      { level: 10, campaigns: 1, roles: { fighter: { tier: 3, sockets: 3 } } },
+      { level: 15, campaigns: 0, roles: {} },
+      { level: 20, campaigns: 0, roles: {} },
+    ])
+    expect(kitLines(summary)).toEqual([
+      'Kit at 5 (2 campaigns): fighter tier 1.5, 0.5 runes; archer tier 1.0, 0.0 runes; mage tier 1.0, 2.0 runes; expected tier 2, 1–2 runes',
+      'Kit at 5, forge-ready campaigns: none (0 of 2)',
+      'Kit at 10 (1 campaigns): fighter tier 3.0, 3.0 runes; expected tier 3, 2–3 runes',
+      'Kit at 10, forge-ready campaigns: none (0 of 1)',
+    ])
+  }, 20_000)
+})
+
+describe('the kit of forge-ready campaigns (report only)', () => {
+  const party = () => readyMadeParty().map((member) => ({ ...member, level: 10 }))
+
+  it('notes each mark reached, and marks it forge-ready only with a workshop of level 4 or more then', () => {
+    const { record } = runCampaign(3, 1, EARLY_ONE, 0)
+    const fresh = { ...record, battlesToLevel: {}, kitAtLevel: {}, forgeReadyAt: undefined }
+    noteMarks(fresh, party(), 12, 3)
+    expect(fresh.battlesToLevel).toEqual({ 5: 12, 10: 12 })
+    expect(Object.keys(fresh.kitAtLevel)).toEqual(['5', '10'])
+    expect(fresh.forgeReadyAt).toBeUndefined()
+    const ready = { ...record, battlesToLevel: {}, kitAtLevel: {}, forgeReadyAt: undefined }
+    noteMarks(ready, party().map((m) => ({ ...m, level: 5 })), 4, 4)
+    noteMarks(ready, party(), 9, 4)
+    noteMarks(ready, party(), 10, 5)
+    expect(ready.battlesToLevel).toEqual({ 5: 4, 10: 9 })
+    expect(ready.forgeReadyAt).toEqual([5, 10])
+  }, 20_000)
+
+  it('averages the kit over the forge-ready campaigns of each mark, and prints it under the Kit line with n of N', () => {
+    const base = { ...runCampaign(3, 1, EARLY_ONE, 0).record }
+    const records = [
+      {
+        ...base,
+        kitAtLevel: { 5: [{ role: 'fighter' as const, tier: 1, sockets: 0 }], 10: [{ role: 'fighter' as const, tier: 3, sockets: 2 }, { role: 'mage' as const, tier: 3, sockets: 1 }] },
+        forgeReadyAt: [10 as const],
+      },
+      { ...base, kitAtLevel: { 5: [{ role: 'fighter' as const, tier: 1, sockets: 0 }], 10: [{ role: 'fighter' as const, tier: 1, sockets: 0 }] }, forgeReadyAt: undefined },
+    ]
+    const summary = summarizeCampaigns([], records)
+    expect(summary.kitForgeReady).toEqual([
+      { level: 5, campaigns: 0, roles: {} },
+      { level: 10, campaigns: 1, roles: { fighter: { tier: 3, sockets: 2 }, mage: { tier: 3, sockets: 1 } } },
+      { level: 15, campaigns: 0, roles: {} },
+      { level: 20, campaigns: 0, roles: {} },
+    ])
+    expect(kitLines(summary)).toEqual([
+      'Kit at 5 (2 campaigns): fighter tier 1.0, 0.0 runes; expected tier 2, 1–2 runes',
+      'Kit at 5, forge-ready campaigns: none (0 of 2)',
+      'Kit at 10 (2 campaigns): fighter tier 2.0, 1.0 runes; mage tier 3.0, 1.0 runes; expected tier 3, 2–3 runes',
+      'Kit at 10, forge-ready campaigns: fighter tier 3.0, 2.0 runes; mage tier 3.0, 1.0 runes (1 of 2)',
+    ])
+  }, 20_000)
+})
+
+describe('the gear policy (stage 10: families by role from tier 3)', () => {
+  /**
+   * The ready-made party (or the members picked, by index) at home, with the
+   * workshop, the post and the stock given and every other building out of the
+   * way, so that only the gear is at work.
+   */
+  const home = (opts: { workshop: number; post?: number; stock?: Stock; members?: number[]; gear?: Array<Partial<Record<EquipmentSlot, string>>> }) => {
+    const game = newGame(undefined, null, 1)
+    const party = game.parties[0]
+    if (opts.members) party.members = opts.members.map((i) => party.members[i])
+    Object.assign(game.world, { workshop: opts.workshop, tradingPost: opts.post ?? 1, infirmary: MAX_INFIRMARY_LEVEL, shrine: MAX_SHRINE_LEVEL })
+    game.world.lodge = lodgeCap(game.world)
+    game.world.stock = { ...opts.stock }
+    game.runes = {}
+    opts.gear?.forEach((gear, i) => {
+      if (Object.keys(gear).length > 0) party.members[i].equipment = Object.fromEntries(Object.entries(gear).map(([slot, id]) => [slot, itemById(id!)!]))
+    })
+    for (const hero of party.members) hero.hp = maxHp(hero)
+    return { game, party }
+  }
+  const plainId = (item: Item | undefined) => item && baseItem(item)!.id
+  const hobgoblins = { encounter: 'hobgoblin_warband', threat: 5 } as MonsterLocation
+  const goblins = { encounter: 'goblin_raid', threat: 5 } as MonsterLocation
+  const fullTier3 = { mainHand: 'mithril_longsword', offHand: 'elderwood_shield', armor: 'mithril_breastplate', head: 'mithril_helm', gloves: 'mithril_gauntlets', boots: 'mithril_greaves' }
+
+  it('forges a fighter a Mithril Longsword at a level 4 workshop, wears it, sells the old and counts the forge gold', () => {
+    const { game, party } = home({ workshop: 4, stock: { gold: 100, mithril: 8 }, members: [0] })
+    const trade = visitFacilities(game, party, 1, () => null)
+    const sword = party.members[0].equipment.mainHand!
+    expect([sword.family, sword.material, sword.tier]).toEqual(['longsword', 'mithril', 3])
+    expect(party.baggage).toEqual([])
+    expect(trade.goldFromSales).toBeGreaterThanOrEqual(salePrice(itemById('iron_sword')!))
+    expect(trade.goldOnForging).toBe(30)
+    expect(game.world.stock.mithril ?? 0).toBe(0)
+  })
+
+  it('reads the lead foe\'s resistance from the next target\'s encounter, 0 without one', () => {
+    const { party } = home({ workshop: 4 })
+    expect(leadFoeResistance(party, hobgoblins)).toBe(4)
+    expect(leadFoeResistance(party, goblins)).toBe(1)
+    expect(leadFoeResistance(party, null)).toBe(0)
+  })
+
+  it('wants the fighter in a war hammer against a lead foe of resistance 4 or more, else a longsword', () => {
+    const fighter = readyMadeParty()[0]
+    const stats = (id: string) => itemById(id)!.stats!
+    expect(HAMMER_RESISTANCE).toBe(4)
+    expect(wantsFamily(fighter, 'mainHand', 'war_hammer', stats('mithril_war_hammer'), 4)).toBe(true)
+    expect(wantsFamily(fighter, 'mainHand', 'longsword', stats('mithril_longsword'), 4)).toBe(false)
+    expect(wantsFamily(fighter, 'mainHand', 'war_hammer', stats('mithril_war_hammer'), 3)).toBe(false)
+    expect(wantsFamily(fighter, 'mainHand', 'longsword', stats('mithril_longsword'), 3)).toBe(true)
+    // Through a home visit: the next target picks the family forged.
+    for (const [target, family] of [[hobgoblins, 'war_hammer'], [goblins, 'longsword']] as const) {
+      const { game, party } = home({ workshop: 4, stock: { gold: 100, mithril: 8 }, members: [0] })
+      visitFacilities(game, party, 1, () => target)
+      expect(party.members[0].equipment.mainHand!.family).toBe(family)
+    }
+  })
+
+  it('switches family only with a higher tier, so a plain weapon never flips as the lead foe\'s resistance crosses 4', () => {
+    // A plain Mithril Longsword worn, the stock able to forge a Mithril War Hammer (30 gold) but not to temper (60): no switch at its own tier, whatever the lead foe.
+    const { game, party } = home({ workshop: 4, stock: { gold: 30, mithril: 8 }, members: [0], gear: [fullTier3] })
+    expect(forgeChoice(game, party, 0, 'mainHand', 4)).toBeNull()
+    expect(forgeChoice(game, party, 0, 'mainHand', 3)).toBeNull()
+    for (const target of [hobgoblins, goblins, hobgoblins, goblins]) {
+      const trade = visitFacilities(game, party, 1, () => target)
+      expect(plainId(party.members[0].equipment.mainHand)).toBe('mithril_longsword')
+      expect(trade.goldOnForging).toBe(0)
+      game.world.stock = { gold: 30, mithril: 8 }
+    }
+    // With adamant at a level 5 workshop the next tier comes in the wanted family.
+    const up = home({ workshop: 5, stock: { gold: 100, adamant: 10 }, members: [0], gear: [fullTier3] })
+    expect(forgeChoice(up.game, up.party, 0, 'mainHand', 4)?.item.id).toBe('adamant_war_hammer')
+  })
+
+  it('wants the archer\'s bow at tiers 1 and 2 (bought) and the crossbow from tier 3 (forged)', () => {
+    const post = home({ workshop: 3, post: 4, stock: { gold: 500 }, members: [1] })
+    visitFacilities(post.game, post.party, 1, () => null)
+    const bow = post.party.members[0].equipment.mainHand!
+    expect([bow.family, bow.tier]).toEqual(['bow', 2])
+    const forged = home({ workshop: 4, stock: { gold: 100, elderwood: 16 }, members: [1] })
+    expect(forgeChoice(forged.game, forged.party, 0, 'mainHand', 0)?.family).toBe('crossbow')
+    visitFacilities(forged.game, forged.party, 1, () => null)
+    expect(forged.party.members[0].equipment.mainHand!.id).toBe('elderwood_crossbow')
+  })
+
+  it('wants the mage in a staff and a robe from tier 3', () => {
+    const { game, party } = home({ workshop: 4, stock: { gold: 200, elderwood: 16, mithril: 8 }, members: [2] })
+    expect(forgeChoice(game, party, 0, 'mainHand', 0)?.family).toBe('staff')
+    expect(forgeChoice(game, party, 0, 'armor', 0)?.family).toBe('robe')
+    visitFacilities(game, party, 1, () => null)
+    const { mainHand, armor } = party.members[0].equipment
+    expect([mainHand!.id, armor!.id]).toEqual(['elderwood_staff', 'mithrilweave_robe'])
+  })
+
+  it('arms the fighter and archer in the best body armour and small gear their strength allows, never at an action point', () => {
+    const [fighter, archer] = readyMadeParty()
+    const stats = (id: string) => itemById(id)!.stats!
+    // Plate costs an action point: never; the breastplate outranks leather (armour class + 5 a point of resistance).
+    expect(wantsFamily(fighter, 'armor', 'plate', stats('mithril_plate'), 0)).toBe(false)
+    expect(armourScore(stats('mithril_breastplate'))).toBeGreaterThan(armourScore(stats('wyvern_leather')))
+    // The archer (strength 3) wears a Mithril helm (4 less the relief), not an Adamant one (4).
+    expect(wantsFamily(archer, 'head', 'helm', stats('mithril_helm'), 0)).toBe(true)
+    expect(wantsFamily(archer, 'head', 'helm', stats('adamant_helm'), 0)).toBe(false)
+    const { game, party } = home({ workshop: 4, stock: { gold: 500, mithril: 200, elderwood: 100 }, members: [0, 1, 2] })
+    visitFacilities(game, party, 1, () => null)
+    const ids = party.members.map((hero) => FORGE_SLOTS.map((slot) => plainId(hero.equipment[slot])))
+    expect(ids).toEqual([
+      ['mithril_longsword', 'mithril_breastplate', 'elderwood_shield', 'mithril_helm', 'mithril_gauntlets', 'mithril_greaves'],
+      ['elderwood_crossbow', 'mithril_breastplate', undefined, 'mithril_helm', 'mithril_gauntlets', 'mithril_greaves'],
+      // The mage's small slots are hide (no wyvern hide in the stock: none forged).
+      ['elderwood_staff', 'mithrilweave_robe', undefined, undefined, undefined, undefined],
+    ])
+  })
+
+  it('below tier 3 buys at the trading post exactly as before: the worn family, the mage keeping its own', () => {
+    // No mithril: the workshop stays at 3, below forging.
+    const { game, party } = home({ workshop: 3, post: 4, stock: { gold: 5000, elderwood: 50 } })
+    const trade = visitFacilities(game, party, 1, () => hobgoblins)
+    const worn = party.members.map((hero) => GEAR_SLOT_NAMES.map((slot) => plainId(hero.equipment[slot])))
+    expect(worn).toEqual([
+      ['steel_longsword', 'ironwood_shield', 'steel_breastplate'],
+      ['ironwood_bow', undefined, 'steel_breastplate'],
+      ['ironwood_wand', undefined, 'steel_breastplate'],
+    ])
+    expect(trade.goldOnForging).toBe(0)
+    expect(game.world.workshop).toBe(3)
+    expect(game.world.stock.elderwood).toBe(50)
+  })
+
+  it('leaves a forged item worn to the workshop: the post, which prices no tier 3, buys nothing for it', () => {
+    const { game, party } = home({ workshop: 0, post: 4, stock: { gold: 500 }, members: [0], gear: [{ mainHand: 'mithril_longsword' }] })
+    const trade = visitFacilities(game, party, 1, () => null)
+    expect(party.members[0].equipment.mainHand!.id).toBe('mithril_longsword')
+    expect(trade.goldOnGear).toBe(0)
+    expect(trade.tierTwoBought).toBe(0)
+  })
+
+  it('tempers after forging and before the sockets: a Masterwork mithril sword gains its second socket, filled', () => {
+    const { game, party } = home({ workshop: 4, stock: { gold: 200, mithril: 12 }, members: [0], gear: [fullTier3] })
+    game.runes = { ember1: 2 }
+    const trade = visitFacilities(game, party, 1, () => null)
+    const sword = party.members[0].equipment.mainHand!
+    expect([sword.base, sword.grade, sword.runes]).toEqual(['mithril_longsword', 3, ['ember1', 'ember1']])
+    expect(trade.goldOnForging).toBe(temperCost(itemById('mithril_longsword')!, 3).gold)
+    expect(game.world.stock.mithril ?? 0).toBe(0)
+  })
+
+  it('forges nothing below a level 4 workshop, or short of the ore, and leaves the stock as it was', () => {
+    const low = home({ workshop: 3, stock: { gold: 100, mithril: 8 }, members: [0] })
+    expect(forgeGear(low.game, low.party, () => 0)).toEqual({ gold: 0, runeGold: 0, forged: 0 })
+    expect(low.game.world.stock).toEqual({ gold: 100, mithril: 8 })
+    const short = home({ workshop: 4, stock: { gold: 100, mithril: 7 }, members: [0] })
+    expect(forgeGear(short.game, short.party, () => 0)).toEqual({ gold: 0, runeGold: 0, forged: 0 })
+    expect(short.game.world.stock).toEqual({ gold: 100, mithril: 7 })
+    expect(short.party.members[0].equipment.mainHand!.id).toBe('iron_sword')
+  })
+
+  it('never sells the ores and woods of tiers 3 to 5 or the trophies as surplus, but sells ironwood', () => {
+    const kept = { mithril: 100, adamant: 30, starmetal: 30, elderwood: 50, wyrmwood: 20, heartwood: 20, wolfhide: 10, wyvern_hide: 10, basilisk_scale: 10, drake_scale: 10 }
+    const { game, party } = home({ workshop: 0, stock: { ...kept, ironwood: 10 } })
+    visitFacilities(game, party, 1, () => null)
+    expect(game.world.stock).toMatchObject(kept)
+    expect(game.world.stock.ironwood ?? 0).toBe(0)
+  })
+
+  it('fuses any rank the workshop allows: three rank-2 runes into a rank 3 at level 4, not at 3', () => {
+    const at = (workshop: number, runes: Record<string, number>) => {
+      const { game, party } = home({ workshop, stock: { gold: 500 }, members: [0] })
+      game.runes = { ...runes }
+      runecraftGear(game, party)
+      return game.runes
+    }
+    expect(at(4, { ember2: 3 })).toEqual({ ember3: 1 })
+    expect(at(3, { ember2: 3 })).toEqual({ ember2: 3 })
+    // A rank 2 fused from Lesser runes is fused again.
+    expect(at(4, { storm1: 9 })).toEqual({ storm3: 1 })
+  })
 })
 
 describe('summarizeCampaigns, the improvements and income', () => {
@@ -1498,13 +1823,20 @@ describe('runes in a campaign', () => {
  * partners contacted 1, 1, 1, 0, 0 unchanged. Events hash `31f97ff2...d70f9f` became `e4dd3391...fb6394`. (The
  * step's first version, with the outer nests in the near-Source world, had moved them to fallen, Source, fallen,
  * Source, fallen, with 0.49 to 0.71 of the land blighted.)
+ *
+ * Stage 10 step 09 (the simulator's gear policy): two fields added by value, `goldOnForging` (0 in all five) and
+ * `kitAtLevel` (each reaching level 5 with every member at main-hand tier 1 and no rune; the fifth reaches no mark),
+ * and the policy put in without a re-record: play did not move. The policy works from tier 3 only (the user's
+ * decision 12), and none of the five reaches a level 4 workshop (1, 1, 0, 1, 0 at the end) or holds an ore or wood
+ * of tier 3+ it used to sell (`goldFromSales` unchanged), so nothing is forged, tempered, fused past rank 2 or kept
+ * that was sold before. Events hash `e4dd3391...fb6394` unchanged; the 50-campaign check identical too.
  */
 const GUARD_RECORDS: CampaignRecord[] = [
-  { outcome: "source", days: 417, battles: 19, spawns: 52, captured: 3, lost: 0, blighted: 0.37430555555555556, healedHp: 108, campDays: 28, towersBuilt: 3, towersLost: 0, deaths: 2, recruits: 3, hallLevel: 3, shrineLevel: 1, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 56, tierTwoBought: 0, crafted: 7, fieldCraftDays: 2, runesFound: 17, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 20, finalLevels: [8, 8, 8, 7], callings: { heavy_knight: 2, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [2, 7], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 19, wipes: 0, finalLevels: [[8, 8, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkDays: 383, vanguardWalkHomeDays: 106, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [5, 0, 0, 0], lodgeLevel: 1, goldBySource: { sites: 332, market: 0, routes: 0, sales: 56 }, partnersContacted: 1, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 1.2973621103117505, waitingIncomePerDay: 0 },
-  { outcome: "source", days: 414, battles: 24, spawns: 50, captured: 4, lost: 0, blighted: 0.3554563492063492, healedHp: 288, campDays: 43, towersBuilt: 3, towersLost: 0, deaths: 0, recruits: 2, hallLevel: 3, shrineLevel: 0, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 6, fieldCraftDays: 3, runesFound: 19, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [9, 9, 9, 8, 7], callings: { heavy_knight: 3, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 24, wipes: 0, finalLevels: [[9, 9, 9, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkDays: 364, vanguardWalkHomeDays: 77, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [6, 0, 0, 0], lodgeLevel: 1, goldBySource: { sites: 328, market: 0, routes: 0, sales: 0 }, partnersContacted: 1, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 1.3792270531400965, waitingIncomePerDay: 0 },
-  { outcome: "source", days: 351, battles: 19, spawns: 34, captured: 3, lost: 0, blighted: 0.27420634920634923, healedHp: 243, campDays: 23, towersBuilt: 3, towersLost: 0, deaths: 3, recruits: 3, hallLevel: 3, shrineLevel: 2, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 51, tierTwoBought: 0, crafted: 4, fieldCraftDays: 4, runesFound: 13, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 7], callings: { ranger: 1, evoker: 1, heavy_knight: 1 }, capstones: {  }, deathsAtLevel: [2, 8, 7], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 19, wipes: 0, finalLevels: [[8, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkDays: 319, vanguardWalkHomeDays: 69, guardBattles: 0, improvementsBuilt: [1, 0, 0], improvementLevels: [4, 1, 0, 0], lodgeLevel: 0, goldBySource: { sites: 280, market: 0, routes: 0, sales: 51 }, partnersContacted: 1, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 1.2905982905982907, waitingIncomePerDay: 0 },
-  { outcome: "fallen", days: 362, battles: 22, spawns: 36, captured: 5, lost: 0, blighted: 0.29851190476190476, healedHp: 254, campDays: 48, towersBuilt: 1, towersLost: 0, deaths: 1, recruits: 3, hallLevel: 3, shrineLevel: 1, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 66, tierTwoBought: 0, crafted: 6, fieldCraftDays: 4, runesFound: 17, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 20, finalLevels: [8, 8, 8, 8, 7], callings: { heavy_knight: 3, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [3], battlesToLevel: { 5: 9 }, roles: { vanguard: { battles: 22, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkDays: 308, vanguardWalkHomeDays: 85, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [7, 0, 0, 0], lodgeLevel: 1, goldBySource: { sites: 288, market: 0, routes: 0, sales: 66 }, partnersContacted: 0, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 1.4116022099447514, waitingIncomePerDay: 0 },
-  { outcome: "fallen", days: 29, battles: 4, spawns: 0, captured: 0, lost: 0, blighted: 0.1177579365079365, healedHp: 1, campDays: 1, towersBuilt: 0, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 1, fieldCraftDays: 1, runesFound: 2, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [3, 3, 3], callings: { swordmaster: 1, heavy_knight: 1, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [], battlesToLevel: {  }, roles: { vanguard: { battles: 4, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkDays: 26, vanguardWalkHomeDays: 0, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [2, 0, 0, 0], lodgeLevel: 0, goldBySource: { sites: 20, market: 0, routes: 0, sales: 0 }, partnersContacted: 0, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 0.8620689655172413, waitingIncomePerDay: 0 },
+  { outcome: "source", days: 417, battles: 19, spawns: 52, captured: 3, lost: 0, blighted: 0.37430555555555556, healedHp: 108, campDays: 28, towersBuilt: 3, towersLost: 0, deaths: 2, recruits: 3, hallLevel: 3, shrineLevel: 1, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 56, tierTwoBought: 0, crafted: 7, fieldCraftDays: 2, runesFound: 17, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 20, finalLevels: [8, 8, 8, 7], callings: { heavy_knight: 2, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [2, 7], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 19, wipes: 0, finalLevels: [[8, 8, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkDays: 383, vanguardWalkHomeDays: 106, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [5, 0, 0, 0], lodgeLevel: 1, goldBySource: { sites: 332, market: 0, routes: 0, sales: 56 }, partnersContacted: 1, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 1.2973621103117505, waitingIncomePerDay: 0, goldOnForging: 0, kitAtLevel: { 5: [{ role: "fighter", tier: 1, sockets: 0 }, { role: "archer", tier: 1, sockets: 0 }, { role: "mage", tier: 1, sockets: 0 }] } },
+  { outcome: "source", days: 414, battles: 24, spawns: 50, captured: 4, lost: 0, blighted: 0.3554563492063492, healedHp: 288, campDays: 43, towersBuilt: 3, towersLost: 0, deaths: 0, recruits: 2, hallLevel: 3, shrineLevel: 0, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 6, fieldCraftDays: 3, runesFound: 19, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [9, 9, 9, 8, 7], callings: { heavy_knight: 3, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 24, wipes: 0, finalLevels: [[9, 9, 9, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkDays: 364, vanguardWalkHomeDays: 77, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [6, 0, 0, 0], lodgeLevel: 1, goldBySource: { sites: 328, market: 0, routes: 0, sales: 0 }, partnersContacted: 1, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 1.3792270531400965, waitingIncomePerDay: 0, goldOnForging: 0, kitAtLevel: { 5: [{ role: "fighter", tier: 1, sockets: 0 }, { role: "archer", tier: 1, sockets: 0 }, { role: "mage", tier: 1, sockets: 0 }] } },
+  { outcome: "source", days: 351, battles: 19, spawns: 34, captured: 3, lost: 0, blighted: 0.27420634920634923, healedHp: 243, campDays: 23, towersBuilt: 3, towersLost: 0, deaths: 3, recruits: 3, hallLevel: 3, shrineLevel: 2, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 51, tierTwoBought: 0, crafted: 4, fieldCraftDays: 4, runesFound: 13, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 7], callings: { ranger: 1, evoker: 1, heavy_knight: 1 }, capstones: {  }, deathsAtLevel: [2, 8, 7], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 19, wipes: 0, finalLevels: [[8, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkDays: 319, vanguardWalkHomeDays: 69, guardBattles: 0, improvementsBuilt: [1, 0, 0], improvementLevels: [4, 1, 0, 0], lodgeLevel: 0, goldBySource: { sites: 280, market: 0, routes: 0, sales: 51 }, partnersContacted: 1, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 1.2905982905982907, waitingIncomePerDay: 0, goldOnForging: 0, kitAtLevel: { 5: [{ role: "fighter", tier: 1, sockets: 0 }, { role: "archer", tier: 1, sockets: 0 }, { role: "mage", tier: 1, sockets: 0 }] } },
+  { outcome: "fallen", days: 362, battles: 22, spawns: 36, captured: 5, lost: 0, blighted: 0.29851190476190476, healedHp: 254, campDays: 48, towersBuilt: 1, towersLost: 0, deaths: 1, recruits: 3, hallLevel: 3, shrineLevel: 1, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 66, tierTwoBought: 0, crafted: 6, fieldCraftDays: 4, runesFound: 17, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 20, finalLevels: [8, 8, 8, 8, 7], callings: { heavy_knight: 3, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [3], battlesToLevel: { 5: 9 }, roles: { vanguard: { battles: 22, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkDays: 308, vanguardWalkHomeDays: 85, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [7, 0, 0, 0], lodgeLevel: 1, goldBySource: { sites: 288, market: 0, routes: 0, sales: 66 }, partnersContacted: 0, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 1.4116022099447514, waitingIncomePerDay: 0, goldOnForging: 0, kitAtLevel: { 5: [{ role: "fighter", tier: 1, sockets: 0 }, { role: "archer", tier: 1, sockets: 0 }, { role: "mage", tier: 1, sockets: 0 }, { role: "fighter", tier: 1, sockets: 0 }] } },
+  { outcome: "fallen", days: 29, battles: 4, spawns: 0, captured: 0, lost: 0, blighted: 0.1177579365079365, healedHp: 1, campDays: 1, towersBuilt: 0, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 1, fieldCraftDays: 1, runesFound: 2, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [3, 3, 3], callings: { swordmaster: 1, heavy_knight: 1, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [], battlesToLevel: {  }, roles: { vanguard: { battles: 4, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkDays: 26, vanguardWalkHomeDays: 0, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [2, 0, 0, 0], lodgeLevel: 0, goldBySource: { sites: 20, market: 0, routes: 0, sales: 0 }, partnersContacted: 0, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 0.8620689655172413, waitingIncomePerDay: 0, goldOnForging: 0, kitAtLevel: {} },
 ]
 const GUARD_EVENTS_SHA256 = 'e4dd3391cd473d66b35d9070815f49e7c84fb913268c20894506e03e0cfb6394'
 

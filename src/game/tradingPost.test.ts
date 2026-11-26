@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { BASE_ITEMS, IRON_SWORD, SPARK_WAND, STORM_WAND, itemById } from '../inventory/inventory.ts'
 import { newGame } from './gameState.ts'
 import type { RuneKey } from '../inventory/runes.ts'
-import { MAX_TRADING_POST_LEVEL, TIER_TWO_LEVEL, TRADING_POST_COSTS, VALUES, buy, buyPrice, buyRefusal, buyRune, raiseTradingPost, runePrice, runeSalePrice, runeWares, salePrice, sell, sellMaterial, sellRune, sellables, sells, tradingPostName, wares } from './tradingPost.ts'
+import { GOODS_LEVEL, GOOD_PRICE, MAX_TRADING_POST_LEVEL, TIER_TWO_LEVEL, TRADING_POST_COSTS, VALUES, buy, buyPrice, buyRefusal, buyGood, buyGoodRefusal, buyRune, goodsForSale, raiseTradingPost, runePrice, runeSalePrice, runeWares, salePrice, sell, sellMaterial, sellRune, sellables, sells, tradingPostName, wares } from './tradingPost.ts'
 
 /** A new game at home, with 100 gold. */
 function home() {
@@ -102,9 +102,13 @@ describe('the trading post', () => {
 })
 
 describe('the price list', () => {
-  it('prices every plain item with a finite, positive, whole number', () => {
+  it('prices every plain item of tiers 1 and 2 with a finite, positive, whole number, and none above', () => {
     for (const item of BASE_ITEMS) {
       const price = buyPrice(item)
+      if (item.tier! >= 3) {
+        expect(price, item.id).toBeNull()
+        continue
+      }
       expect(Number.isInteger(price), item.id).toBe(true)
       expect(price!, item.id).toBeGreaterThan(0)
     }
@@ -308,7 +312,109 @@ describe('trading post levels 5 and 6', () => {
     }
   })
 
+  it('never sell tier 3 and up (long-campaign stage 10: the workshop forges it)', () => {
+    const game = home()
+    game.world.tradingPost = 6
+    game.world.stock.gold = 10_000
+    expect(wares(game.world).every((item) => item.tier! <= 2)).toBe(true)
+    for (const id of ['mithril_longsword', 'adamant_breastplate@2', 'starweave_robe@3', 'drake_leather', 'elderwood_bow']) {
+      const item = itemById(id)!
+      expect(sells(game.world, item), id).toBe(false)
+      expect(buyPrice(item), id).toBeNull()
+      expect(buyRefusal(game, game.parties[0], id), id).toBe('The trading post does not sell that; the workshop forges it.')
+    }
+    expect(buy(game, game.parties[0], 'mithril_longsword')).toBe('The trading post does not sell that; the workshop forges it.')
+    expect(game.world.stock.gold).toBe(10_000)
+    expect(game.parties[0].baggage).toEqual([])
+  })
+
+  it('buys a forged item for half its forged worth and its runes; tiers 1 and 2 as before', () => {
+    expect(salePrice(itemById('mithril_longsword')!)).toBe(22)
+    expect(salePrice(itemById('mithril_longsword#ember1')!)).toBe(Math.floor((45 + 15) / 2))
+    expect(salePrice(itemById('mithril_longsword@3+balanced2')!)).toBe(90)
+    expect(salePrice(itemById('mithril_longsword@2#ember2')!)).toBe(Math.floor((135 + 45) / 2))
+    expect(salePrice(itemById('starmetal_plate@3')!)).toBe(Math.floor(345 / 2))
+    expect(salePrice(itemById('steel_longsword@3')!)).toBe(buyPrice(itemById('steel_longsword@3')!)! / 2)
+    expect(salePrice(itemById('iron_sword@2')!)).toBe(18)
+  })
+
   it('are named Trading Post, Market, Market Hall and Trading House', () => {
     expect([1, 2, 3, 4, 5, 6].map(tradingPostName)).toEqual(['Trading Post', 'Trading Post', 'Trading Post', 'Market', 'Market Hall', 'Trading House'])
+  })
+})
+
+describe('partners\' goods at the Market Hall', () => {
+  const ALL = ['millbrook', 'saltmere', 'stonehollow', 'elder_glade', 'emberwatch']
+  function market(level = GOODS_LEVEL, contacted: string[] = ALL) {
+    const game = home()
+    game.world.tradingPost = level
+    game.world.contacted = [...contacted]
+    game.world.silent = []
+    return game
+  }
+
+  it('are sold from level 5 at 3 gold a unit', () => {
+    expect(GOODS_LEVEL).toBe(5)
+    expect(GOOD_PRICE).toBe(3)
+  })
+
+  it('list nothing below level 5, and the level refusal', () => {
+    const game = market(4)
+    expect(goodsForSale(game.world)).toEqual([])
+    expect(buyGoodRefusal(game, game.parties[0], 'mithril', 1)).toBe("A level 5 trading post sells partners' goods.")
+  })
+
+  it('list nothing with no partner contacted, else each good in partner order with the stand-in', () => {
+    expect(goodsForSale(market(5, []).world)).toEqual([])
+    expect(goodsForSale(market().world).map((o) => `${o.partner}:${o.material}`)).toEqual([
+      'millbrook:timber', 'saltmere:salt', 'stonehollow:mithril', 'elder_glade:elderwood', 'elder_glade:wyvern_hide', 'emberwatch:adamant',
+    ])
+    expect(goodsForSale(market().world)[2]).toEqual({ partner: 'stonehollow', name: 'Stonehollow', material: 'mithril' })
+  })
+
+  it('drop a silent partner and take it back when it wakes', () => {
+    const game = market()
+    game.world.silent = ['stonehollow']
+    expect(goodsForSale(game.world).some((o) => o.material === 'mithril')).toBe(false)
+    game.world.silent = []
+    expect(goodsForSale(game.world).some((o) => o.material === 'mithril')).toBe(true)
+  })
+
+  it('refuse in order', () => {
+    const game = market()
+    const party = game.parties[0]
+    game.world.stock.gold = 2
+    expect(buyGoodRefusal(game, party, 'starmetal', 0)).toBe('No partner sells starmetal here.')
+    game.world.silent = ['stonehollow']
+    expect(buyGoodRefusal(game, party, 'mithril', 1)).toBe('No partner sells mithril here.')
+    game.world.silent = []
+    for (const amount of [0, -1, 1.5]) expect(buyGoodRefusal(game, party, 'mithril', amount), String(amount)).toBe('Buy a whole number of at least 1.')
+    expect(buyGoodRefusal(game, party, 'mithril', 1)).toBe('It costs 3 gold, more than the stock holds.')
+    game.world.stock.gold = 3
+    expect(buyGoodRefusal(game, party, 'mithril', 1)).toBeNull()
+    expect(buyGoodRefusal(game, party, 'mithril', 2)).toBe('It costs 6 gold, more than the stock holds.')
+    game.world.tradingPost = 4
+    expect(buyGoodRefusal(game, party, 'mithril', 1)).toBe("A level 5 trading post sells partners' goods.")
+    expect(buyGoodRefusal(game, party, 'starmetal', 1)).toBe("A level 5 trading post sells partners' goods.")
+    party.position = { q: 40, r: 40 }
+    expect(buyGoodRefusal(game, party, 'mithril', 1)).toMatch(/^The trading post is at /)
+  })
+
+  it('sell Stonehollow\'s mithril at 3 gold a unit, and the wyvern hide stand-in', () => {
+    const game = market()
+    game.world.stock = { gold: 10 }
+    expect(buyGood(game, game.parties[0], 'mithril', 3)).toBeNull()
+    expect(game.world.stock).toMatchObject({ gold: 1, mithril: 3 })
+    game.world.stock = { gold: 10 }
+    expect(buyGood(game, game.parties[0], 'wyvern_hide', 2)).toBeNull()
+    expect(game.world.stock).toMatchObject({ gold: 4, wyvern_hide: 2 })
+  })
+
+  it('leave the stock untouched when refused', () => {
+    const game = market()
+    game.world.stock = { gold: 2, stone: 5 }
+    const before = structuredClone(game.world.stock)
+    expect(buyGood(game, game.parties[0], 'mithril', 1)).not.toBeNull()
+    expect(game.world.stock).toEqual(before)
   })
 })

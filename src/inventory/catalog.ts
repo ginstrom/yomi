@@ -1,4 +1,5 @@
 import type { EquipmentSlot, ItemIcon, ItemStats } from './inventory.ts'
+import type { Material } from '../game/territory.ts'
 
 /**
  * The catalog of plain gear (docs/designs/long-campaign/stage-03-gear-families.md):
@@ -8,7 +9,7 @@ import type { EquipmentSlot, ItemIcon, ItemStats } from './inventory.ts'
  */
 
 export type MaterialKind = 'metal' | 'wood' | 'hide' | 'cloth'
-export type Tier = 1 | 2
+export type Tier = 1 | 2 | 3 | 4 | 5
 /** How a tier and a grade treat an item: by its slot (gearClass). */
 export type GearClass = 'weapon' | 'shield' | 'armour' | 'small'
 
@@ -17,6 +18,12 @@ export interface MaterialDef {
   name: string
   kind: MaterialKind
   tier: Tier
+  /** Points off the strength each of its families asks, never below 0: Mithril 1, Starmetal 2. */
+  strengthRelief?: number
+  /** Its families' spell-skill penalties are halved toward 0 (Math.trunc): Mithril, Starmetal. */
+  casterFriendly?: true
+  /** Tiers 3 to 5: the stock material (src/game/territory.ts `Material`) forging and tempering it spends. */
+  stock?: Material
 }
 
 export type FamilyId =
@@ -63,7 +70,13 @@ export interface FamilyDef {
   tier1?: { id: string; name: string }
 }
 
-/** One row a kind and tier; no material id holds an underscore, so a plain id splits at its first. */
+/**
+ * One row a kind and tier; no material id holds an underscore, so a plain id
+ * splits at its first (the hide tiers 3 to 5 are `wyvern`, `basilisk` and
+ * `drake`, though their stock is `wyvern_hide` and the rest). Tiers 1 and 2
+ * first, then tiers 3 to 5 (long-campaign stage 10): metal, wood, hide, and
+ * cloth woven from the metal's ore.
+ */
 export const MATERIALS: readonly MaterialDef[] = [
   { id: 'iron', name: 'Iron', kind: 'metal', tier: 1 },
   { id: 'steel', name: 'Steel', kind: 'metal', tier: 2 },
@@ -73,6 +86,18 @@ export const MATERIALS: readonly MaterialDef[] = [
   { id: 'wolfhide', name: 'Wolfhide', kind: 'hide', tier: 2 },
   { id: 'linen', name: 'Linen', kind: 'cloth', tier: 1 },
   { id: 'silk', name: 'Silk', kind: 'cloth', tier: 2 },
+  { id: 'mithril', name: 'Mithril', kind: 'metal', tier: 3, strengthRelief: 1, casterFriendly: true, stock: 'mithril' },
+  { id: 'adamant', name: 'Adamant', kind: 'metal', tier: 4, stock: 'adamant' },
+  { id: 'starmetal', name: 'Starmetal', kind: 'metal', tier: 5, strengthRelief: 2, casterFriendly: true, stock: 'starmetal' },
+  { id: 'elderwood', name: 'Elderwood', kind: 'wood', tier: 3, stock: 'elderwood' },
+  { id: 'wyrmwood', name: 'Wyrmwood', kind: 'wood', tier: 4, stock: 'wyrmwood' },
+  { id: 'heartwood', name: 'Heartwood', kind: 'wood', tier: 5, stock: 'heartwood' },
+  { id: 'wyvern', name: 'Wyvern-hide', kind: 'hide', tier: 3, stock: 'wyvern_hide' },
+  { id: 'basilisk', name: 'Basilisk-scale', kind: 'hide', tier: 4, stock: 'basilisk_scale' },
+  { id: 'drake', name: 'Drake-scale', kind: 'hide', tier: 5, stock: 'drake_scale' },
+  { id: 'mithrilweave', name: 'Mithrilweave', kind: 'cloth', tier: 3, stock: 'mithril' },
+  { id: 'adamantweave', name: 'Adamantweave', kind: 'cloth', tier: 4, stock: 'adamant' },
+  { id: 'starweave', name: 'Starweave', kind: 'cloth', tier: 5, stock: 'starmetal' },
 ]
 
 const d = (count: number, sides: number, bonus = 0) => ({ count, sides, bonus })
@@ -166,16 +191,34 @@ export const FAMILIES: readonly FamilyDef[] = [
 ]
 
 /**
- * What a tier adds over tier 1, by gear class. A number adds to its field (a
- * missing field counting 0), and a damage roll's `bonus` to the damage bonus.
- * A tier never changes attack AP, range, piercing, two-handedness, strength or a penalty.
+ * What a tier adds over tier 1, by gear class (gear-and-runes §4.2). A number
+ * adds to its field (a missing field counting 0), and a damage roll's `bonus`
+ * to the damage bonus. A tier never changes attack AP, range, two-handedness
+ * or a penalty; it touches piercing only as a weapon's tiers 4 and 5 add
+ * `armorPierce` 1, and strength and spell skill only through its material's
+ * relief (`tierStats`).
  */
 export const TIER_BONUS: Record<GearClass, Record<Tier, ItemStats>> = {
-  weapon: { 1: {}, 2: { damage: d(0, 0, 2) } },
-  shield: { 1: {}, 2: { acBonus: 2 } },
-  armour: { 1: {}, 2: { acBonus: 2, resistance: 1 } },
-  small: { 1: {}, 2: { acBonus: 1 } },
+  weapon: {
+    1: {},
+    2: { damage: d(0, 0, 2) },
+    3: { damage: d(0, 0, 4), toHit: 5 },
+    4: { damage: d(0, 0, 6), toHit: 5, armorPierce: 1 },
+    5: { damage: d(0, 0, 8), toHit: 10, armorPierce: 1 },
+  },
+  shield: { 1: {}, 2: { acBonus: 2 }, 3: { acBonus: 4 }, 4: { acBonus: 6, resistance: 1 }, 5: { acBonus: 8, resistance: 1 } },
+  armour: {
+    1: {},
+    2: { acBonus: 2, resistance: 1 },
+    3: { acBonus: 4, resistance: 1 },
+    4: { acBonus: 6, resistance: 2 },
+    5: { acBonus: 8, resistance: 3 },
+  },
+  small: { 1: {}, 2: { acBonus: 1 }, 3: { acBonus: 1 }, 4: { acBonus: 2 }, 5: { acBonus: 3 } },
 }
+
+/** Resistance a small-slot item adds at each tier, only in a family whose tier-1 stats have resistance (helm, gauntlets, greaves). */
+export const SMALL_RESISTANCE: Record<Tier, number> = { 1: 0, 2: 0, 3: 1, 4: 1, 5: 2 }
 
 /** Weapon in the main hand, shield in the off hand, armour on the body, and the small slots (head, gloves, boots). */
 export function gearClass(slot: EquipmentSlot): GearClass {
@@ -194,15 +237,25 @@ export function familyById(id: FamilyId): FamilyDef {
   return FAMILY_BY_ID.get(id)!
 }
 
-/** `stats` with the tier's bonus for its class added. */
-export function tierStats(stats: ItemStats, cls: GearClass, tier: Tier): ItemStats {
+/**
+ * `stats` in `material`: its tier's bonus for `cls` added (and, for a small-slot
+ * family with resistance, `SMALL_RESISTANCE`), then the material's strength
+ * relief taken off a strength asked (never below 0), and for a caster-friendly
+ * material a spell-skill penalty halved toward 0. Tiers 1 and 2 carry neither
+ * relief, so they give the tier bonus alone.
+ */
+export function tierStats(stats: ItemStats, cls: GearClass, material: MaterialDef): ItemStats {
   const out: ItemStats = { ...stats }
-  for (const [key, value] of Object.entries(TIER_BONUS[cls][tier]) as [keyof ItemStats, unknown][]) {
+  const bonus: ItemStats = { ...TIER_BONUS[cls][material.tier] }
+  if (cls === 'small' && stats.resistance && SMALL_RESISTANCE[material.tier]) bonus.resistance = SMALL_RESISTANCE[material.tier]
+  for (const [key, value] of Object.entries(bonus) as [keyof ItemStats, unknown][]) {
     if (key === 'damage') {
       if (out.damage) out.damage = { ...out.damage, bonus: out.damage.bonus + (value as { bonus: number }).bonus }
     } else {
       ;(out as Record<string, unknown>)[key] = ((stats[key] as number | undefined) ?? 0) + (value as number)
     }
   }
+  if (material.strengthRelief && out.strength) out.strength = Math.max(0, out.strength - material.strengthRelief)
+  if (material.casterFriendly && out.spellSkill !== undefined && out.spellSkill < 0) out.spellSkill = Math.trunc(out.spellSkill / 2)
   return out
 }

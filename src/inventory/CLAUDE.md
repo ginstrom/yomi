@@ -4,7 +4,7 @@ Loaded when working in `src/inventory/`. The full catalog, grade, socket and run
 
 ## The modules
 
-- `catalog.ts`: the families of plain gear (`FAMILIES`: slot, material kind, icon, tier-1 stats), the materials (a tier 1 and a tier 2 of each kind), what tier 2 adds (`TIER_BONUS`) and the legacy ids (`LEGACY_ALIASES`).
+- `catalog.ts`: the families of plain gear (`FAMILIES`: slot, material kind, icon, tier-1 stats), the materials (tiers 1 to 5 of each kind; Mithril and Starmetal ease strength and halve spell-skill penalties), what each tier adds (`TIER_BONUS`, `SMALL_RESISTANCE`, folded by `tierStats`) and the legacy ids (`LEGACY_ALIASES`).
 - `inventory.ts`: the items (`BASE_ITEMS`, generated from the catalog; `WEAPONS`, the starting weapons; `MAGIC_ITEMS`, the enchanted loot), `itemById`, `addStats` and the strength shortfall. Equipping itself (`equipFromBackpack` and the rest) is in `src/character/character.ts`.
 - `grades.ts`: the three grades. `modifiers.ts`: the modifiers (`MODIFIERS`: families, workshop level, change at each grade).
 - `runes.ts`: the ten rune kinds at four ranks, sockets (`socketsOf`), fitting (`runeFits`), the pouch, and `onHitParts`, the one phrasing of on-hit effects every screen uses.
@@ -15,13 +15,13 @@ An item's id is `<plain>[@<grade>][+<modifier><grade>][#<rune>(.<rune>)*]`, as i
 
 ## What changes what
 
-- A grade adds by gear class (damage to a weapon, armour class to a shield or small-slot item, resistance to body armour) and never changes AP, range, piercing, strength or a penalty.
+- A grade adds by gear class (damage to a weapon, armour class to a shield or small-slot item, resistance to body armour) and never changes AP, range, piercing, strength or a penalty; a tier adds piercing at 4 and 5.
 - No tier, grade or modifier touches maximum hit points; only a Life rune in armour or a shield does. Enchanted items take no grade or modifier.
 - Each rune does one thing in a weapon (the main hand), another in armour and another in a shield (`slotClass`), folded into the item's stats (`addStats`). Its wards are summed over everything worn, its `onHit` read from the main hand only.
 
 ## Rune fitting
 
-`itemById` refuses more runes than the item's sockets or a rune that does not fit. Tier 1 has no sockets, tier 2 one, Masterwork one more, at most 3, and a small-slot item at most 1; three enchanted items have one of their own. Mind fits a weapon only if it strikes with Magic, and Acid only a melee weapon or the crossbow. `runeFitsOnly` says where a rune fits, for refusals.
+`itemById` refuses more runes than the item's sockets or a rune that does not fit. Tier 1 has no sockets, tiers 2 and 3 one, tiers 4 and 5 two, Masterwork one more, at most 3, and a small-slot item at most 1; three enchanted items have one of their own. Mind fits a weapon only if it strikes with Magic, and Acid only a melee weapon or the crossbow. `runeFitsOnly` says where a rune fits, for refusals.
 
 ## Equipping
 

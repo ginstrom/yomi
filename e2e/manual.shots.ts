@@ -479,6 +479,55 @@ describe('the manual’s screenshots', () => {
     await shot(game, 'trading-post-routes-page2')
   })
 
+  it('forging at a level 4 workshop and the Market Hall’s Goods', async () => {
+    const game = await games.open()
+    await game.newGame()
+    await game.page.evaluate(() => {
+      const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
+      saved.game.world.contacted = ['millbrook', 'stonehollow']
+      saved.game.world.tradingPost = 5
+      saved.game.world.workshop = 4
+      saved.game.world.stock = { gold: 300, mithril: 20 }
+      localStorage.setItem('yomi.save.1', JSON.stringify(saved))
+    })
+    await game.click((await game.reload()).buttons.continue)
+    await game.waitForScenes(['World'])
+    await game.click((await game.settled('World')).buttons.enterEncampment)
+    await game.waitForScenes(['Encampment'], ['World'])
+    let camp = await game.settled('Encampment')
+    await game.click(camp.facilities.find((f) => f.id === 'workshop')!)
+    camp = await game.settled('Encampment', (c) => c.selected === 'workshop')
+    await game.click(camp.buttons.open)
+    await game.waitForScenes(['Crafting'], ['World'])
+    const bench = await game.settled('Crafting')
+    await game.click(bench.buttons.forgeTab)
+    let forge = await game.settled('Crafting', (c) => c.tab === 'forge')
+    // The Mithril Longsword is on the weapons' first page; the loop pages on only if the list ever grows.
+    for (let page = 0; page < 5 && !forge.forgeRows.find((r) => r.id === 'longsword:mithril')?.visible; page++) {
+      await game.click(forge.buttons.next)
+      forge = await game.settled('Crafting', (c) => c.tab === 'forge')
+    }
+    await game.click(forge.forgeRows.find((r) => r.id === 'longsword:mithril')!)
+    await game.settled('Crafting', (c) => c.chosen === 'longsword:mithril')
+    await game.hover({ x: 0, y: 0 })
+    await shot(game, 'crafting-forge')
+
+    await game.click((await game.settled('Crafting')).buttons.close)
+    await game.waitForScenes(['Encampment'], ['World'])
+    camp = await game.settled('Encampment')
+    await game.click(camp.facilities.find((f) => f.id === 'trading_post')!)
+    await game.click((await game.settled('Encampment', (c) => c.selected === 'trading_post')).buttons.open)
+    await game.waitForScenes(['TradingPost'], ['World'])
+    const post = await game.settled('TradingPost')
+    await game.click(post.goodsButton)
+    const goods = await game.settled('TradingPost', (p) => p.filter.slot === 'goods' && p.rows.length > 0)
+    const mithril = goods.rows.find((row) => row.id === 'good:stonehollow:mithril')!
+    await game.click(mithril)
+    await game.settled('TradingPost', (p) => p.selected === mithril.id)
+    await game.hover({ x: 0, y: 0 })
+    await shot(game, 'trading-post-goods')
+  })
+
   it('a company of two parties: the guild hall’s columns, the exchange and the party bar', async () => {
     const game = await games.open()
     await game.newGame()
