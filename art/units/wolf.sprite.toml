@@ -1,0 +1,61 @@
+# A wolf: a low, lean grey skirmisher, head forward, tail streaming behind,
+# pale muzzle and a gold eye; built to run down the archer.
+canvas = "unit"
+
+outline = "auto"
+
+[points]
+chest = [16, 21]
+
+[frames.idle_0.runs]
+15 = [[1, "d"]]
+16 = [[1, "dl"], [24, "D"], [27, "D"]]
+17 = [[2, "dl"], [24, "Dd"], [27, "dD"]]
+18 = [[2, "ddd"], [9, "ddllllllllllll"], [23, "dllllld"]]
+19 = [[1, "dlll"], [5, "dddllllllllllllll"], [22, "ddlYlllld"]]
+20 = [[1, "dddd"], [5, "ddddddddddddddddd"], [22, "ddllwwwwD"]]
+21 = [[2, "ddd"], [5, "dddddddddddddddddd"], [23, "dddWWWD"]]
+22 = [[6, "DDdddddddddddddddd"], [24, "dWWD"]]
+23 = [[7, "DDdddddddddddddddD"]]
+24 = [[8, "DDDDDDDDDDDDDDDD"]]
+25 = [[8, "dddd"], [13, "DD"], [19, "dddd"], [24, "DD"]]
+26 = [[9, "ddd"], [13, "DD"], [20, "ddd"], [24, "DD"]]
+27 = [[9, "ddd"], [13, "DD"], [20, "ddd"], [24, "DD"]]
+28 = [[9, "ddd"], [13, "DD"], [20, "ddd"], [24, "DD"]]
+29 = [[9, "ddd"], [13, "DD"], [20, "ddd"], [24, "DD"]]
+30 = [[8, "dddd"], [13, "DDD"], [20, "dddd"], [24, "DDD"]]
+
+# A breath: the whole body sinks a pixel above the paws.
+[frames.idle_1]
+from = "idle_0"
+move = { rows = [0, 27], by = [0, 1] }
+
+[anim.idle]
+frames = ["idle_0", "idle_1"]
+ms = 520
+
+# A stretch: the near legs reach apart (back leg behind, front leg ahead).
+[frames.walk_0]
+from = "idle_0"
+[frames.walk_0.runs]
+27 = [[9, "d.."], [8, "d"], [20, "..."], [21, "d"]]
+28 = [[9, "..."], [7, "dd"], [20, "..."], [22, "dd"]]
+29 = [[9, "..."], [6, "dd"], [20, "..."], [23, "dd"]]
+30 = [[8, "...."], [5, "ddd"], [20, "...."], [23, "ddd"]]
+
+# The near paws lift, then the far ones.
+[frames.walk_1]
+from = "idle_0"
+[frames.walk_1.runs]
+29 = [[9, "..."], [20, "..."]]
+30 = [[8, "...."], [20, "...."]]
+
+[frames.walk_2]
+from = "idle_0"
+[frames.walk_2.runs]
+29 = [[13, ".."], [24, ".."]]
+30 = [[13, "..."], [24, "..."]]
+
+[anim.walk]
+frames = ["walk_0", "walk_1", "walk_0", "walk_2"]
+ms = 110

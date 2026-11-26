@@ -6527,6 +6527,140 @@
       24
     ]
   },
+  "ogre": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 640
+          },
+          {
+            "frame": "idle_1",
+            "ms": 640
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "walk_0",
+            "ms": 170
+          },
+          {
+            "frame": "walk_1",
+            "ms": 170
+          },
+          {
+            "frame": "walk_0",
+            "ms": 170
+          },
+          {
+            "frame": "walk_2",
+            "ms": 170
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      2,
+      0,
+      30,
+      32
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "ogre.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          2,
+          0,
+          30,
+          32
+        ],
+        "file": "ogre__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          2,
+          1,
+          30,
+          31
+        ],
+        "file": "ogre__idle_1.png"
+      },
+      "walk_0": {
+        "bounds": [
+          2,
+          0,
+          30,
+          32
+        ],
+        "file": "ogre__walk_0.png"
+      },
+      "walk_1": {
+        "bounds": [
+          2,
+          0,
+          30,
+          32
+        ],
+        "file": "ogre__walk_1.png"
+      },
+      "walk_2": {
+        "bounds": [
+          2,
+          0,
+          30,
+          32
+        ],
+        "file": "ogre__walk_2.png"
+      }
+    },
+    "points": {
+      "idle_0": {
+        "chest": [
+          15.5,
+          13.5
+        ]
+      },
+      "idle_1": {
+        "chest": [
+          15.5,
+          14.5
+        ]
+      },
+      "walk_0": {
+        "chest": [
+          15.5,
+          13.5
+        ]
+      },
+      "walk_1": {
+        "chest": [
+          15.5,
+          13.5
+        ]
+      },
+      "walk_2": {
+        "chest": [
+          15.5,
+          13.5
+        ]
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
   "portrait_barbarian": {
     "anchor": [
       16,
@@ -7385,6 +7519,274 @@
         "grip": [
           25.5,
           19.5
+        ]
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "wolf": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 520
+          },
+          {
+            "frame": "idle_1",
+            "ms": 520
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "walk_0",
+            "ms": 110
+          },
+          {
+            "frame": "walk_1",
+            "ms": 110
+          },
+          {
+            "frame": "walk_0",
+            "ms": 110
+          },
+          {
+            "frame": "walk_2",
+            "ms": 110
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      0,
+      14,
+      32,
+      18
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "wolf.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          0,
+          14,
+          32,
+          18
+        ],
+        "file": "wolf__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          0,
+          15,
+          32,
+          17
+        ],
+        "file": "wolf__idle_1.png"
+      },
+      "walk_0": {
+        "bounds": [
+          0,
+          14,
+          32,
+          18
+        ],
+        "file": "wolf__walk_0.png"
+      },
+      "walk_1": {
+        "bounds": [
+          0,
+          14,
+          32,
+          18
+        ],
+        "file": "wolf__walk_1.png"
+      },
+      "walk_2": {
+        "bounds": [
+          0,
+          14,
+          32,
+          18
+        ],
+        "file": "wolf__walk_2.png"
+      }
+    },
+    "points": {
+      "idle_0": {
+        "chest": [
+          16.5,
+          21.5
+        ]
+      },
+      "idle_1": {
+        "chest": [
+          16.5,
+          22.5
+        ]
+      },
+      "walk_0": {
+        "chest": [
+          16.5,
+          21.5
+        ]
+      },
+      "walk_1": {
+        "chest": [
+          16.5,
+          21.5
+        ]
+      },
+      "walk_2": {
+        "chest": [
+          16.5,
+          21.5
+        ]
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "worg_rider": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 540
+          },
+          {
+            "frame": "idle_1",
+            "ms": 540
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "walk_0",
+            "ms": 120
+          },
+          {
+            "frame": "walk_1",
+            "ms": 120
+          },
+          {
+            "frame": "walk_0",
+            "ms": 120
+          },
+          {
+            "frame": "walk_2",
+            "ms": 120
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      0,
+      4,
+      32,
+      28
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "worg_rider.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          0,
+          4,
+          32,
+          28
+        ],
+        "file": "worg_rider__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          0,
+          5,
+          32,
+          27
+        ],
+        "file": "worg_rider__idle_1.png"
+      },
+      "walk_0": {
+        "bounds": [
+          0,
+          4,
+          32,
+          28
+        ],
+        "file": "worg_rider__walk_0.png"
+      },
+      "walk_1": {
+        "bounds": [
+          0,
+          4,
+          32,
+          28
+        ],
+        "file": "worg_rider__walk_1.png"
+      },
+      "walk_2": {
+        "bounds": [
+          0,
+          4,
+          32,
+          28
+        ],
+        "file": "worg_rider__walk_2.png"
+      }
+    },
+    "points": {
+      "idle_0": {
+        "chest": [
+          15.5,
+          17.5
+        ]
+      },
+      "idle_1": {
+        "chest": [
+          15.5,
+          18.5
+        ]
+      },
+      "walk_0": {
+        "chest": [
+          15.5,
+          17.5
+        ]
+      },
+      "walk_1": {
+        "chest": [
+          15.5,
+          17.5
+        ]
+      },
+      "walk_2": {
+        "chest": [
+          15.5,
+          17.5
         ]
       }
     },
