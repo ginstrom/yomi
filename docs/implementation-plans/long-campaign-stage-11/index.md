@@ -18,7 +18,7 @@ Design first, then the references, then the code (the code wins, per the stages 
 8. **Worg Riders' band is 7 to 9** *(for the user, Q8)*, not the design's 6 to 9: the Worg Rider is native 7 and campaign §5.3 keeps every band's minimum at or above its kinds' native levels. No ring has threat 6, so play is the same either way.
 9. **Sprites: 13** *(for the user, Q9)*: the design says 14; its table names 12 new kinds, and the rebuilt Horror is a 13th (decision 3). The plan draws 13.
 10. **`--player-kit expected`** *(for the user, Q10)*: each member wears `expectedKit(level)`'s tier at the **low** end of each range (grade, runes filled, rank), in the families stage 10's gear policy picks by role, and the war hammer when the encounter's lead foe has resistance 4 or more; weapon runes Ember then Stone, armour runes Stone then Life (no ring wards: gear §5.8 step 3 stays out). C1.
-11. **Sweep and Rock use existing ability fields** (no engine addition beyond the immunity, design §2): Sweep is an area centred on the ogre, radius 1, foes only, through resistance; Rock is a burst of radius 0 at range 4, through resistance. If either cannot be built from today's fields, the ring step stops and reports. The wolf's pack bonus, the wyvern's flight and the wight's half damage from non-magic weapons stay out (plain blocks).
+11. **Sweep and Rock use existing ability fields** (no engine addition beyond the immunity, design §2): Sweep is an area centred on the ogre, radius 1, foes only, through resistance; Rock is a burst of radius 0 at range 4, through resistance. **`throughResistance` means cut by resistance, as a blow: give the kind `armorPierce`, or omit the flag to ignore resistance** (found in step 08; without it only the element's ward cuts an area; breaths keep no flag). If either cannot be built from today's fields, the ring step stops and reports. The wolf's pack bonus, the wyvern's flight and the wight's half damage from non-magic weapons stay out (plain blocks).
 12. **The immunity** (step 03): `CombatantStats.immune?: true` means no status whose `StatusRule` has a `tick` (today Poisoned and Corroded) is laid on the unit; checked in the one place a status is laid; the outcome records `immune: true`, so `LOG_SCHEMA_VERSION` 26 → 27; the policy values such a status at 0 on an immune unit. No `SAVE_VERSION` bump for it (a missing field reads as none).
 13. **Blightborn:** the Blight Cultist, the Blight Lich and `source_horror` are `blightborn` (Dawn's bane applies), as `horror` is.
 14. **Trophies** (gear §4.3) land with their kinds: wolf and worg_rider wolfhide 1 (ring 7), wyvern wyvern_hide 3 (ring 9), basilisk basilisk_scale 3 (ring 12), young_dragon drake_scale 6 (ring 15), elder_wyrm drake_scale 10 (ring 18). **Elder Glade's stand-in** (`STAND_IN_GOODS`) is removed in ring 9's step, when wyverns drop wyvern hide.
@@ -108,6 +108,8 @@ Each a `MonsterKind`, `UnitKind` id = sprite id, block `<NAME>_STATS` in `src/co
 | `elder_wyrm` | Elder Wyrm | 18 | 450 | res 5, regeneration 2, wards fire 15 | `wyrm_breath`, `wyrm_strikes` | 12 |
 | `source_horror` | Blight Horror | 20 | 500 | res 3, regeneration 2, blightborn | `blight_breath`, `horror_claws` | 13 |
 
+Piercing (the yardstick does not see `armorPierce`; step 08, against the kit's resistance): wolf 4, worg rider 6, ogre 5.
+
 ### C4. The new abilities (steps 08 to 13)
 
 In `ABILITIES`, ids in `ABILITY_IDS` after `fire_spit` and before `power_attack`, in this order; numbers not given are the engineer's first values:
@@ -116,7 +118,7 @@ In `ABILITIES`, ids in `ABILITY_IDS` after `fire_spit` and before `power_attack`
 - `ogre_sweep` "Sweep": area `{ shape: 'burst', centredOnSelf: true, range: 0, radius: 1, foesOnly: true, throughResistance: true, damage, halfOnMiss: false }`, recharge ≥ 1.
 - `wyvern_strikes` "Bite and Sting": routine, Bite then Tail Sting laying `poisoned`.
 - `basilisk_gaze` "Gaze": area cone range 3, no damage, lays `chilled`, recharge 2, `halfOnMiss: false`.
-- `giant_rock` "Rock": area burst range 4, radius 0, `throughResistance: true`, damage, recharge ≥ 1.
+- `giant_rock` "Rock": area burst range 4, radius 0, `throughResistance: true`, damage, recharge ≥ 1. The flag cuts it by resistance, as a blow: give the Hill Giant `armorPierce`, or omit the flag to ignore resistance (step 10 chooses).
 - `dragon_breath` "Fire Breath": area cone range 3, 6d6, element fire, lays `seared`, `halfOnMiss: true`, recharge 3.
 - `dragon_strikes` "Bite and Claws": routine Bite (2d8), Claw (1d8), Claw (1d8).
 - `wyrm_breath` "Fire Breath": area cone range 4, 8d6, fire, lays `seared`, `halfOnMiss: true`, recharge 3.

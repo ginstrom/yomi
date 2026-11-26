@@ -195,3 +195,11 @@ All six end inside 300–475. Trials used: wolf pack 1, ogre camp 1, worg riders
 **The policy snapshot:** re-recorded with ring 7's lines only. The test now asserts it: the first 14,242 lines hash to stage 10 step 02's `b9cef6e1…28ac` unchanged, every line after them begins `wolf_pack`, `worg_riders` or `ogre_camp`, 16,403 lines in all, `08248429…ebc1`.
 
 **Characterization pins on the far world, re-pinned with the change proven confined** (the digested JSON dumped before and after and diffed): `blight.test.ts`'s two pinned 30-day runs (two spawns at threat 9 are a Bandit Troop where they were a Salamander Spring: with six eligible kinds where three were, the same draw picks another; the event counts, the world RNG, the spawn places and the blight's hash are unchanged) and `worldMap.test.ts`'s seeded session (the three renamed nests' id, name and encounter and ten far spawns' name and encounter; `SESSION_TURN` unchanged). Neither is the refactor guard, and neither runs `--near-source`.
+
+**Follow-up outside this stage (found in step 08's browser runs):** `src/scenes/soundPlayer.ts`, `stopVoice` tweens a voice clip's volume while the clip's `complete` handler destroys it, so under load the tween sets `volume` on a destroyed sound (`Cannot set properties of null (setting 'volume')`) and a browser test's "no uncaught errors" check fails (runlog #74, `saves.test.ts`). There before this stage; not fixed here.
+
+**Corrected for steps 10 to 13:** an area with `throughResistance` is cut by the target's resistance less the attacker's `armorPierce`, as a blow; without the flag resistance is ignored and only the element's ward cuts it. The plan had it backwards (index decision 11 and C4, `10-ring-12.md`, `02-expected-kit.md`, amended).
+
+## Step 08 outcome
+
+Step 08 (ring 7: wolves, worg riders, ogres): engineer opus, reviewer opus, verdict clean, 1 review round, no blocking finding. Commits `b0fbe7d`, `4ca43d2`, `79d678f` (record); clean-tree gates at `4ca43d2`: `npm test` runlog #69, `npm run build` #70, `npm run sprites:check` #71; the reviewer's `npm test` #77 at `79d678f`; browser: the reviewer's #78, 190 passed and 2 timeouts, both passing on the rerun #79. Cells wp6 418, wp9 358, wr7 463, wr9 326, oc7 405, oc10 308, all inside 300–475; 50-campaign hash identical; departures 1 to 6 of the execution record accepted.

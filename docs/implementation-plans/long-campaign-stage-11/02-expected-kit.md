@@ -159,7 +159,7 @@ Test-first: write each test red before the code.
 
 **For later steps**
 - Ring steps: add each kind to `STAGE_11_KINDS` (and its exceptions to `STAGE_11_EXCEPTIONS`) in `src/game/encounters.test.ts`; a kind in that list leaves the bare test by itself.
-- A foe's plain weapon damage meets resistance 11 to 21 on the kitted fighter (the archer 11 to 18, the mage 3 to 7): damage that is to tell at rings 12 to 18 has to go through resistance (`throughResistance` areas, spells, elements) or carry `armorPierce`. The cells will show it; decision 4's 300–475 may need this from the first trial.
+- A foe's plain weapon damage meets resistance 11 to 21 on the kitted fighter (the archer 11 to 18, the mage 3 to 7): damage that is to tell at rings 12 to 18 has to ignore resistance (spells, and areas *without* `throughResistance`, which only an element's ward cuts) or carry `armorPierce` (corrected after step 08: an area *with* `throughResistance` is cut by resistance, as a blow: give the kind `armorPierce`, or omit the flag to ignore resistance). The cells will show it; decision 4's 300–475 may need this from the first trial.
 - `FIGHTER_GROWTH` (the bare table) no longer matches today's bare fighter (hit 65/83/93/100/100 and hit points 35/59/89/119/149 at levels 1/5/10/15/20); it was left alone (out of scope; stage 12 re-measures).
 
 **Review round 1** (opus reviewer, at `2cd7aca`; reruns runlog #27 and #28): verdict clean, no blocking finding; nothing disputed. Recorded from it, in the closing commit:
