@@ -103,3 +103,12 @@ No code change, no tuning, no band or "Now" change, no other plan file than this
 - [ ] One commit, "Stage 11 step 01: the stage's baseline", of this file, `log.md` and the index's row 01 only, files staged by path, no attribution lines; the index's row 01 updated with status and commit.
 
 ## 7. Execution record
+
+**Summary (2026-11-26, code `36cf131`; no source change since stage 10's measuring step).** Every figure equals stage 10's final figure and the 50-campaign hash is identical; nothing moved, so nothing to bring to the orchestrator. `one` 288, `company` 289 and `one`'s 331 days stay out of band as accepted until stage 12; `rl10` 409 is in band; heroes dead 1.2. Full tables in [`log.md`](log.md). `yomi-measure`'s first pass failed on a driver-script slip and was rerun whole (no bearing on the figures). The `long` output has no trophy line. No code changed.
+
+**Baseline for stage 11**
+- 50-campaign hash (reference for steps 02, 03, 08-13): `57fdea1553a35b1af0e33b74a11ea9fe0a0e2f62ef9e5c80972af59276e53e75` (26 of 50).
+- Early (500, `--near-source`): `one` 288 (331 days, 18.8 battles, 1.2 dead), `company` 289, `rl10` 409 (533 days, 34.0 battles).
+- Long (100, `--log none`): Source 1 of 100 (1%), fell 97, out of days 2; 1414 days; 42.3 battles; battles to level 5/10/15/20 6.8/28.4/55.9/none in 84/53/16/0 campaigns; win rate by threat 7 0.939, 9 0.785, 12 0.367, 15 0.295; 2271 gold on forging; run time 166 s alone.
+- Standard cells: GR3 500, BC3 455, BC4 454, BC5 494, SN5 451, SP5 475, SG7 0, SG10 1; TL5 0.
+- Far cells: BCO9 2, BCO12 0, FH15 0, FH18 0, SG20-18 28, SG20 71.
