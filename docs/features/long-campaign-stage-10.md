@@ -4,7 +4,7 @@
 
 - Request (user's words):
   > The next thing is stage 10 of the long campaign: forging and the high tiers. Its design is docs/designs/long-campaign/stage-10-forging-and-high-tiers.md and it is marked "ready for planning". [...] As with stages 2–9, the approved stage design goes straight to the planner. Start with the bookkeeping commit, then cut a long-campaign-stage-10 branch off main and run the orchestrator. Early figures, the refactor guard and the 50-campaign check run with --near-source as in stage 9. Balance bands are mine to change: bring any out-of-band figures to me.
-- Slug `long-campaign-stage-10` · Phase 6, PR · Next action: pr-creator (pr-reviewer ready at c72d798, `.git/pr-review/long-campaign-stage-10.md`) · Branch: `long-campaign-stage-10`, off main at 4d51a8b (stage 9 merged as PR #11).
+- Slug `long-campaign-stage-10` · Phase 6, PR · Next action: pr-creator, push and open approved 2026-11-26 (pr-reviewer ready at c72d798, `.git/pr-review/long-campaign-stage-10.md`) · Branch: `long-campaign-stage-10`, off main at 4d51a8b (stage 9 merged as PR #11).
 - Path: Large, but the stage design is the approved design. Straight to planning, as stages 2–9 did.
 - Links:
   - Stages overview: `docs/designs/long-campaign/index.md`
@@ -12,6 +12,7 @@
   - Previous stage: `docs/features/long-campaign-stage-09.md`
   - Plan: `docs/implementation-plans/long-campaign-stage-10/index.md` (11 steps, 25dee5a)
   - Plan log (history): `docs/implementation-plans/long-campaign-stage-10/log.md`
+  - Status thread: C0CMCLX2G8G, ts "1795692555.809649", https://recursiveai.slack.com/archives/C0CMCLX2G8G/p1795692555809649
   - Summary page: `.git/orchestrator/long-campaign-stage-10/summary.html`, https://claude.ai/artifact/L6b8hMdWK1tF9VNUu4cdag
 - Open questions: none. Plan questions 1–6 answered 2026-11-23 (decision log); step 02's engineer records them in the index.
 - Tiers (engineer / reviewer): planner opus. 01, 06 sonnet / sonnet; 04, 05, 08, 11 sonnet / opus; 02, 03, 07, 09, 10 opus / opus. No escalations.
@@ -33,3 +34,4 @@
 | 2026-11-23 | Accept the planner's other departures (index decisions) and tiers | orchestrator | — | Routine engineering choices |
 | 2026-11-23 | Step 10: accept the long campaign's gear lag until stage 12 (kit "Done when" clause unmet: Source 1/100, main hand tier 1 at level 10); add a report-only kit line over forge-ready campaigns; stage 12's candidates: keep weak parties off strong targets, forge for the vanguard, workshop before post, workshop level-2 stone cost | user | fix targeting now; cheaper workshop; workshop first | Cause is the simulator's targeting and spend order (stage 12), not the design's levers |
 | 2026-11-23 | Accept the Auto-resolve estimate's wait (2.6–4.7 s at level 15 in the dev build, loaded machine; step 07 cut its work ~6×) as a known issue | user | investigate the frame scheduling now (finer slicing, Web Worker) | Moving on to verification |
+| 2026-11-26 | Push the branch and open the PR against main | user | draft only; not yet | Pre-PR review ready |
