@@ -381,6 +381,48 @@
     {
       "frames": [
         {
+          "duration": 750,
+          "frame": "blight_cultist/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 750,
+          "frame": "blight_cultist/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "blight_cultist/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 190,
+          "frame": "blight_cultist/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 190,
+          "frame": "blight_cultist/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 190,
+          "frame": "blight_cultist/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 190,
+          "frame": "blight_cultist/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "blight_cultist/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 260,
           "frame": "camp_fire/base",
           "key": "atlas"
@@ -1885,6 +1927,48 @@
     {
       "frames": [
         {
+          "duration": 900,
+          "frame": "stone_golem/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 900,
+          "frame": "stone_golem/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "stone_golem/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 260,
+          "frame": "stone_golem/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 260,
+          "frame": "stone_golem/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 260,
+          "frame": "stone_golem/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 260,
+          "frame": "stone_golem/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "stone_golem/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 560,
           "frame": "troll/idle_0",
           "key": "atlas"
@@ -2090,6 +2174,48 @@
         }
       ],
       "key": "wyvern/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 800,
+          "frame": "young_dragon/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 800,
+          "frame": "young_dragon/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "young_dragon/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 220,
+          "frame": "young_dragon/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 220,
+          "frame": "young_dragon/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 220,
+          "frame": "young_dragon/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 220,
+          "frame": "young_dragon/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "young_dragon/walk",
       "repeat": -1
     }
   ]
