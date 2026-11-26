@@ -57,36 +57,13 @@ Design first, then the references, then the code (the code wins, per the stages 
 
 The task files copy each contract they produce or consume unchanged. "Existing" means at `1a008af`. A step that changes a contract updates the index and every task file that copies it.
 
-### C1. Expected kit for single battles (step 02)
+### C1. Expected kit for single battles (step 02, done)
 
-```ts
-// scripts/simulate.ts
-export type PlayerKit = 'own' | 'expected'
-// CliArgs gains playerKit: PlayerKit, default 'own'; flag '--player-kit own|expected'. 'expected' only for single battles
-//   (refused with --campaign) and not with --player-weapon (refused: 'choose one of --player-kit expected and --player-weapon').
-export function expectedGear(character: Character, level: number, leadResistance: number): void
-//   equips `character` (its worn gear replaced; clampHp after) with expectedKit(level): every slot the role's family
-//   (stage 10's gear-policy families by kitRole: fighter longsword, or war hammer when leadResistance >= 4, archer bow,
-//   or crossbow from tier 3; mage staff and robe; the body armour the policy's strength rule picks; head, gloves, boots)
-//   at expectedKit(level).tier and grades[0]; runes of rank ranks[0] filled across worn gear up to sockets[0], the main
-//   hand first (Ember, then Stone), then body armour, shield and the small slots (Stone, then Life). Draws nothing.
-// Single battles with 'expected': raisedParty's members each get expectedGear(member, args.partyLevel, lead), lead the
-//   resistance of the encounter's first enemy unit built at --threat. The summary line names the kit.
-```
+`--player-kit expected` and `expectedGear(character, level, leadResistance)` (`scripts/simulate.ts`): the contract's text is in [`02-expected-kit.md`](02-expected-kit.md) and copied in each ring step's task file; the code is as written there.
 
-### C2. The kitted yardstick (step 02)
+### C2. The kitted yardstick (step 02, done)
 
-```ts
-// src/combat/combat.ts
-export const KITTED_FIGHTER_GROWTH: ReadonlyArray<readonly [number, number, number, number]>
-//   [level, hero hit, hit points, mean damage a turn] of the ready-made fighter raised to level 5, 10, 15, 20 (raisedParty)
-//   wearing expectedGear(fighter, level, 0): toHit, maxHp, and floor(actionPoints / attackApCost) × (mean of its damage roll +
-//   mean on-hit bonus). Recorded constants; scripts/simulate.test.ts recomputes them and must match.
-export function foeYardstick(level: number, kit: 'bare' | 'expected' = 'bare'): FoeYardstick
-//   'bare' is today's (FIGHTER_GROWTH), unchanged; 'expected' the same bands from KITTED_FIGHTER_GROWTH.
-// src/game/encounters.test.ts: today's nine kinds stay on 'bare' with today's exceptions; every kind added in stage 11
-//   (STAGE_11_KINDS, a list in the test) is held to 'expected' at its native level, exceptions named with a reason.
-```
+`KITTED_FIGHTER_GROWTH` and `foeYardstick(level, kit: 'bare' | 'expected' = 'bare')` (`src/combat/combat.ts`); every stage 11 kind is in `STAGE_11_KINDS` (`src/game/encounters.test.ts`), held to `'expected'` at its native level, exceptions named with a reason. Text: [`02-expected-kit.md`](02-expected-kit.md).
 
 ### C3. The new kinds (steps 08 to 13)
 
@@ -171,9 +148,9 @@ Each listed location keeps its position and loot and takes the new id, name and 
 // SOURCE_FOE_LEVEL and EncounterDef.maxFoeLevel are removed. The Source location (`SOURCE_ID`) is unchanged.
 ```
 
-### C8. Sprites (steps 04 to 07)
+### C8. Sprites (steps 04 to 07, done)
 
-`art/units/<kind>.sprite.toml` for each C3 kind, `idle` and `walk` animations and `[points] chest`, built into `public/assets/sprites/`: step 04 `wolf`, `worg_rider`, `ogre`; 05 `wyvern`, `barrow_wight`, `basilisk`, `hill_giant`; 06 `stone_golem`, `blight_cultist`, `young_dragon`; 07 `blight_lich`, `elder_wyrm`, `source_horror`. Bosses (dragon, lich, wyrm, `source_horror`) on the largest unit canvas `docs/reference/sprites.md` allows. Nothing in `src/` changes.
+All 13 kinds' sprites are in the atlas (`art/units/<kind>.sprite.toml`); text in the sprite steps' task files.
 
 ### C9. The cells (steps 02, 08 to 14)
 
@@ -205,8 +182,7 @@ Each listed location keeps its position and loot and takes the new id, name and 
 
 01 → 02 → 03 → 08 → 09 → 10 → 11 → 12 → 13 → 14 → 15, with the sprite steps 04–07 beside them.
 
-- **04–07** touch only `art/units/` and `public/assets/sprites/`, each in its own worktree, any time; each must be merged before its ring step (04 before 08, 05 before 09, 06 before 11, 07 before 12). `src/scenes/unitLook.test.ts` fails for a kind with no sprite, so a ring step cannot commit without its sprites. Two sprite steps may run at once only if their atlas rebuilds are merged one after the other (the atlas and manifest are shared outputs: the second rebuilds after merging the first).
-- **03** may run beside 02 only if 02's simulations are not running (one simulation at a time); otherwise after 02.
+- **04–07** (sprites) are done and merged.
 - **Ring steps are strictly sequential**: they share `encounters.ts`, `combat.ts`, `abilities.ts`, `worldMap.ts`, `blight.ts`, `loot.ts`, `save.ts`, the snapshot and `bands.md`.
 - **Checkpoints:** a ring step stops for the orchestrator if a cell stays outside 300–475 after three trials (decision 4), if an ability cannot be built from existing fields (decision 11), or if the guard or the 50-campaign check moves (decision 15). Step 14 brings any early figure further out than accepted to the orchestrator.
 
@@ -241,20 +217,7 @@ Each listed location keeps its position and loot and takes the new id, name and 
 
 ## Open questions
 
-**Answered 2026-11-26: the user accepted every planner default (Q1 to Q10); the defaults stand** (decision log of the feature record). None blocks a step.
-
-| Q | Question | Default | Blocks |
-| --- | --- | --- | --- |
-| Q1 | Each encounter's foes and counts | decision 1 | 08–12 |
-| Q2 | Which nests change | decision 2 | 08–12 |
-| Q3 | The Source's guardians at 20; near-home Source kept | decision 3 | 07, 13 |
-| Q4 | "Most but not all" as a number | decision 4 | 08–14 |
-| Q5 | The hero side for the new kinds' yardstick | decision 5 | 02, 08–13 |
-| Q6 | Favoured runes of the new nests | decision 6 | 09–12 |
-| Q7 | Blight Breath's element and targets | decision 7 | 13 |
-| Q8 | Worg Riders' band | decision 8 | 08 |
-| Q9 | 13 or 14 sprites | decision 9 | 07 |
-| Q10 | The expected kit in a cell | decision 10 | 02 |
+None. **Answered 2026-11-26: the user accepted every planner default (Q1 to Q10)**; each is the decision marked *(for the user, Qn)* above (decision log of the feature record).
 
 ## For implementers
 
