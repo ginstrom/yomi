@@ -108,3 +108,7 @@ One attack a turn at every level (8 action points, a longsword's 5). The fighter
 | `sgk20` (today's Source) | tier 5 Masterwork, 4 runes of rank 3 | 500 | SG20 71 | 0.855 / 0.342 | 9.55 | 789.9 / 14.7 | 26 s |
 
 Own kit unchanged: `bc3` 455, 0.536, 11.87 and `bco9` 2, 0.801, 5.64, both identical to step 01.
+
+## Step 05 outcome
+
+Step 05 (sprites, rings 9 and 12): engineer sonnet, reviewer opus, verdict clean, 2 review rounds. Commits `5bc31dc`, `3d0e480` (records `b46e518`, `5f0f703`); clean-tree checks `npm test` runlog #18 and `npm run sprites:check` runlog #20. No simulation run.

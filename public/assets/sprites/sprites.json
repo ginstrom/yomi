@@ -937,6 +937,274 @@
       32
     ]
   },
+  "barrow_wight": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 700
+          },
+          {
+            "frame": "idle_1",
+            "ms": 700
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "walk_0",
+            "ms": 200
+          },
+          {
+            "frame": "walk_1",
+            "ms": 200
+          },
+          {
+            "frame": "walk_0",
+            "ms": 200
+          },
+          {
+            "frame": "walk_2",
+            "ms": 200
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      8,
+      4,
+      20,
+      28
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "barrow_wight.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          8,
+          4,
+          20,
+          28
+        ],
+        "file": "barrow_wight__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          8,
+          5,
+          20,
+          27
+        ],
+        "file": "barrow_wight__idle_1.png"
+      },
+      "walk_0": {
+        "bounds": [
+          8,
+          4,
+          20,
+          28
+        ],
+        "file": "barrow_wight__walk_0.png"
+      },
+      "walk_1": {
+        "bounds": [
+          8,
+          4,
+          20,
+          28
+        ],
+        "file": "barrow_wight__walk_1.png"
+      },
+      "walk_2": {
+        "bounds": [
+          8,
+          4,
+          20,
+          28
+        ],
+        "file": "barrow_wight__walk_2.png"
+      }
+    },
+    "points": {
+      "idle_0": {
+        "chest": [
+          14.5,
+          14.5
+        ]
+      },
+      "idle_1": {
+        "chest": [
+          14.5,
+          15.5
+        ]
+      },
+      "walk_0": {
+        "chest": [
+          14.5,
+          14.5
+        ]
+      },
+      "walk_1": {
+        "chest": [
+          14.5,
+          14.5
+        ]
+      },
+      "walk_2": {
+        "chest": [
+          14.5,
+          14.5
+        ]
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "basilisk": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 760
+          },
+          {
+            "frame": "idle_1",
+            "ms": 760
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "walk_0",
+            "ms": 230
+          },
+          {
+            "frame": "walk_1",
+            "ms": 230
+          },
+          {
+            "frame": "walk_0",
+            "ms": 230
+          },
+          {
+            "frame": "walk_2",
+            "ms": 230
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      0,
+      13,
+      31,
+      19
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "basilisk.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          0,
+          13,
+          31,
+          19
+        ],
+        "file": "basilisk__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          0,
+          14,
+          31,
+          18
+        ],
+        "file": "basilisk__idle_1.png"
+      },
+      "walk_0": {
+        "bounds": [
+          0,
+          13,
+          31,
+          19
+        ],
+        "file": "basilisk__walk_0.png"
+      },
+      "walk_1": {
+        "bounds": [
+          0,
+          13,
+          31,
+          19
+        ],
+        "file": "basilisk__walk_1.png"
+      },
+      "walk_2": {
+        "bounds": [
+          0,
+          13,
+          31,
+          19
+        ],
+        "file": "basilisk__walk_2.png"
+      }
+    },
+    "points": {
+      "idle_0": {
+        "chest": [
+          20.5,
+          21.5
+        ]
+      },
+      "idle_1": {
+        "chest": [
+          20.5,
+          22.5
+        ]
+      },
+      "walk_0": {
+        "chest": [
+          20.5,
+          21.5
+        ]
+      },
+      "walk_1": {
+        "chest": [
+          20.5,
+          21.5
+        ]
+      },
+      "walk_2": {
+        "chest": [
+          20.5,
+          21.5
+        ]
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
   "camp_fire": {
     "anchor": [
       12,
@@ -3788,6 +4056,140 @@
         "chest": [
           16.5,
           17.5
+        ]
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "hill_giant": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 700
+          },
+          {
+            "frame": "idle_1",
+            "ms": 700
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "walk_0",
+            "ms": 190
+          },
+          {
+            "frame": "walk_1",
+            "ms": 190
+          },
+          {
+            "frame": "walk_0",
+            "ms": 190
+          },
+          {
+            "frame": "walk_2",
+            "ms": 190
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      0,
+      0,
+      32,
+      32
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "hill_giant.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "file": "hill_giant__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          0,
+          1,
+          32,
+          31
+        ],
+        "file": "hill_giant__idle_1.png"
+      },
+      "walk_0": {
+        "bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "file": "hill_giant__walk_0.png"
+      },
+      "walk_1": {
+        "bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "file": "hill_giant__walk_1.png"
+      },
+      "walk_2": {
+        "bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "file": "hill_giant__walk_2.png"
+      }
+    },
+    "points": {
+      "idle_0": {
+        "chest": [
+          15.5,
+          14.5
+        ]
+      },
+      "idle_1": {
+        "chest": [
+          15.5,
+          15.5
+        ]
+      },
+      "walk_0": {
+        "chest": [
+          15.5,
+          14.5
+        ]
+      },
+      "walk_1": {
+        "chest": [
+          15.5,
+          14.5
+        ]
+      },
+      "walk_2": {
+        "chest": [
+          15.5,
+          14.5
         ]
       }
     },
@@ -7787,6 +8189,140 @@
         "chest": [
           15.5,
           17.5
+        ]
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "wyvern": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 620
+          },
+          {
+            "frame": "idle_1",
+            "ms": 620
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "walk_0",
+            "ms": 170
+          },
+          {
+            "frame": "walk_1",
+            "ms": 170
+          },
+          {
+            "frame": "walk_0",
+            "ms": 170
+          },
+          {
+            "frame": "walk_2",
+            "ms": 170
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      0,
+      2,
+      31,
+      30
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "wyvern.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          0,
+          2,
+          31,
+          30
+        ],
+        "file": "wyvern__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          0,
+          3,
+          31,
+          29
+        ],
+        "file": "wyvern__idle_1.png"
+      },
+      "walk_0": {
+        "bounds": [
+          0,
+          2,
+          31,
+          30
+        ],
+        "file": "wyvern__walk_0.png"
+      },
+      "walk_1": {
+        "bounds": [
+          0,
+          2,
+          31,
+          30
+        ],
+        "file": "wyvern__walk_1.png"
+      },
+      "walk_2": {
+        "bounds": [
+          0,
+          2,
+          31,
+          30
+        ],
+        "file": "wyvern__walk_2.png"
+      }
+    },
+    "points": {
+      "idle_0": {
+        "chest": [
+          17.5,
+          18.5
+        ]
+      },
+      "idle_1": {
+        "chest": [
+          17.5,
+          19.5
+        ]
+      },
+      "walk_0": {
+        "chest": [
+          17.5,
+          18.5
+        ]
+      },
+      "walk_1": {
+        "chest": [
+          17.5,
+          18.5
+        ]
+      },
+      "walk_2": {
+        "chest": [
+          17.5,
+          18.5
         ]
       }
     },

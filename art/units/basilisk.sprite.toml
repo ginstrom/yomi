@@ -1,0 +1,62 @@
+# A basilisk: a squat, heavy, stone-plated lizard, spined along the back, its
+# broad head low and a pale cold eye that burns brightest on the sprite.
+canvas = "unit"
+
+outline = "auto"
+
+[points]
+chest = [20, 21]
+
+[frames.idle_0.runs]
+14 = [[10, "a"], [14, "a"], [18, "a"]]
+15 = [[9, "aMa"], [13, "aMa"], [17, "aMa"]]
+16 = [[8, "MamamamamamaM"]]
+17 = [[6, "MmmmammmammmammmM"], [23, "MmmmmM"]]
+18 = [[5, "Mmmmmmmmmmmmmmmm"], [21, "mmmzmmmmM"]]
+19 = [[4, "Mmmmmmmmmmmmmmmmm"], [21, "mmmmWWWmM"]]
+20 = [[3, "Mmmmmmmmmmmmmmmmmm"], [21, "mmmmWzzWM"]]
+21 = [[2, "Mmmmmmmmmmmmmmmmmmm"], [21, "mmmmmmmmM"]]
+22 = [[1, "MmmmmMmmmmmmmmmmmmmm"], [21, "mnnWnWnnM"]]
+23 = [[2, "MMMmmmnnnnnnnnnnnnnnnnnnnnnM"]]
+24 = [[5, "MMnnttnnnttnnnttnnnttnnMM"]]
+25 = [[5, "MmmM"], [10, "MmmM"], [17, "MmmM"], [23, "MmmM"]]
+26 = [[5, "mmmM"], [10, "mmmM"], [17, "mmmM"], [23, "mmmM"]]
+27 = [[5, "mmmM"], [10, "mmmM"], [17, "mmmM"], [23, "mmmM"]]
+28 = [[5, "mmmM"], [10, "mmmM"], [17, "mmmM"], [23, "mmmM"]]
+29 = [[5, "mmmM"], [10, "mmmM"], [17, "mmmM"], [23, "mmmM"]]
+30 = [[5, "mmmMW"], [10, "mmmMW"], [17, "mmmMW"], [23, "mmmMW"]]
+
+# A breath: the body and head sink a pixel; the feet stay put.
+[frames.idle_1]
+from = "idle_0"
+move = { rows = [0, 24], by = [0, 1] }
+
+[anim.idle]
+frames = ["idle_0", "idle_1"]
+ms = 760
+
+# A heavy crawl: the legs lean forward and back in step.
+[frames.walk_0]
+from = "idle_0"
+[frames.walk_0.runs]
+27 = [[4, "mmmM.mmmM."], [17, ".mmmM..mmmM"]]
+28 = [[4, "mmmM.mmmM."], [17, ".mmmM..mmmM"]]
+29 = [[3, "mmmM.mmmM.."], [17, "..mmmM..mmmM"]]
+30 = [[3, "mmmMWmmmMW.."], [17, "..mmmMW.mmmMW"]]
+
+# The near legs lift: the left of each pair, then the right.
+[frames.walk_1]
+from = "idle_0"
+[frames.walk_1.runs]
+29 = [[5, "...."], [17, "...."]]
+30 = [[5, "....."], [17, "....."]]
+
+[frames.walk_2]
+from = "idle_0"
+[frames.walk_2.runs]
+29 = [[10, "...."], [23, "...."]]
+30 = [[10, "....."], [23, "....."]]
+
+[anim.walk]
+frames = ["walk_0", "walk_1", "walk_0", "walk_2"]
+ms = 230
