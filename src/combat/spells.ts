@@ -669,3 +669,12 @@ export function spellRange(stats: Pick<CombatantStats, 'magic'>, spell: SpellId)
   const reaches = !hostile && (target === 'ally' || target === 'fallen' || (target === 'area' && range > 0))
   return range + (reaches ? (stats.magic?.friendlyRange ?? 0) : 0)
 }
+
+/**
+ * Whether `status` is never laid on a unit of `stats`: the unit is `immune`
+ * and the status's rule has a `tick`. The engine reads it wherever a status
+ * is laid and the policy wherever it values laying one, so they agree.
+ */
+export function refusesStatus(stats: Pick<CombatantStats, 'immune'>, status: StatusId): boolean {
+  return stats.immune === true && STATUSES[status].tick !== undefined
+}

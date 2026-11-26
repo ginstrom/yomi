@@ -1,6 +1,6 @@
 import { ABILITIES, abilityApCost, type Ability, type AbilityId, type Strike } from '../combat/abilities.ts'
 import { baneApplies, damageThrough, effectiveResistance, hitChance, warded, type CombatantStats, type DamageRoll, type RNG } from '../combat/combat.ts'
-import { HELPLESS_BONUS, SPELLS, STATUSES, isHealing, spellApCost, spellPower, type SpellId, type StatusId } from '../combat/spells.ts'
+import { HELPLESS_BONUS, SPELLS, STATUSES, isHealing, refusesStatus, spellApCost, spellPower, type SpellId, type StatusId } from '../combat/spells.ts'
 import { hexDistance, type Hex } from '../grid/hex.ts'
 import {
   ARC_BONUS,
@@ -301,7 +301,7 @@ function areaCast(state: BattleState, casts: readonly CastOption[], source: Unit
     if (c.spell === 'web') return c.foes.filter((u) => !hasStatus(u, 'webbed')).length
     // A spell that only lays a status (Bane) counts the foes not under it yet.
     const { damage, status } = SPELLS[c.spell]
-    const counted = !damage && status ? c.foes.filter((u) => !hasStatus(u, status.id)).length : hurt(c).length
+    const counted = !damage && status ? c.foes.filter((u) => canLay(u, status.id)).length : hurt(c).length
     return counted >= 2 ? counted : 0
   }
   return best(areas, foesTouched, 0, castOn(source))?.action ?? null
@@ -507,8 +507,14 @@ function markUse(state: BattleState, self: UnitSnapshot, own: readonly Action[],
   return best(ordered, (a) => target(a)!.hp, 0, (a) => a.target === source)
 }
 
-/** What laying `status` on `target` is worth: `STATUS_VALUE`'s, or for Seared the target's regeneration. */
+/** Whether laying `status` on `unit` would do anything: it is not under it already and does not refuse it (`refusesStatus`). */
+function canLay(unit: UnitSnapshot, status: StatusId): boolean {
+  return !hasStatus(unit, status) && !refusesStatus(unit, status)
+}
+
+/** What laying `status` on `target` is worth: `STATUS_VALUE`'s, or for Seared the target's regeneration; 0 where the target refuses it (`refusesStatus`, the immunity). */
 function statusWorth(status: StatusId, target: UnitSnapshot): number {
+  if (refusesStatus(target, status)) return 0
   return status === 'seared' ? (target.regeneration ?? 0) : (STATUS_VALUE[status] ?? 0)
 }
 
@@ -679,7 +685,7 @@ function statusArea(state: BattleState, self: UnitSnapshot, own: readonly Action
     const area = ABILITIES[action.ability].area!
     const touched = abilityTouches(state.units, self, action.ability, action.at, self.attackRange)
     if (touched.some((u) => u.side === self.side)) return 0
-    return touched.filter((u) => !hasStatus(u, area.status!.id)).length
+    return touched.filter((u) => canLay(u, area.status!.id)).length
   }
   return best(areas, fresh, 0, (a) => touchesSource(state, self, a, source))
 }

@@ -61,6 +61,11 @@ describe('foeInfoLines', () => {
     })
   })
 
+  it('ends with what an immune unit is immune to, by the name of each ticking status’s damage', () => {
+    expect(foeInfoLines(unit({ name: 'Stone Golem', immune: true }))).toEqual(['Stone Golem', 'Immune to acid and poison'])
+    expect(foeInfoLines(unit({ name: 'Stone Golem', immune: true, wards: { poison: 99 } }))).toEqual(['Stone Golem', 'Wards: poison 99', 'Immune to acid and poison'])
+  })
+
   it('then lists the wards above 0 in element order', () => {
     const lines = foeInfoLines(unit({ name: 'Troll', abilities: ['troll_claws'], wards: { poison: 3, fire: 99, frost: 0 } }))
     expect(lines).toEqual(['Troll', 'Claws: ready', '  claw 1d4+2, claw 1d4+2', 'Wards: fire 99, poison 3'])

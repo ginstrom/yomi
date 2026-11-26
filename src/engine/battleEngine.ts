@@ -20,6 +20,7 @@ import {
   HELPLESS_BONUS,
   SPELLS,
   STATUSES,
+  refusesStatus,
   spellApCost,
   spellPower,
   spellRange,
@@ -45,7 +46,7 @@ import {
 } from '../grid/hex.ts'
 
 /** Bump when event shapes change so log consumers can tell formats apart. */
-export const LOG_SCHEMA_VERSION = 26
+export const LOG_SCHEMA_VERSION = 27
 
 /** What an attacker's chance to hit gains, in percent, for each other standing ally adjacent to the defender. */
 export const FLANK_BONUS_PER_ALLY = 10
@@ -361,6 +362,8 @@ export interface AttackEvent extends EventBase {
   healed?: number
   /** The on-hit statuses laid, as they stand after; absent if none. */
   onHitStatuses?: ActiveStatus[]
+  /** A status the strike or the weapon's on-hit effects would have laid was refused, the defender being `immune` to it (`refusesStatus`); absent otherwise. */
+  immune?: true
   /** On the first strike of a technique that costs mana: the mana it cost, paid as it began. */
   manaCost?: number
   /** With `manaCost`: the unit's mana once it was paid. */
@@ -430,6 +433,8 @@ export interface CastOutcome {
   hpAfter: number
   /** The status laid on it, as it stands after; null if none. */
   status: ActiveStatus | null
+  /** The status that would have been laid was refused, the unit being `immune` to it (`refusesStatus`); absent otherwise. */
+  immune?: true
   /** `TAUNT_PENALTY`, already taken off `chance`, when a taunted user rolled at a unit other than its taunter; absent otherwise. */
   tauntPenalty?: number
   /** The unit was kept standing at 1 by Unbreakable. */
@@ -1635,9 +1640,11 @@ export class BattleEngine {
    * two durations, and its images anew; a new one laid on the unit's own
    * side's turn changes its action points at once. Taunted names the unit
    * that laid it (`source`), the newer taunter replacing the old; no other
-   * status keeps one.
+   * status keeps one. Null, and nothing changed, where the unit refuses the
+   * status (`refusesStatus`, the immunity). It draws nothing.
    */
-  private layStatus(unit: UnitRecord, laid: StatusLaid, by?: UnitRecord): ActiveStatus {
+  private layStatus(unit: UnitRecord, laid: StatusLaid, by?: UnitRecord): ActiveStatus | null {
+    if (refusesStatus(unit.stats, laid.id)) return null
     const source = laid.id === 'taunted' ? by?.id : undefined
     const existing = unit.statuses.find((s) => s.id === laid.id)
     if (existing) {
@@ -1663,6 +1670,15 @@ export class BattleEngine {
       unit.turnReady = false
     }
     return { ...status }
+  }
+
+  /**
+   * `layStatus` as an outcome records it: the status as it stands after, or
+   * null with `immune` where the unit refused it.
+   */
+  private laidOn(unit: UnitRecord, laid: StatusLaid, by?: UnitRecord): { status: ActiveStatus | null; immune?: true } {
+    const status = this.layStatus(unit, laid, by)
+    return status ? { status } : { status: null, immune: true }
   }
 
   /**
@@ -1975,10 +1991,9 @@ export class BattleEngine {
     const { apCost, manaCost } = this.payFor(actor, abilityId)
     if (target !== actor) actor.facing = hexDirectionTowards(actor.position, target.position)!
     const hpBefore = target.hp
-    const status = this.layStatus(target, laid)
     const outcome: CastOutcome = {
       unit: target.id, attackRoll: null, chance: null, defenderAc: null, hit: true, critical: false, fumble: false, image: false,
-      damage: 0, warded: 0, half: false, healed: 0, hpBefore, hpAfter: target.hp, status,
+      damage: 0, warded: 0, half: false, healed: 0, hpBefore, hpAfter: target.hp, ...this.laidOn(target, laid),
     }
     return [
       this.record<AbilityEvent>({
@@ -2118,10 +2133,14 @@ export class BattleEngine {
       apCost !== null && target.hp <= 0 && !actor.refunded && actor.stats.traits?.includes('blademaster') === true
         ? (strike?.actionApCost ?? apCost)
         : 0
-    const laid = strike?.strike.status && landed && target.hp > 0 ? this.layStatus(target, strike.strike.status) : null
-    const onHitStatuses = onHit
+    // Every status the hit would lay, the strike's then the weapon's on-hit ones; an immune defender refuses some (null).
+    const tried = strike?.strike.status && landed && target.hp > 0 ? this.laidOn(target, strike.strike.status) : null
+    const laid = tried?.status ?? null
+    const onHitTried = onHit
       .filter((entry) => entry.status && (!entry.onCrit || critical))
-      .flatMap((entry) => (target.hp > 0 ? [this.layStatus(target, entry.status!)] : []))
+      .flatMap((entry) => (target.hp > 0 ? [this.laidOn(target, entry.status!)] : []))
+    const onHitStatuses = onHitTried.flatMap((t) => (t.status ? [t.status] : []))
+    const refused = tried?.immune === true || onHitTried.some((t) => t.immune)
     // A technique's mana was paid as it began; what a hit restores comes after.
     const manaPaid = actor.mana
     const manaRestored =
@@ -2170,6 +2189,7 @@ export class BattleEngine {
         bonus,
         ...(heals ? { healed } : {}),
         ...(onHitStatuses.length > 0 ? { onHitStatuses } : {}),
+        ...(refused ? { immune: true as const } : {}),
         ...(strike?.manaCost !== undefined ? { manaCost: strike.manaCost, manaAfter: manaPaid } : {}),
         ...(taunt > 0 ? { tauntPenalty: taunt } : {}),
         ...(traitBonus !== 0 ? { traitBonus } : {}),
@@ -2273,10 +2293,10 @@ export class BattleEngine {
       }
       const healed = heal ? Math.min(rollDamage(heal, this.rng) + healBonus, unit.stats.maxHp - unit.hp) : 0
       unit.hp += Math.max(0, healed)
-      const laid = status ? this.layStatus(unit, status) : null
+      const laid = status ? this.laidOn(unit, status) : { status: null }
       return {
         unit: unit.id, attackRoll: null, chance: null, defenderAc: null, hit: true, critical: false, fumble: false, image: false,
-        damage: 0, warded: 0, half: false, healed: Math.max(0, healed), hpBefore, hpAfter: unit.hp, status: laid,
+        damage: 0, warded: 0, half: false, healed: Math.max(0, healed), hpBefore, hpAfter: unit.hp, ...laid,
       }
     })
     // A drain heals a caster its own area left standing, by a share of the hit points all it touched lost
@@ -2333,10 +2353,10 @@ export class BattleEngine {
     const outcomes: StruckOutcome[] = touched.map((unit) => {
       if (area.auto) {
         const hpBefore = unit.hp
-        const status = area.status ? this.layStatus(unit, area.status, actor) : null
+        const laid = area.status ? this.laidOn(unit, area.status, actor) : { status: null }
         return {
           unit: unit.id, attackRoll: null, chance: null, defenderAc: null, hit: true, critical: false, fumble: false, image: false,
-          damage: 0, warded: 0, half: false, healed: 0, hpBefore, hpAfter: unit.hp, status,
+          damage: 0, warded: 0, half: false, healed: 0, hpBefore, hpAfter: unit.hp, ...laid,
         }
       }
       const doubled = dice && area.bane && baneApplies(this.statsOf(unit)) ? { ...dice, count: dice.count * 2 } : dice
@@ -2415,11 +2435,11 @@ export class BattleEngine {
     // A blow that wakes a sleeper wakes it before anything it lays; Sleep itself deals none.
     const woke = wakings(unit, damage)
     if (woke.length > 0) unit.statuses = unit.statuses.filter((s) => !woke.includes(s.id))
-    const laid = roll.hit && !image && blow.status && unit.hp > 0 ? this.layStatus(unit, blow.status) : null
+    const laid = roll.hit && !image && blow.status && unit.hp > 0 ? this.laidOn(unit, blow.status) : { status: null }
     return {
       unit: unit.id, ...roll, defenderAc, image, damage, warded: through - damage, half,
       ...(blow.throughResistance ? { resisted: rolled - through } : {}),
-      healed: 0, hpBefore, hpAfter: unit.hp, status: laid,
+      healed: 0, hpBefore, hpAfter: unit.hp, ...laid,
       ...(blow.taunt > 0 ? { tauntPenalty: blow.taunt } : {}),
       ...(endured ? { endured: true as const } : {}),
       woke,
@@ -2599,6 +2619,17 @@ function strikeVerb(event: AttackEvent): string {
   return ability.strikes?.find((s) => s.name === event.strike)?.verb ?? ability.verb
 }
 
+/** What a line says after a hit's damage where the unit, immune, refused the status the hit would have laid. */
+const UNAFFECTED_BY_REST = 'unaffected by the rest'
+
+/** " Golem is unaffected." for each unit of a no-roll ability that refused its status (the immunity), else nothing. */
+function unaffectedNotes(outcomes: readonly CastOutcome[], names: Readonly<Record<UnitId, string>>): string {
+  return outcomes
+    .filter((o) => o.immune)
+    .map((o) => ` ${names[o.unit]} is unaffected.`)
+    .join('')
+}
+
 /** " (warded N)" after a damage the ward took N off, else nothing. */
 function wardedNote(points: number): string {
   return points > 0 ? ` (warded ${points})` : ''
@@ -2619,6 +2650,7 @@ function hostileOutcome(outcome: CastOutcome, name: string): string {
   const struck = outcome.damage > 0 || outcome.warded > 0
   const parts = struck ? [`HITS ${name} for ${outcome.damage} dmg${notes.length > 0 ? ` (${notes.join(', ')})` : ''}`] : []
   if (outcome.status) parts.push(struck ? laidPhrase(outcome.status.id).replace(/^is /, '') : `${name} ${laidPhrase(outcome.status.id)}`)
+  if (outcome.immune) parts.push(struck ? UNAFFECTED_BY_REST : `${name} is unaffected`)
   return parts.join(', ') || `HITS ${name}`
 }
 
@@ -2661,12 +2693,12 @@ function describeAbility(event: AbilityEvent, names: Readonly<Record<UnitId, str
   const { verb, selfStatus, foeStatus } = ABILITIES[event.ability]
   const opening = `${names[event.unit]} ${verb}`
   // A status laid with no roll: "Mira sprints.", "Brenna marks Goblin."
-  if (selfStatus) return `${opening}.`
-  if (foeStatus) return `${opening} ${names[event.outcomes[0].unit]}.`
+  if (selfStatus) return `${opening}.${unaffectedNotes(event.outcomes, names)}`
+  if (foeStatus) return `${opening} ${names[event.outcomes[0].unit]}.${unaffectedNotes(event.outcomes, names)}`
   // An area that rolls nothing: "Aldric taunts 2 foes."
   if (ABILITIES[event.ability].area?.auto) {
     const laid = event.outcomes.filter((o) => o.status !== null).length
-    return `${opening} ${laid} ${laid === 1 ? 'foe' : 'foes'}.`
+    return `${opening} ${laid} ${laid === 1 ? 'foe' : 'foes'}.${unaffectedNotes(event.outcomes, names)}`
   }
   if (event.outcomes.length === 0) return `${opening}: it touches no one.`
   return `${opening}: ${event.outcomes.map((o) => hostileOutcome(o, names[o.unit])).join('; ')}.`
@@ -2722,7 +2754,7 @@ export function formatEvent(event: BattleEvent, names: Readonly<Record<UnitId, s
           .map((b) => ` +${b.damage}${b.element ? ` ${b.element}` : ''}${wardedNote(b.rolled - b.damage)}`)
           .join('')
         const statuses = new Set([...(event.status ? [event.status] : []), ...(event.onHitStatuses ?? [])].map((s) => s.id))
-        const laid = [...statuses].map((id) => `, ${laidPhrase(id).replace(/^is /, '')}`).join('')
+        const laid = [...statuses].map((id) => `, ${laidPhrase(id).replace(/^is /, '')}`).join('') + (event.immune ? `, ${UNAFFECTED_BY_REST}` : '')
         const heals = (event.healed ?? 0) > 0 ? ` ${attackerName} heals ${event.healed}.` : ''
         const endured = event.endured ? ` ${endures(defenderName)}` : ''
         const deathblow = event.deathblow ? ' A deathblow!' : ''

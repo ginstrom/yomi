@@ -351,6 +351,11 @@ describe('words', () => {
  * three raised a level at a time along `planFor` (as debug `level n all auto`
  * and the simulator's `raisedParty`), their worn weapon, shield and armour
  * remade in the same family at the entry's tier (Fine above tier 1).
+ *
+ * Long-campaign stage 11, step 03: every `logs` digest re-recorded for the log
+ * schema's bump to 27 and nothing else (each sample's `battle_start` writes
+ * `schemaVersion`); play did not move: all 18 met the old digests with the
+ * same code and the version held at 26, and no `forecast` tally changed.
  */
 describe('the estimate fixture (stage 10 step 07)', () => {
   interface Entry {
@@ -419,41 +424,41 @@ describe('the estimate fixture (stage 10 step 07)', () => {
 
   const FIXTURE: Entry[] = [
     { level: 1, tier: 1, encounter: 'goblin_raid', threat: 1, base: 1000, samples: 40, forecast: { samples: 40, wins: 40, heroLost: 0, stalled: 0 },
-      logs: '7c4ca1415c0593774e1ebcb399e74191dd4dcbd8364f7df933a8c6eb7e68c0e3' },
+      logs: 'b5a56057afd0fc781400fccf03d1faeb4b3dc6700bacd1dcef83c464991d2f3e' },
     { level: 1, tier: 1, encounter: 'kobold_scouts', threat: 3, base: 1001, samples: 12, forecast: { samples: 12, wins: 12, heroLost: 0, stalled: 0 },
-      logs: 'cc799b1b5c1256d02066d2873e40ea86b965cccbb7681e1007d7e069311f3641' },
+      logs: 'df9c8d26f01f857bd74861b1befbde922fe2802d7d0e11cfcd301da5d801c022' },
     { level: 3, tier: 1, encounter: 'hobgoblin_warband', threat: 4, base: 1002, samples: 10, forecast: { samples: 10, wins: 8, heroLost: 4, stalled: 0 },
-      logs: 'fdc0755f0d71fb9aaf479d8ac27d289798cca283c5bb8268f6e29e48855bb5c2' },
+      logs: '7dc29ef4ac8b29e8f2f08ec47a7975979e30292596210dc413d00c388eb9b29d' },
     { level: 4, tier: 1, encounter: 'troll_lair', threat: 3, base: 1003, samples: 10, forecast: { samples: 10, wins: 10, heroLost: 0, stalled: 0 },
-      logs: '7482a5830d15348fe2c706fd2bbef7ac519857f118e958b3cf2b6b075b123c08' },
+      logs: '5c34bcfb697e8bfa7cd2925245ceab88e63b8fc346d2971d7d3f6d636f6f66c3' },
     { level: 5, tier: 2, encounter: 'bandit_camp', threat: 5, base: 1004, samples: 8, forecast: { samples: 8, wins: 8, heroLost: 0, stalled: 0 },
-      logs: 'f66227e52235c7f220c79f1beeefdccec21d9aad8e6fabef0f4dc5dcc0465774' },
+      logs: '1f3260b0cb8e01e61718bddbbbeacdb510544b849ac2b506bd882d18fed34cb0' },
     { level: 6, tier: 2, encounter: 'spider_nest', threat: 6, base: 1005, samples: 8, forecast: { samples: 8, wins: 8, heroLost: 1, stalled: 0 },
-      logs: '9162a96f6e0e84b151b6edbece4344389c0d9b0e23194c652ab8b6ed9ec4fcba' },
+      logs: '45745930d986c5867c5be49a400efb7859e53515a54aa330091619e6742ad2af' },
     { level: 8, tier: 2, encounter: 'salamander_pool', threat: 7, base: 1006, samples: 8, forecast: { samples: 8, wins: 8, heroLost: 0, stalled: 0 },
-      logs: 'e2d2d258cb5e5ac051c2f61323600422a33d30b226e882fcf379099e3b7bacb7' },
+      logs: 'a1c1c4e13d8cd2eaa15ad4a5b4ed54acd739be87a475438385d20f4818dd04fd' },
     { level: 6, tier: 2, encounter: 'bandit_company', threat: 9, base: 1007, samples: 8, forecast: { samples: 8, wins: 0, heroLost: 8, stalled: 0 },
-      logs: '09c86e90b4e333b69f13389d07af4d3c99bf505e89129f5bbce530e4cab0dcf0' },
+      logs: 'a21b8d0abaf21f3294d813ff5bd1a5138cb3f0e7e32f170e02d061ed1dc75fdc' },
     { level: 12, tier: 3, encounter: 'bandit_company', threat: 12, base: 1008, samples: 6, forecast: { samples: 6, wins: 1, heroLost: 6, stalled: 0 },
-      logs: 'f738e452745be0164c9d383ab1f23a8121da166c3f99454ced649feeda070897' },
+      logs: 'c2184c3642122b42567b6a55e9de8af31bb7d681cbb0d5c60f2e85c2fa6c31d8' },
     { level: 10, tier: 3, encounter: 'source_guardians', threat: 10, base: 1009, samples: 6, forecast: { samples: 6, wins: 0, heroLost: 6, stalled: 0 },
-      logs: 'abe630899229d3e8ffe161db84f9ff4e170aa9a5d5c3fa401ab7b190ea16e79f' },
+      logs: 'b4e9ea6c9028ffa38b65433a6928e179ee8994c8d4c91c9bc05a5063c7490e5f' },
     { level: 15, tier: 4, encounter: 'freebooter_host', threat: 15, base: 1010, samples: 40, forecast: { samples: 40, wins: 19, heroLost: 26, stalled: 0 },
-      logs: '8190b26dae9b809f78362148405a04df9dcb974b714ca1e796ec6e51b185922d' },
+      logs: '1899c8b6bacec70820e822ed9d254e5631a1d011dbf0d5ba554142cfe1a6da18' },
     { level: 18, tier: 5, encounter: 'freebooter_host', threat: 18, base: 1011, samples: 6, forecast: { samples: 6, wins: 0, heroLost: 6, stalled: 0 },
-      logs: '537f0701d3cbd353e5106f30c7239d97f246ed7f7e20a792121f8320ca98d338' },
+      logs: '62b93396048b163933fee4426e62b4164f659435eaedb773e481e0306497abb2' },
     { level: 18, tier: 5, encounter: 'source_guardians', threat: 20, base: 1012, samples: 4, forecast: { samples: 4, wins: 4, heroLost: 0, stalled: 0 },
-      logs: '5f159dc3d28d746051d85d6a37b119cf7fd44199e4e21c8638491b43354c03a9' },
+      logs: 'a5f451b6f41a4cfa2cd009465536c207bf43698275f0ae3f78d8bc26d2afb1fb' },
     { level: 15, tier: 4, encounter: 'freebooter_host', threat: 15, base: 1013, samples: 8, steps: 6, forecast: { samples: 8, wins: 5, heroLost: 4, stalled: 0 },
-      logs: 'f2d0be96ff7d40532768189e6d7e25a9207150860fe07d9e254cf9e02c38c78c' },
+      logs: 'f9f5fec97d03d29047b70c01342fbee5f0b63acd5b5aeefa1bca3fb63969e45f' },
     { level: 6, tier: 2, encounter: 'spider_nest', threat: 6, base: 1014, samples: 8, steps: 15, forecast: { samples: 8, wins: 8, heroLost: 0, stalled: 0 },
-      logs: '78f8f2bcba1cbd49e159ba9450ba0bfc59c43dfa1d7d87fb0de4fa9cc53cac76' },
+      logs: '6abb5da718987b40fe4cde12639849a73d63e8645e343ce28e9d0f02d75dfc72' },
     { level: 4, tier: 1, encounter: 'troll_lair', threat: 3, base: 1015, samples: 8, steps: 20, forecast: { samples: 8, wins: 8, heroLost: 0, stalled: 0 },
-      logs: 'f68319da5c8bb878f14e99d275cc96cdc7759975c1918fc38b79639375d2d99d' },
+      logs: '49c7933eca12cc83f84a31464e9a6978d42610ed5b384c6a1f7fa63eda33497d' },
     { level: 10, tier: 3, encounter: 'source_guardians', threat: 10, base: 1016, samples: 6, steps: 10, forecast: { samples: 6, wins: 0, heroLost: 6, stalled: 0 },
-      logs: '0fa7116c68b52bdee4a392520e317f2af15d25ff1359b90289ed6c2203ec6eb3' },
+      logs: '7e79aae4855f49248579dbe6ce983e15ad51f52640e59b681b9977c7a45bf36c' },
     { level: 10, tier: 1, encounter: 'goblin_raid', threat: 1, base: 1017, samples: 4, foeHp: 3000, forecast: { samples: 4, wins: 0, heroLost: 0, stalled: 4 },
-      logs: '76e2e7b5a89eda99eacb5039b2dbd5b94d13afcc70be04a7b051b3b02e57d0eb' },
+      logs: 'e806d8aece4848177ca039836d308e0c654f1fbcd1cc1029b138a5f3b79e5c95' },
   ]
 
   it.each(FIXTURE.map((entry) => [`level ${entry.level}, tier ${entry.tier} vs ${entry.encounter} ${entry.threat}${entry.steps !== undefined ? `, ${entry.steps} steps in` : ''}${entry.foeHp ? ', foes unkillable' : ''}`, entry] as const))(

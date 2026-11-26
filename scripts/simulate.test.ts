@@ -1964,6 +1964,12 @@ describe('runes in a campaign', () => {
  * decision 12), and none of the five reaches a level 4 workshop (1, 1, 0, 1, 0 at the end) or holds an ore or wood
  * of tier 3+ it used to sell (`goldFromSales` unchanged), so nothing is forged, tempered, fused past rank 2 or kept
  * that was sold before. Events hash `e4dd3391...fb6394` unchanged; the 50-campaign check identical too.
+ *
+ * Stage 11 step 03 (the immunity): the events hash alone re-recorded, `e4dd3391...fb6394` became `0b0f4c20...e961af`,
+ * for the log schema's bump to 27 and nothing else: every `battle_start` writes `schemaVersion`. Play did not move:
+ * the records are untouched, the old hash is met with the same code and the version held at 26, and the
+ * 50-campaign log (`57fdea15...e53e75` became `1e85d023...ed216`) is the old one byte for byte once
+ * `"schemaVersion":27` is put back to 26. No unit is immune yet.
  */
 const GUARD_RECORDS: CampaignRecord[] = [
   { outcome: "source", days: 417, battles: 19, spawns: 52, captured: 3, lost: 0, blighted: 0.37430555555555556, healedHp: 108, campDays: 28, towersBuilt: 3, towersLost: 0, deaths: 2, recruits: 3, hallLevel: 3, shrineLevel: 1, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 56, tierTwoBought: 0, crafted: 7, fieldCraftDays: 2, runesFound: 17, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 20, finalLevels: [8, 8, 8, 7], callings: { heavy_knight: 2, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [2, 7], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 19, wipes: 0, finalLevels: [[8, 8, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkDays: 383, vanguardWalkHomeDays: 106, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [5, 0, 0, 0], lodgeLevel: 1, goldBySource: { sites: 332, market: 0, routes: 0, sales: 56 }, partnersContacted: 1, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 1.2973621103117505, waitingIncomePerDay: 0, goldOnForging: 0, kitAtLevel: { 5: [{ role: "fighter", tier: 1, sockets: 0 }, { role: "archer", tier: 1, sockets: 0 }, { role: "mage", tier: 1, sockets: 0 }] } },
@@ -1972,7 +1978,7 @@ const GUARD_RECORDS: CampaignRecord[] = [
   { outcome: "fallen", days: 362, battles: 22, spawns: 36, captured: 5, lost: 0, blighted: 0.29851190476190476, healedHp: 254, campDays: 48, towersBuilt: 1, towersLost: 0, deaths: 1, recruits: 3, hallLevel: 3, shrineLevel: 1, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 66, tierTwoBought: 0, crafted: 6, fieldCraftDays: 4, runesFound: 17, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 20, finalLevels: [8, 8, 8, 8, 7], callings: { heavy_knight: 3, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [3], battlesToLevel: { 5: 9 }, roles: { vanguard: { battles: 22, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkDays: 308, vanguardWalkHomeDays: 85, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [7, 0, 0, 0], lodgeLevel: 1, goldBySource: { sites: 288, market: 0, routes: 0, sales: 66 }, partnersContacted: 0, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 1.4116022099447514, waitingIncomePerDay: 0, goldOnForging: 0, kitAtLevel: { 5: [{ role: "fighter", tier: 1, sockets: 0 }, { role: "archer", tier: 1, sockets: 0 }, { role: "mage", tier: 1, sockets: 0 }, { role: "fighter", tier: 1, sockets: 0 }] } },
   { outcome: "fallen", days: 29, battles: 4, spawns: 0, captured: 0, lost: 0, blighted: 0.1177579365079365, healedHp: 1, campDays: 1, towersBuilt: 0, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 1, fieldCraftDays: 1, runesFound: 2, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [3, 3, 3], callings: { swordmaster: 1, heavy_knight: 1, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [], battlesToLevel: {  }, roles: { vanguard: { battles: 4, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkDays: 26, vanguardWalkHomeDays: 0, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [2, 0, 0, 0], lodgeLevel: 0, goldBySource: { sites: 20, market: 0, routes: 0, sales: 0 }, partnersContacted: 0, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 0.8620689655172413, waitingIncomePerDay: 0, goldOnForging: 0, kitAtLevel: {} },
 ]
-const GUARD_EVENTS_SHA256 = 'e4dd3391cd473d66b35d9070815f49e7c84fb913268c20894506e03e0cfb6394'
+const GUARD_EVENTS_SHA256 = '0b0f4c20e93ec2b2ebbb30710c4ce04989dd8e1168a75fff487b66d376e961af'
 
 describe('the campaign’s policy on the day loop', () => {
   const args = parseArgs(['--campaign', '--parties', '1'])
@@ -2223,14 +2229,14 @@ describe('the company’s record', () => {
     expect(roleOf(run, party)).toBe('guard')
   })
 
-  it('logs the party and its role on battle_start, under schema version 26, and counts the battle to the role', () => {
+  it('logs the party and its role on battle_start, under schema version 27, and counts the battle to the role', () => {
     const { run, game, party } = campaignOf()
     const target = nextTarget(game.world, party, args.readyLevel)!
     party.position = { ...target.position }
     party.confronting = target.id
     carryOut(run, party, { kind: 'fight', target })
     const start = run.battles[0][0]
-    expect(start).toMatchObject({ type: 'battle_start', schemaVersion: 26, meta: { party: 'party_1', role: 'vanguard' } })
+    expect(start).toMatchObject({ type: 'battle_start', schemaVersion: 27, meta: { party: 'party_1', role: 'vanguard' } })
     // The new keys come after the old, so the old keys keep their order in the log.
     if (start.type !== 'battle_start') throw new Error('no battle_start')
     expect(Object.keys(start.meta).slice(-2)).toEqual(['party', 'role'])

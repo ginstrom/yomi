@@ -1904,8 +1904,8 @@ describe('BattleEngine strike routines and recharge', () => {
   const bite = (target: string): Action => ({ type: 'ability', unit: 'spider', ability: 'spider_bite', target })
   const NAMED = { ...NAMES, troll: 'Troll', spider: 'Spider', zed: 'Zed' }
 
-  it('is logged under schema version 26 (skill trees step 17, the traits on attack events; 25 was skill trees step 09; 24 stage 6 step 09, battle_start meta party and role; 23 stage 4 step 05, AttackEvent.bonus)', () => {
-    expect(LOG_SCHEMA_VERSION).toBe(26)
+  it('is logged under schema version 27 (stage 11 step 03, `immune` on attack events and outcomes; 26 was skill trees step 17, the traits on attack events; 25 was skill trees step 09; 24 stage 6 step 09, battle_start meta party and role; 23 stage 4 step 05, AttackEvent.bonus)', () => {
+    expect(LOG_SCHEMA_VERSION).toBe(27)
   })
 
   it('makes one attack per strike, the first carrying the ability’s AP and the rest none', () => {
@@ -2573,9 +2573,9 @@ describe('BattleEngine on-hit effects', () => {
     expect(formatEvent(attack, NAMED)).toBe('Warrior rolls 50 (needs 60 or less) — HITS Troll for 6 dmg (armour stops 1).')
   })
 
-  it('is logged under schema version 26 (25 from skill trees step 09, 24 from stage 6 step 09)', () => {
-    expect(LOG_SCHEMA_VERSION).toBe(26)
-    expect(new BattleEngine(DUEL).getLog()[0]).toMatchObject({ schemaVersion: 26 })
+  it('is logged under schema version 27 (26 from skill trees step 17, 25 from step 09, 24 from stage 6 step 09)', () => {
+    expect(LOG_SCHEMA_VERSION).toBe(27)
+    expect(new BattleEngine(DUEL).getLog()[0]).toMatchObject({ schemaVersion: 27 })
   })
 })
 
@@ -2900,8 +2900,8 @@ describe('BattleEngine hero techniques', () => {
   const MISS = [0]
   const NAMED = { ...NAMES, troll: 'Troll' }
 
-  it('has raised the log schema past 25 (skill trees step 09: technique mana on attack and ability events; 26 from step 17)', () => {
-    expect(LOG_SCHEMA_VERSION).toBe(26)
+  it('has raised the log schema past 25 (skill trees step 09: technique mana on attack and ability events; 26 from step 17, 27 from stage 11 step 03)', () => {
+    expect(LOG_SCHEMA_VERSION).toBe(27)
   })
 
   describe('who may use one', () => {

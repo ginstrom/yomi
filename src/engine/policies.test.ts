@@ -452,6 +452,13 @@ describe('policies', () => {
         it('not where only one foe it would touch is not yet baned', () => {
           expect(choose(laid(field(['bane'], foes), 'e1', 'baned'))).not.toMatchObject({ type: 'cast' })
         })
+
+        it('counts no foe immune to a status that ticks (Death Cloud), and still counts it for one that does not (stage 11 step 03)', () => {
+          const immune: Placing[] = [foes[0], { ...foes[1], stats: { ...GOBLIN_STATS, immune: true } }]
+          expect(choose(field(['death_cloud'], foes))).toMatchObject({ type: 'cast', spell: 'death_cloud' })
+          expect(choose(field(['death_cloud'], immune))).not.toMatchObject({ type: 'cast' })
+          expect(choose(field(['bane'], immune))).toMatchObject({ type: 'cast', spell: 'bane' })
+        })
       })
 
       describe('prisonCast (8)', () => {
@@ -706,6 +713,21 @@ describe('policies', () => {
     })
 
     describe('status value (2)', () => {
+      it('counts Venom Strike’s poison at 0 against an immune foe, as against one already poisoned (stage 11 step 03)', () => {
+        const immune = stage(hero(['venom_strike']), hex(1, 1), [{ id: 'e1', at: hex(2, 1), stats: { ...GOBLIN_STATS, immune: true } }])
+        const poisoned = stage(hero(['venom_strike']), hex(1, 1), [{ id: 'e1', at: hex(2, 1), statuses: [{ id: 'poisoned', turnsLeft: 2 }] }])
+        const fresh = stage(hero(['venom_strike']), hex(1, 1), [{ id: 'e1', at: hex(2, 1) }])
+        const score = (engine: BattleEngine) => techniqueScore(engine.getState(), unitAt(engine, 'p1'), 'venom_strike', unitAt(engine, 'e1'))
+        expect(score(immune)).toBeCloseTo(score(poisoned), 10)
+        expect(score(fresh) - score(immune)).toBeCloseTo(STATUS_VALUE.poisoned! * 0.55, 10)
+        // A status that does not tick is worth what it is on any foe.
+        const pin = (stats: CombatantStats) => {
+          const engine = stage(hero(['pin']), hex(1, 1), [{ id: 'e1', at: hex(2, 1), stats }])
+          return techniqueScore(engine.getState(), unitAt(engine, 'p1'), 'pin', unitAt(engine, 'e1'))
+        }
+        expect(pin({ ...GOBLIN_STATS, immune: true })).toBeCloseTo(pin(GOBLIN_STATS), 10)
+      })
+
       it('counts Venom Strike’s poison at 7 times the chance, only against a foe not already poisoned', () => {
         const fresh = stage(hero(['venom_strike']), hex(1, 1), [{ id: 'e1', at: hex(2, 1) }])
         const poisoned = stage(hero(['venom_strike']), hex(1, 1), [{ id: 'e1', at: hex(2, 1), statuses: [{ id: 'poisoned', turnsLeft: 2 }] }])

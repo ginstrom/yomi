@@ -151,6 +151,7 @@ describe('sameCombatStats', () => {
       { critDamage: 4 },
       { manaOnHit: 1 },
       { manaRegen: 2 },
+      { immune: true },
     ]
     for (const field of fields) {
       expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, ...field })).toBe(false)

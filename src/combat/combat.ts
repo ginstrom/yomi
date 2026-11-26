@@ -82,6 +82,8 @@ export interface CombatantStats {
   imbueDamage?: number
   /** The blight's own: a Dawn rune's bane applies to it (`baneApplies`). */
   blightborn?: true
+  /** No status whose rule has a `tick` (Poisoned, Corroded) is ever laid on it (`refusesStatus`); every other status is. Its wards, not this, are what stop the damage. */
+  immune?: true
   /** The rules its nodes give it that the engine reads by name (`TRAIT_IDS` order); left out when none. */
   traits?: readonly TraitId[]
   /** Added to the chance and to a hit's damage (after the dice, never doubled) of its free attacks, counters included (Iron Skin); none when left out. */
@@ -215,6 +217,7 @@ export function sameCombatStats(a: CombatantStats, b: CombatantStats): boolean {
     sameOnHit(a.onHit, b.onHit) &&
     (a.imbueDamage ?? 0) === (b.imbueDamage ?? 0) &&
     (a.blightborn ?? false) === (b.blightborn ?? false) &&
+    (a.immune ?? false) === (b.immune ?? false) &&
     sameList(a.traits, b.traits) &&
     samePair(a.opportunity, b.opportunity) &&
     samePair(a.rear, b.rear) &&

@@ -1,6 +1,6 @@
 import { ABILITIES, type Ability, type AbilityId, type Strike } from '../combat/abilities.ts'
 import { ELEMENTS, formatDamage, type CombatantStats, type DamageRoll } from '../combat/combat.ts'
-import { STATUSES, type StatusLaid } from '../combat/spells.ts'
+import { STATUSES, STATUS_IDS, refusesStatus, type StatusLaid } from '../combat/spells.ts'
 import { TAUNT_PENALTY, type UnitSnapshot } from '../engine/battleEngine.ts'
 import { costWords } from './perkTree.ts'
 
@@ -11,8 +11,9 @@ export const DESCRIPTION_INDENT = '  '
  * What hovering a foe tells: its name, as the panel's title; then for each
  * ability a line with its name and when it is ready ("Fire Spit: ready",
  * "Web: ready in 2 turns"), and under it what it does, worked out from its
- * data (`describeAbility`); then its wards ("Wards: fire 99"). [] for a unit
- * with neither abilities nor wards.
+ * data (`describeAbility`); then its wards ("Wards: fire 99"); then what it
+ * is immune to ("Immune to acid and poison": the statuses it refuses, by what
+ * their ticks are called). [] for a unit with none of these.
  *
  * The panel is read on the player's turn, and a recharge counter falls as the
  * foe's own turn begins, so a counter of N means the ability is usable on the
@@ -27,6 +28,8 @@ export function foeInfoLines(unit: UnitSnapshot): string[] {
   })
   const wards = ELEMENTS.filter((e) => (unit.wards?.[e] ?? 0) > 0).map((e) => `${e} ${unit.wards![e]}`)
   if (wards.length > 0) lines.push(`Wards: ${wards.join(', ')}`)
+  const refused = STATUS_IDS.filter((id) => refusesStatus(unit, id)).map((id) => STATUSES[id].tickName ?? STATUSES[id].adjective)
+  if (refused.length > 0) lines.push(`Immune to ${refused.join(' and ')}`)
   return lines.length > 0 ? [unit.name, ...lines] : []
 }
 
