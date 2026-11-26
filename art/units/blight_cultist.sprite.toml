@@ -1,0 +1,69 @@
+# A blight cultist: a man-sized figure in a dark steel-blue hooded robe, his face
+# a black hollow with two acid-green eyes under the brow, one hand raised round a
+# glowing green orb and the other holding a censer on a chain; blighted moss-green
+# veins run down the robe and trim its hem.
+canvas = "unit"
+
+outline = "auto"
+
+[points]
+chest = [15, 15]
+
+[frames.idle_0.runs]
+6 = [[14, "dDDd"]]
+7 = [[13, "dDDDDD"], [23, "eEe"]]
+8 = [[12, "dDDDDDDD"], [22, "eEEEe"]]
+9 = [[12, "dDDDDDDD"], [23, "eEe"]]
+10 = [[12, "DkEkkEkD"], [23, "eee"]]
+11 = [[12, "DkkkkkkD"], [22, "dDD"]]
+12 = [[11, "dDDkkkkDDD"], [21, "dDDD"]]
+13 = [[10, "dDDDDDDDDDDD"]]
+14 = [[8, "dDDDDDDDeDDDDD"]]
+15 = [[8, "dDDDDDDDeDDDDD"]]
+16 = [[8, "dDDDDDDDeDDDDD"]]
+17 = [[8, "dDDDDDDDeDDDDD"]]
+18 = [[7, "dDDDDDDDDeDDDDD"]]
+19 = [[5, "ee"], [10, "dDDDDDeDDDDD"]]
+20 = [[5, "l"], [10, "dDDDDDeDDDDD"]]
+21 = [[5, "l"], [10, "dDDDDDeDDDDD"]]
+22 = [[5, "l"], [9, "dDDDDDDeDDDDDD"]]
+23 = [[3, "eEEEe"], [9, "dDDDDDDeDDDDDD"]]
+24 = [[3, "ddddd"], [9, "dDDDDDDeDDDDDD"]]
+25 = [[4, "ddd"], [9, "dDDDDDDeDDDDDD"]]
+26 = [[8, "dDDDDDDDeDDDDDDD"]]
+27 = [[8, "dDDDDDDDeDDDDDDD"]]
+28 = [[7, "eeeeeeeeeeeeeeeeee"]]
+29 = [[11, "NNNN"], [17, "NNNN"]]
+30 = [[10, "NNNNN"], [17, "NNNNN"]]
+
+# A breath: head, shoulders and raised arm sink a pixel; the robe and censer stay.
+[frames.idle_1]
+from = "idle_0"
+move = { rows = [0, 13], by = [0, 1] }
+
+[anim.idle]
+frames = ["idle_0", "idle_1"]
+ms = 750
+
+# A stride: the feet part under the hem.
+[frames.walk_0]
+from = "idle_0"
+[frames.walk_0.runs]
+29 = [[10, "NNNN....NNNN"]]
+30 = [[9, "NNNNN....NNNNN"]]
+
+[frames.walk_1]
+from = "idle_0"
+[frames.walk_1.runs]
+29 = [[11, "...."]]
+30 = [[10, "....."]]
+
+[frames.walk_2]
+from = "idle_0"
+[frames.walk_2.runs]
+29 = [[17, "...."]]
+30 = [[17, "....."]]
+
+[anim.walk]
+frames = ["walk_0", "walk_1", "walk_0", "walk_2"]
+ms = 190

@@ -130,3 +130,8 @@ Step 02 (expected kit and the kitted yardstick): engineer opus, reviewer opus, v
 The breastplate alone gives gear §5.8's "about 5" and "about 8"; the rest is the metal small slots the policy's `armourScore` picks, the shield and the fighter's own nodes.
 
 **Also noted in review:** `expectedGear` reads `BASE_ITEMS`, not what a workshop can forge, so the mage wears hide small slots at tiers 3 to 5 and the archer at tier 4, where a campaign party forges none.
+
+## Step 06 outcome
+
+Step 06 (sprites, ring 15): engineer sonnet, reviewer opus, verdict clean, 1 review round. Commits `7ebb9c6`, `943e193`; clean-tree checks `npm test` runlog #30 and `npm run sprites:check` runlog #31 (both at `943e193`). No simulation run.
+

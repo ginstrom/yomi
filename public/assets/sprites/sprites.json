@@ -1205,6 +1205,140 @@
       32
     ]
   },
+  "blight_cultist": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 750
+          },
+          {
+            "frame": "idle_1",
+            "ms": 750
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "walk_0",
+            "ms": 190
+          },
+          {
+            "frame": "walk_1",
+            "ms": 190
+          },
+          {
+            "frame": "walk_0",
+            "ms": 190
+          },
+          {
+            "frame": "walk_2",
+            "ms": 190
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      2,
+      5,
+      26,
+      27
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "blight_cultist.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          2,
+          5,
+          26,
+          27
+        ],
+        "file": "blight_cultist__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          2,
+          6,
+          26,
+          26
+        ],
+        "file": "blight_cultist__idle_1.png"
+      },
+      "walk_0": {
+        "bounds": [
+          2,
+          5,
+          26,
+          27
+        ],
+        "file": "blight_cultist__walk_0.png"
+      },
+      "walk_1": {
+        "bounds": [
+          2,
+          5,
+          26,
+          27
+        ],
+        "file": "blight_cultist__walk_1.png"
+      },
+      "walk_2": {
+        "bounds": [
+          2,
+          5,
+          26,
+          27
+        ],
+        "file": "blight_cultist__walk_2.png"
+      }
+    },
+    "points": {
+      "idle_0": {
+        "chest": [
+          15.5,
+          15.5
+        ]
+      },
+      "idle_1": {
+        "chest": [
+          15.5,
+          15.5
+        ]
+      },
+      "walk_0": {
+        "chest": [
+          15.5,
+          15.5
+        ]
+      },
+      "walk_1": {
+        "chest": [
+          15.5,
+          15.5
+        ]
+      },
+      "walk_2": {
+        "chest": [
+          15.5,
+          15.5
+        ]
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
   "camp_fire": {
     "anchor": [
       12,
@@ -7579,6 +7713,140 @@
       32
     ]
   },
+  "stone_golem": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 900
+          },
+          {
+            "frame": "idle_1",
+            "ms": 900
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "walk_0",
+            "ms": 260
+          },
+          {
+            "frame": "walk_1",
+            "ms": 260
+          },
+          {
+            "frame": "walk_0",
+            "ms": 260
+          },
+          {
+            "frame": "walk_2",
+            "ms": 260
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      0,
+      1,
+      32,
+      31
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "stone_golem.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          0,
+          1,
+          32,
+          31
+        ],
+        "file": "stone_golem__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          0,
+          2,
+          32,
+          30
+        ],
+        "file": "stone_golem__idle_1.png"
+      },
+      "walk_0": {
+        "bounds": [
+          0,
+          1,
+          32,
+          31
+        ],
+        "file": "stone_golem__walk_0.png"
+      },
+      "walk_1": {
+        "bounds": [
+          0,
+          1,
+          32,
+          31
+        ],
+        "file": "stone_golem__walk_1.png"
+      },
+      "walk_2": {
+        "bounds": [
+          0,
+          1,
+          32,
+          31
+        ],
+        "file": "stone_golem__walk_2.png"
+      }
+    },
+    "points": {
+      "idle_0": {
+        "chest": [
+          15.5,
+          14.5
+        ]
+      },
+      "idle_1": {
+        "chest": [
+          15.5,
+          14.5
+        ]
+      },
+      "walk_0": {
+        "chest": [
+          15.5,
+          14.5
+        ]
+      },
+      "walk_1": {
+        "chest": [
+          15.5,
+          14.5
+        ]
+      },
+      "walk_2": {
+        "chest": [
+          15.5,
+          14.5
+        ]
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
   "tile_dark": {
     "anchor": [
       0,
@@ -8323,6 +8591,140 @@
         "chest": [
           17.5,
           18.5
+        ]
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "young_dragon": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 800
+          },
+          {
+            "frame": "idle_1",
+            "ms": 800
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "walk_0",
+            "ms": 220
+          },
+          {
+            "frame": "walk_1",
+            "ms": 220
+          },
+          {
+            "frame": "walk_0",
+            "ms": 220
+          },
+          {
+            "frame": "walk_2",
+            "ms": 220
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      0,
+      0,
+      32,
+      32
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "young_dragon.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "file": "young_dragon__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          0,
+          1,
+          32,
+          31
+        ],
+        "file": "young_dragon__idle_1.png"
+      },
+      "walk_0": {
+        "bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "file": "young_dragon__walk_0.png"
+      },
+      "walk_1": {
+        "bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "file": "young_dragon__walk_1.png"
+      },
+      "walk_2": {
+        "bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "file": "young_dragon__walk_2.png"
+      }
+    },
+    "points": {
+      "idle_0": {
+        "chest": [
+          20.5,
+          15.5
+        ]
+      },
+      "idle_1": {
+        "chest": [
+          20.5,
+          16.5
+        ]
+      },
+      "walk_0": {
+        "chest": [
+          20.5,
+          15.5
+        ]
+      },
+      "walk_1": {
+        "chest": [
+          20.5,
+          15.5
+        ]
+      },
+      "walk_2": {
+        "chest": [
+          20.5,
+          15.5
         ]
       }
     },
