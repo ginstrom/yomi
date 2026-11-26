@@ -181,7 +181,7 @@ Each listed location keeps its position and loot and takes the new id, name and 
 
 | Step | Task | Outcome | Depends on | Engineer / reviewer | Status |
 | --- | --- | --- | --- | --- | --- |
-| 01 | [The stage's baseline](01-baseline.md) | 50-campaign hash, `one`, `company`, `rl10` (500, `--near-source`), `long` (100), far cells; no code change | — | sonnet / sonnet | done (baseline commit, see git log) |
+| 01 | [The stage's baseline](01-baseline.md) | 50-campaign hash, `one`, `company`, `rl10` (500, `--near-source`), `long` (100), far cells; no code change | — | sonnet / sonnet | done (`42eaff0`) |
 | 02 | [Expected kit and the kitted yardstick](02-expected-kit.md) | `--player-kit expected`, `expectedGear` (C1), `KITTED_FIGHTER_GROWTH`, `foeYardstick(level, kit)` (C2); kitted far cells | 01 | opus / opus | pending |
 | 03 | [The golem's immunity](03-immunity.md) | `CombatantStats.immune`, the `immune` outcome field, log 27, policy value (decision 12) | 01 | opus / opus | pending |
 | 04 | [Sprites: ring 7](04-sprites-ring-7.md) | `wolf`, `worg_rider`, `ogre` (C8) | — | sonnet / opus | pending |
