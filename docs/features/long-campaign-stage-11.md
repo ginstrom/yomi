@@ -4,7 +4,7 @@
 
 - Request (user's words):
   > Merge PR #12 (stage 10), then start stage 11, the high roster. [...] Its design, docs/designs/long-campaign/stage-11-high-roster.md, is marked "ready for planning". It covers ogres, wyverns, wights, basilisks, giants, golems, cultists, dragons, the lich, the elder wyrm, and the Source rebuilt at 20, each with a sprite. Stage 11 picks up two things stage 10 left for it. The trophies table is empty until then, and the Source Guardians stay capped at level 6 until then.
-- Slug `long-campaign-stage-11` · Phase 4, implementation · Next action: step 09, ring 9 (engineer running; it first trims the plan index, 31.5 of 32 KB), then 10 → … → 15, one at a time.
+- Slug `long-campaign-stage-11` · Phase 4, implementation · Next action: step 09, ring 9: engineer runs a fourth trial (4 wyverns at 9–10, 3 at 11–12), else keeps trial 3 (wy9 498, wy12 399), then gates and review; then 10 → … → 15, one at a time.
 - Branch: `long-campaign-stage-11`, off main at c138d83 (stage 10 merged as PR #12, e801f5c).
 - Path: Large, but the stage design is the approved design. Straight to planning, as stages 2–10 did.
 - Links:
@@ -19,8 +19,8 @@
 - Done: 01 (runlog #15), 02 (#22), 03 (#58), 08 (#69; cells wp 418/358, wr 463/326, oc 405/308; browser #78 + #79), each clean in 1 round; sprites 04–07 merged. 50-check reference 1e85d023… (schema 27), unmoved by 08. SAVE_VERSION 32.
 - `throughResistance` on an area means cut by resistance less `armorPierce`; without it resistance is ignored (plan corrected d06bdb9). Follow-up outside the stage: `stopVoice` fade race in `src/scenes/soundPlayer.ts`.
 - Run npm with `PATH=/opt/homebrew/opt/node@26/bin:$PATH` (default node is 22). Sprite tool is `/Users/ryan/.local/bin/sprite`, never `npx sprite`.
-- Checkpoints to the user: a cell outside 300–475 after three trials; an ability that needs a new engine field; the guard or 50-check moving; an early figure further out than accepted.
-- Carried from stage 10: trophies table empty until now (Elder Glade's wyvern-hide stand-in to be removed); Source Guardians at SOURCE_FOE_LEVEL 6 until now.
+- Checkpoints to the user: a band's TOP cell outside 300–475 after three trials (a bottom-end miss is recorded for stage 12, no stop); an ability that needs a new engine field; the guard or 50-check moving; an early figure further out than accepted.
+- Carried from stage 10: trophies from kills (done through ring 9); Source Guardians at SOURCE_FOE_LEVEL 6 until step 13.
 - Not this stage (stage 12, the retune): the accepted early figures (288/289), the long campaign's gear lag, the Source falling to 1/100, market income, the simulator's spend order and targeting.
 
 ## Decision log
@@ -39,3 +39,5 @@
 | 2026-11-26 | Expected kit's rune order stays socket by socket: first weapon socket Ember, later Stone | user | every weapon socket Ember | Closest to §5.8's level-20 damage |
 | 2026-11-26 | Hill giant is the ogre's height and ~2 px broader, not "visibly larger" | orchestrator | shrink the ogre | 32 px canvas; blue hide and mantle set it apart |
 | 2026-11-26 | Step 03 re-records `GUARD_EVENTS_SHA256` and 18 forecast digests for `LOG_SCHEMA_VERSION` 27; new 50-check reference 1e85d023… (equals 57fdea15… at schema 26) | orchestrator | keep version 26 (breaks the event-shape rule) | Only the version number in `battle_start` moved; play identical, shown with the version held at 26 |
+| 2026-11-27 | Wyvern roost: one more trial (four wyverns at 9–10, three at 11–12, trial 3's block); if both ends aren't inside, keep trial 3 (wy9 498, wy12 399) | user | keep now; stronger wyvern 459/175; lesser third foe at 11–12 | No one block fits both ends: the kit row is the same at 9 and 12 |
+| 2026-11-27 | Rings 12–18: when a band's two ends can't both land in 300–475 in three trials, tune the top end inside, let the bottom run easy, record both for stage 12, don't stop; a top-end miss still comes to the user | user | stop each time; read the top with a better kit | Same squeeze expected in every band |
