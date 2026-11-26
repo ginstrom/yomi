@@ -29,7 +29,7 @@ export function lootRng(battleSeed: number): RNG {
 }
 
 /** The element a nest's leader favours, at `FAVOURED_CHANCE`. */
-export const FAVOURED_RUNES: Partial<Record<EncounterId, RuneId>> = { salamander_pool: 'ember', spider_nest: 'venom', wyvern_roost: 'venom' }
+export const FAVOURED_RUNES: Partial<Record<EncounterId, RuneId>> = { salamander_pool: 'ember', spider_nest: 'venom', wyvern_roost: 'venom', basilisk_lair: 'rime' }
 export const FAVOURED_CHANCE = 0.5
 
 /** The highest threat that may yield nothing, and rolls rank 1 only. */

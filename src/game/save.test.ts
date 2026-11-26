@@ -119,8 +119,8 @@ describe('a save', () => {
     expect(parsed.game.parties[0].baggage.length).toBeGreaterThan(0)
   })
 
-  it('is version 33: ring 9\'s fixed nests became two Wyvern Roosts and an Ogre Camp (stage 11 step 09); 32 was ring 7\'s (step 08), 31 the trophies in the stock (stage 10)', () => {
-    expect(SAVE_VERSION).toBe(33)
+  it('is version 34: ring 12\'s fixed nests became a barrow, a Basilisk Lair and a Hill Giant Steading (stage 11 step 10); 33 was ring 9\'s (step 09), 32 ring 7\'s (step 08), 31 the trophies in the stock (stage 10)', () => {
+    expect(SAVE_VERSION).toBe(34)
   })
 
   it('round-trips a stock of mithril and a trophy, a forged item in the baggage and a tempered, runed one worn', () => {
@@ -166,10 +166,10 @@ describe('a save', () => {
     expect(parseSave(broken((hero) => (hero.perkPicks = 2)))).toBeNull()
   })
 
-  it('reads a save of any version but 33 as unreadable: there is no migration (stage 8 decision 15, stages 9, 10 and 11)', () => {
+  it('reads a save of any version but 34 as unreadable: there is no migration (stage 8 decision 15, stages 9, 10 and 11)', () => {
     const saved = JSON.parse(serializeSave({ game: gameUnderWay(), battle: null, savedAt: 5 }))
     expect(parseSave(JSON.stringify(saved))).not.toBeNull()
-    for (const version of [17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 34]) {
+    for (const version of [17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 35]) {
       expect(parseSave(JSON.stringify({ ...saved, version })), `${version}`).toBeNull()
     }
   })

@@ -8,10 +8,13 @@ import type { UnitSetup } from '../engine/battleEngine.ts'
 import { hexDistance, offsetToHex } from '../grid/hex.ts'
 import {
   ARMORED_TROLL_STATS,
+  BARROW_WIGHT_STATS,
+  BASILISK_STATS,
   BLIGHT_HORROR_STATS,
   GIANT_SPIDER_STATS,
   GOBLIN_SHAMAN_STATS,
   GOBLIN_STATS,
+  HILL_GIANT_STATS,
   HOBGOBLIN_CHIEF_STATS,
   KOBOLD_STATS,
   OGRE_STATS,
@@ -37,11 +40,14 @@ import {
   foeStats,
   banditCamp,
   banditCompany,
+  barrowWights,
+  basiliskLair,
   freebooterHost,
   type BanditKind,
   type EncounterId,
   type MonsterKind,
   goblinRaid,
+  hillGiantSteading,
   heroId,
   hobgoblinWarband,
   koboldScouts,
@@ -68,6 +74,10 @@ const WORG_RIDERS_COUNTS = [3, 3, 5]
 const OGRE_CAMP_COUNTS = [3, 3, 3, 4]
 /** Ring 9's counts (stage 11 step 09; the cells' tuning is in the plan's log). */
 const WYVERN_ROOST_COUNTS = [4, 4, 3, 3]
+/** Ring 12's counts (stage 11 step 10; the cells' tuning is in the plan's log). */
+const BARROW_WIGHTS_COUNTS = [3, 3, 4, 4]
+const BASILISK_LAIR_COUNTS = [3, 3, 3, 4]
+const HILL_GIANT_STEADING_COUNTS = [3, 3, 4, 4]
 
 describe.each(Object.entries(ENCOUNTERS))('the %s encounter', (_id, build) => {
   const wounded = party().map((fighter, i) => ({ ...fighter, hp: 5 + i }))
@@ -493,7 +503,7 @@ describe('ring 7\'s encounters (long-campaign stage 11 step 08)', () => {
   }
 
   it('are registered after the Freebooter Host, in order, with their bands and counts', () => {
-    expect(Object.keys(ENCOUNTERS).slice(-4, -1)).toEqual(['wolf_pack', 'worg_riders', 'ogre_camp'])
+    expect(Object.keys(ENCOUNTERS).slice(Object.keys(ENCOUNTERS).indexOf('wolf_pack')).slice(0, 3)).toEqual(['wolf_pack', 'worg_riders', 'ogre_camp'])
     expect(Object.keys(ENCOUNTERS).indexOf('wolf_pack')).toBe(Object.keys(ENCOUNTERS).indexOf('freebooter_host') + 1)
     expect([ENCOUNTER_BANDS.wolf_pack, ENCOUNTER_BANDS.worg_riders, ENCOUNTER_BANDS.ogre_camp]).toEqual([
       { min: 6, max: 9 },
@@ -578,7 +588,6 @@ describe('ring 9\'s encounter (long-campaign stage 11 step 09)', () => {
   const ROOST = ['Wyvern', 'Wyvern Mate', 'Young Wyvern', 'Old Wyvern']
 
   it('is registered after ring 7\'s, with its band and counts', () => {
-    expect(Object.keys(ENCOUNTERS).slice(-1)).toEqual(['wyvern_roost'])
     expect(Object.keys(ENCOUNTERS).indexOf('wyvern_roost')).toBe(Object.keys(ENCOUNTERS).indexOf('ogre_camp') + 1)
     expect(ENCOUNTER_BANDS.wyvern_roost).toEqual({ min: 9, max: 12 })
     expect(ENCOUNTER_COUNTS.wyvern_roost).toEqual(WYVERN_ROOST_COUNTS)
@@ -610,6 +619,62 @@ describe('ring 9\'s encounter (long-campaign stage 11 step 09)', () => {
     expect(WYVERN_STATS).toMatchObject({ name: 'Wyvern', resistance: 2, abilities: ['wyvern_strikes'], attackRange: 1 })
     expect(FOE_XP.wyvern).toBe(150)
     expect(FOE_NATIVE_LEVEL.wyvern).toBe(9)
+  })
+})
+
+describe('ring 12\'s encounters (long-campaign stage 11 step 10)', () => {
+  const fielded = (build: typeof barrowWights, threat: number) => {
+    const { setup, kinds, threat: fought } = build(party(), threat)
+    expect(fought).toBe(threat)
+    const foes = setup.units.filter((u) => u.side === 'enemy')
+    // Every foe is its kind at the threat's level (no kind here is native above its band's first threat), under its own name.
+    for (const u of foes) expect(u.stats).toEqual({ ...foeStats(kinds[u.id] as MonsterKind, threat), name: u.stats.name })
+    return foes.map((u) => [kinds[u.id], u.stats.name])
+  }
+  const WIGHTS = [['barrow_wight', 'Barrow King'], ['barrow_wight', 'Barrow Wight'], ['barrow_wight', 'Grave Wight'], ['barrow_wight', 'Pale Wight']]
+  const LAIR = [['basilisk', 'Basilisk'], ['ogre', 'Ogre Keeper'], ['basilisk', 'Basilisk Mate'], ['ogre', 'Ogre']]
+  const STEADING = [['hill_giant', 'Hill Giant'], ['ogre', 'Ogre'], ['ogre', 'Ogre Thrall'], ['hill_giant', 'Giant Chief']]
+
+  it('are registered after the Wyvern Roost, in order, with their bands and counts', () => {
+    const ids = Object.keys(ENCOUNTERS)
+    expect(ids.slice(ids.indexOf('wyvern_roost') + 1).slice(0, 3)).toEqual(['barrow_wights', 'basilisk_lair', 'hill_giant_steading'])
+    expect([ENCOUNTER_BANDS.barrow_wights, ENCOUNTER_BANDS.basilisk_lair, ENCOUNTER_BANDS.hill_giant_steading]).toEqual([
+      { min: 11, max: 14 },
+      { min: 11, max: 14 },
+      { min: 12, max: 15 },
+    ])
+    expect(ENCOUNTER_COUNTS.barrow_wights).toEqual(BARROW_WIGHTS_COUNTS)
+    expect(ENCOUNTER_COUNTS.basilisk_lair).toEqual(BASILISK_LAIR_COUNTS)
+    expect(ENCOUNTER_COUNTS.hill_giant_steading).toEqual(HILL_GIANT_STEADING_COUNTS)
+  })
+
+  it.each([
+    ['barrow_wights', barrowWights, WIGHTS, BARROW_WIGHTS_COUNTS, 11, 14],
+    ['basilisk_lair', basiliskLair, LAIR, BASILISK_LAIR_COUNTS, 11, 14],
+    ['hill_giant_steading', hillGiantSteading, STEADING, HILL_GIANT_STEADING_COUNTS, 12, 15],
+  ] as const)('fields %s at its band\'s two ends: its counts\' number of foes, the lead first, each at the threat\'s level', (_id, build, slots, counts, min, max) => {
+    expect(fielded(build, min)).toEqual(slots.slice(0, counts[0]))
+    expect(fielded(build, max)).toEqual(slots.slice(0, counts[max - min]))
+    // Below its band as at its first threat, above it as at its last.
+    expect(build(party(), min - 1)).toEqual(build(party(), min))
+    expect(build(party())).toEqual(build(party(), min))
+    expect(build(party(), max + 1)).toEqual(build(party(), max))
+  })
+
+  it('writes the kinds as campaign §5.5 has them, but for the wight\'s half damage: resistance, special, XP and native level', () => {
+    expect(foeStats('barrow_wight', 11)).toEqual(BARROW_WIGHT_STATS)
+    expect(foeStats('basilisk', 11)).toEqual({ ...BASILISK_STATS, abilityDamageBonus: 0 })
+    expect(foeStats('hill_giant', 12)).toEqual({ ...HILL_GIANT_STATS, abilityDamageBonus: 0 })
+    expect(BARROW_WIGHT_STATS).toMatchObject({ name: 'Barrow Wight', resistance: 3, magic: { spells: ['drain_life'] } })
+    expect(BASILISK_STATS).toMatchObject({ name: 'Basilisk', resistance: 4, abilities: ['basilisk_gaze'] })
+    expect(HILL_GIANT_STATS).toMatchObject({ name: 'Hill Giant', resistance: 3, weapon: 'Club', abilities: ['giant_rock'] })
+    expect([FOE_XP.barrow_wight, FOE_XP.basilisk, FOE_XP.hill_giant]).toEqual([110, 150, 200])
+    expect([FOE_NATIVE_LEVEL.barrow_wight, FOE_NATIVE_LEVEL.basilisk, FOE_NATIVE_LEVEL.hill_giant]).toEqual([11, 11, 12])
+  })
+
+  it('pierces enough of the expected kit\'s resistance (11 to 13 at these levels) for each kind\'s blow to tell', () => {
+    // The line under the plan's C3: wolf 4, worg rider 6, ogre 5, wyvern 11; the wight 8, the basilisk 9, the giant 9.
+    expect([BARROW_WIGHT_STATS.armorPierce, BASILISK_STATS.armorPierce, HILL_GIANT_STATS.armorPierce]).toEqual([8, 9, 9])
   })
 })
 
@@ -660,9 +725,12 @@ describe('the encounters\' bands and counts', () => {
     expect(encountersFor(8)).toEqual(['source_guardians', 'spider_nest', 'salamander_pool', 'bandit_company', 'wolf_pack', 'worg_riders', 'ogre_camp'])
     expect(encountersFor(9)).toEqual(['source_guardians', 'spider_nest', 'salamander_pool', 'bandit_company', 'wolf_pack', 'worg_riders', 'ogre_camp', 'wyvern_roost'])
     expect(encountersFor(10)).toEqual(['source_guardians', 'bandit_company', 'ogre_camp', 'wyvern_roost'])
-    for (const threat of [11, 12]) expect(encountersFor(threat)).toEqual(['source_guardians', 'bandit_company', 'wyvern_roost'])
-    expect(encountersFor(13)).toEqual(['source_guardians', 'bandit_company'])
-    for (const threat of [14, 20]) expect(encountersFor(threat)).toEqual(['source_guardians', 'freebooter_host'])
+    expect(encountersFor(11)).toEqual(['source_guardians', 'bandit_company', 'wyvern_roost', 'barrow_wights', 'basilisk_lair'])
+    expect(encountersFor(12)).toEqual(['source_guardians', 'bandit_company', 'wyvern_roost', 'barrow_wights', 'basilisk_lair', 'hill_giant_steading'])
+    expect(encountersFor(13)).toEqual(['source_guardians', 'bandit_company', 'barrow_wights', 'basilisk_lair', 'hill_giant_steading'])
+    expect(encountersFor(14)).toEqual(['source_guardians', 'freebooter_host', 'barrow_wights', 'basilisk_lair', 'hill_giant_steading'])
+    expect(encountersFor(15)).toEqual(['source_guardians', 'freebooter_host', 'hill_giant_steading'])
+    for (const threat of [16, 20]) expect(encountersFor(threat)).toEqual(['source_guardians', 'freebooter_host'])
     expect(encountersFor(21)).toEqual([])
     expect(encountersFor(0)).toEqual([])
   })
@@ -683,13 +751,16 @@ const BLOCKS: Record<MonsterKind, CombatantStats> = {
   worg_rider: WORG_RIDER_STATS,
   ogre: OGRE_STATS,
   wyvern: WYVERN_STATS,
+  barrow_wight: BARROW_WIGHT_STATS,
+  basilisk: BASILISK_STATS,
+  hill_giant: HILL_GIANT_STATS,
 }
 
 describe('foeStats', () => {
   const kinds = Object.keys(BLOCKS) as MonsterKind[]
 
-  it('gives every monster kind a native level, 1 but for the Giant Spider\'s 4, the Salamander\'s 5 and stage 11\'s kinds (ring 7: the Wolf 6, the Worg Rider and the Ogre 7; ring 9: the Wyvern 9)', () => {
-    const above: Partial<Record<MonsterKind, number>> = { giant_spider: 4, salamander: 5, wolf: 6, worg_rider: 7, ogre: 7, wyvern: 9 }
+  it('gives every monster kind a native level, 1 but for the Giant Spider\'s 4, the Salamander\'s 5 and stage 11\'s kinds (ring 7: the Wolf 6, the Worg Rider and the Ogre 7; ring 9: the Wyvern 9; ring 12: the Barrow Wight and the Basilisk 11, the Hill Giant 12)', () => {
+    const above: Partial<Record<MonsterKind, number>> = { giant_spider: 4, salamander: 5, wolf: 6, worg_rider: 7, ogre: 7, wyvern: 9, barrow_wight: 11, basilisk: 11, hill_giant: 12 }
     for (const kind of kinds) expect(FOE_NATIVE_LEVEL[kind]).toBe(above[kind] ?? 1)
   })
 
@@ -732,7 +803,7 @@ describe('the foe yardstick', () => {
    * The kinds added in long-campaign stage 11, held to the kitted yardstick (`foeYardstick(level, 'expected')`) until
    * stage 12 measures again; every other kind stays on the bare one. Each ring step adds its kinds here.
    */
-  const STAGE_11_KINDS: readonly MonsterKind[] = ['wolf', 'worg_rider', 'ogre', 'wyvern']
+  const STAGE_11_KINDS: readonly MonsterKind[] = ['wolf', 'worg_rider', 'ogre', 'wyvern', 'barrow_wight', 'basilisk', 'hill_giant']
   /** The fields a stage 11 kind is meant to sit outside the kitted yardstick on, and why. */
   const STAGE_11_EXCEPTIONS: typeof EXCEPTIONS = []
 

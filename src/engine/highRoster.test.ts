@@ -1,8 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import { ABILITIES } from '../combat/abilities.ts'
-import { OGRE_STATS, WOLF_STATS, WORG_RIDER_STATS, WYVERN_STATS, damageThrough, effectiveResistance, type CombatantStats } from '../combat/combat.ts'
+import {
+  BARROW_WIGHT_STATS,
+  BASILISK_STATS,
+  HILL_GIANT_STATS,
+  OGRE_STATS,
+  WOLF_STATS,
+  WORG_RIDER_STATS,
+  WYVERN_STATS,
+  damageThrough,
+  effectiveResistance,
+  type CombatantStats,
+} from '../combat/combat.ts'
+import { SPELLS } from '../combat/spells.ts'
 import { hex, hexKey } from '../grid/hex.ts'
-import { BattleEngine, type AbilityEvent, type Action, type AttackEvent, type UnitSetup } from './battleEngine.ts'
+import { BattleEngine, type AbilityEvent, type Action, type AttackEvent, type CastEvent, type UnitSetup } from './battleEngine.ts'
 
 /**
  * The kinds of long-campaign stage 11 (the high roster), ring by ring: what
@@ -247,6 +259,194 @@ describe('ring 9 (stage 11 step 09)', () => {
       engine.step(END_TURN)
       const reach = engine.legalActions('wyvern').flatMap((a) => (a.type === 'move' ? [a.to.q] : []))
       expect(reach.every((q) => q > 1)).toBe(true)
+    })
+  })
+})
+
+describe('ring 12 (stage 11 step 10)', () => {
+  describe('the Barrow Wight’s Drain Life', () => {
+    const drain: Action = { type: 'cast', unit: 'wight', spell: 'drain_life', target: 'hero' }
+    const { manaCost, apCost, range, damage } = SPELLS.drain_life
+    /** The wight wounded by `lost`, the hero `range` hexes off. */
+    const field = (rng: () => number, lost = 20) =>
+      enemyTurn([heroAt('hero', 1, 1), { ...foeAt('wight', BARROW_WIGHT_STATS, 1 + range, 1), hp: BARROW_WIGHT_STATS.maxHp - lost }], rng)
+
+    it('is a caster of one spell, Drain Life, with the mana for it, and no ability', () => {
+      expect(BARROW_WIGHT_STATS.magic!.spells).toEqual(['drain_life'])
+      expect(BARROW_WIGHT_STATS.magic!.maxMana).toBeGreaterThanOrEqual(manaCost)
+      expect(BARROW_WIGHT_STATS.abilities).toBeUndefined()
+    })
+
+    it('casts it on a hero in range: the hero loses hit points, whatever its armour, and the wight heals by half of them', () => {
+      // A roll that hits, then a 1 on each die.
+      const stream = counted([HIT, ...Array<number>(damage!.count).fill(0)])
+      const engine = field(stream.rng)
+      const [event] = engine.step(drain) as CastEvent[]
+      const dealt = damage!.count + damage!.bonus
+      expect(event).toMatchObject({ type: 'cast', caster: 'wight', spell: 'drain_life', drained: Math.floor(dealt / 2), outcomes: [{ unit: 'hero', hit: true, damage: dealt }] })
+      expect(unitOf(engine, 'hero').hp).toBe(HERO_STATS.maxHp - dealt)
+      expect(unitOf(engine, 'wight')).toMatchObject({
+        hp: BARROW_WIGHT_STATS.maxHp - 20 + Math.floor(dealt / 2),
+        ap: BARROW_WIGHT_STATS.actionPoints - apCost,
+        mana: BARROW_WIGHT_STATS.magic!.maxMana - manaCost,
+      })
+    })
+
+    it('heals nothing on a miss, and cannot reach a hero beyond its range', () => {
+      const engine = field(() => MISS)
+      const [event] = engine.step(drain) as CastEvent[]
+      expect(event).toMatchObject({ drained: 0, outcomes: [{ unit: 'hero', hit: false, damage: 0 }] })
+      expect(unitOf(engine, 'wight').hp).toBe(BARROW_WIGHT_STATS.maxHp - 20)
+      const far = enemyTurn([heroAt('hero', 1, 1), foeAt('wight', BARROW_WIGHT_STATS, 2 + range, 1)], () => HIT)
+      expect(far.legalActions('wight').some((a) => a.type === 'cast')).toBe(false)
+    })
+
+    it('takes a blow as any foe does: a plain block, with no word on what the weapon is (the half damage is deferred)', () => {
+      expect(BARROW_WIGHT_STATS).toMatchObject({ resistance: 3 })
+      expect(BARROW_WIGHT_STATS.wards).toBeUndefined()
+      expect(BARROW_WIGHT_STATS.immune).toBeUndefined()
+    })
+  })
+
+  describe('the Basilisk’s Gaze', () => {
+    const { apCost, recharge } = ABILITIES.basilisk_gaze
+    const area = ABILITIES.basilisk_gaze.area!
+    const gaze = (at = hex(4, 1)): Action => ({ type: 'ability', unit: 'basilisk', ability: 'basilisk_gaze', at })
+    /** The Basilisk at (5,1) looking west down the row: heroes 1, 2 and 3 hexes off in it and a fourth 4 off. */
+    const field = (rng: () => number) =>
+      enemyTurn(
+        [
+          heroAt('near', 4, 1),
+          heroAt('mid', 3, 1),
+          heroAt('far', 2, 1),
+          heroAt('beyond', 1, 1),
+          foeAt('basilisk', BASILISK_STATS, 5, 1),
+        ],
+        rng,
+      )
+    const chilled = (engine: BattleEngine, id: string) => unitOf(engine, id).statuses.find((s) => s.id === 'chilled')
+
+    it('is a cone 3 hexes long that deals no damage and lays Chilled, every other turn', () => {
+      expect(ABILITIES.basilisk_gaze.name).toBe('Gaze')
+      expect(area).toEqual({ shape: 'cone', range: 3, status: { id: 'chilled', turns: area.status!.turns }, halfOnMiss: false })
+      expect(recharge).toBe(2)
+      expect(BASILISK_STATS.abilities).toEqual(['basilisk_gaze'])
+    })
+
+    it('rolls once against each hero in the cone and lays Chilled on those it hits, with no dice and no damage', () => {
+      // near: hit; mid: missed; far: hit. No damage dice are drawn.
+      const stream = counted([HIT, MISS, HIT])
+      const engine = field(stream.rng)
+      const [event] = engine.step(gaze()) as AbilityEvent[]
+      expect(event).toMatchObject({ type: 'ability', unit: 'basilisk', ability: 'basilisk_gaze', shape: 'cone', apCost, skill: BASILISK_STATS.toHit })
+      expect(event.outcomes.map((o) => [o.unit, o.hit, o.half, o.damage])).toEqual([
+        ['near', true, false, 0],
+        ['mid', false, false, 0],
+        ['far', true, false, 0],
+      ])
+      expect(event.outcomes.map((o) => o.status?.id)).toEqual(['chilled', undefined, 'chilled'])
+      expect(stream.draws()).toBe(3)
+      for (const id of ['near', 'mid', 'far', 'beyond']) expect(unitOf(engine, id).hp, id).toBe(HERO_STATS.maxHp)
+      expect(chilled(engine, 'near')).toMatchObject({ id: 'chilled', turnsLeft: area.status!.turns })
+      expect(chilled(engine, 'mid')).toBeUndefined()
+      expect(chilled(engine, 'far')).toBeDefined()
+      expect(chilled(engine, 'beyond')).toBeUndefined()
+      expect(unitOf(engine, 'basilisk')).toMatchObject({ ap: BASILISK_STATS.actionPoints - apCost, recharging: { basilisk_gaze: recharge } })
+    })
+
+    it('costs a chilled hero 3 action points on its next turn', () => {
+      const engine = field(() => HIT)
+      engine.step(gaze())
+      engine.step(END_TURN)
+      expect(unitOf(engine, 'near').ap).toBe(HERO_STATS.actionPoints - 3)
+      expect(unitOf(engine, 'beyond').ap).toBe(HERO_STATS.actionPoints)
+    })
+
+    it('is not legal again until its recharge has run: the turn after next', () => {
+      const engine = field(() => HIT)
+      const ready = () => engine.legalActions('basilisk').some((a) => a.type === 'ability')
+      engine.step(gaze())
+      expect(ready()).toBe(false)
+      engine.step(END_TURN)
+      engine.step(END_TURN)
+      expect(ready()).toBe(false)
+      engine.step(END_TURN)
+      engine.step(END_TURN)
+      expect(ready()).toBe(true)
+    })
+
+    it('is slow: fewer action points than a foe of 8', () => {
+      expect(BASILISK_STATS.actionPoints).toBeLessThan(8)
+      expect(BASILISK_STATS).toMatchObject({ resistance: 4 })
+    })
+  })
+
+  describe('the Hill Giant’s Rock', () => {
+    const { apCost, recharge } = ABILITIES.giant_rock
+    const area = ABILITIES.giant_rock.area!
+    const dice = area.damage!
+    const rock = (at: ReturnType<typeof hex>): Action => ({ type: 'ability', unit: 'giant', ability: 'giant_rock', at })
+    /** The Giant at (6,1); a hero 4 hexes off with one beside it either side and one behind, and an ogre of the Giant's own beside that hero. */
+    const field = (rng: () => number, resistance = HERO_STATS.resistance!) =>
+      enemyTurn(
+        [
+          heroAt('target', 2, 1, { resistance }),
+          heroAt('beside', 3, 1),
+          heroAt('behind', 1, 1),
+          heroAt('above', 2, 0),
+          foeAt('giant', HILL_GIANT_STATS, 6, 1),
+          foeAt('ogre', OGRE_STATS, 2, 2),
+        ],
+        rng,
+      )
+
+    it('is a burst of no radius 4 hexes off, through resistance, with a recharge; the Giant’s weapon is a Club', () => {
+      expect(ABILITIES.giant_rock.name).toBe('Rock')
+      expect(area).toMatchObject({ shape: 'burst', range: 4, radius: 0, throughResistance: true })
+      expect(area.element).toBeUndefined()
+      expect(recharge).toBeGreaterThanOrEqual(1)
+      expect(HILL_GIANT_STATS).toMatchObject({ weapon: 'Club', resistance: 3, abilities: ['giant_rock'] })
+    })
+
+    it('aimed at a hero 4 hexes off, touches only that hero: one roll and its dice, and nothing else is struck', () => {
+      const stream = counted([HIT, ...Array<number>(dice.count).fill(0)])
+      const engine = field(stream.rng)
+      const [event] = engine.step(rock(hex(2, 1))) as AbilityEvent[]
+      expect(event).toMatchObject({ type: 'ability', unit: 'giant', ability: 'giant_rock', shape: 'burst', at: hex(2, 1), distance: 4, apCost, skill: HILL_GIANT_STATS.toHit })
+      expect(event.outcomes.map((o) => [o.unit, o.hit])).toEqual([['target', true]])
+      expect(stream.draws()).toBe(1 + dice.count)
+      for (const id of ['beside', 'behind', 'above', 'ogre', 'giant']) expect(unitOf(engine, id).hp, id).toBe(unitOf(engine, id).maxHp)
+      expect(unitOf(engine, 'giant')).toMatchObject({ ap: HILL_GIANT_STATS.actionPoints - apCost, recharging: { giant_rock: recharge } })
+    })
+
+    it('goes through the hero’s resistance, less the Giant’s piercing, as a blow', () => {
+      // A hero in plate of the expected kit's weight (resistance 11 at the Giant's level), a 10 on each die.
+      const engine = field(counted([HIT, ...Array<number>(dice.count).fill(0.999)]).rng, 11)
+      const [event] = engine.step(rock(hex(2, 1))) as AbilityEvent[]
+      const rolled = dice.count * dice.sides + dice.bonus
+      const through = damageThrough(rolled, effectiveResistance(HILL_GIANT_STATS, 11))
+      // The Giant pierces some of the hero's armour, not all: the armour still turns part of the rock.
+      expect(HILL_GIANT_STATS.armorPierce).toBeGreaterThan(0)
+      expect(through).toBeLessThan(rolled)
+      expect(event.outcomes).toMatchObject([{ unit: 'target', damage: through, resisted: rolled - through }])
+      expect(unitOf(engine, 'target').hp).toBe(HERO_STATS.maxHp - through)
+    })
+
+    it('cannot be thrown further than 4 hexes, and is aimed at a hero’s hex 2 to 4 off as well as beside it', () => {
+      const engine = field(() => HIT)
+      const centres = engine.legalActions('giant').flatMap((a) => (a.type === 'ability' && 'at' in a ? [hexKey(a.at)] : []))
+      expect(centres).toContain(hexKey(hex(2, 1)))
+      expect(centres).toContain(hexKey(hex(3, 1)))
+      expect(centres).not.toContain(hexKey(hex(1, 1)))
+      expect(() => engine.step(rock(hex(1, 1)))).toThrow('cannot use giant_rock')
+    })
+
+    it('is ready again after its recharge, not before', () => {
+      const engine = field(() => HIT)
+      engine.step(rock(hex(2, 1)))
+      expect(engine.legalActions('giant').some((a) => a.type === 'ability')).toBe(false)
+      for (let turn = 0; turn < 2 * recharge; turn++) engine.step(END_TURN)
+      expect(engine.legalActions('giant').some((a) => a.type === 'ability')).toBe(true)
     })
   })
 })

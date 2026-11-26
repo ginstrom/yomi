@@ -36,11 +36,13 @@ import { CUTSCENE_IDS } from '../story/cutscenes.ts'
  * ring 7's fixed nests and gives them the wolves', worg riders' and ogres'
  * encounters; no migration. Version 33 (stage 11, ring 9) does the same for
  * ring 9: two Wyvern Roosts and an Ogre Camp; no migration.
+ * Version 34 (stage 11, ring 12) does the same for ring 12: a barrow of
+ * wights, a Basilisk Lair and a Hill Giant Steading; no migration.
  * Rules and item numbers may change
  * freely, as a character stores no derived number and an item is saved by
  * its id.
  */
-export const SAVE_VERSION = 33
+export const SAVE_VERSION = 34
 
 /** One slot's contents. */
 export interface SaveFile {

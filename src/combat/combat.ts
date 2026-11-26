@@ -616,6 +616,76 @@ export const WYVERN_STATS: CombatantStats = {
   abilities: ['wyvern_strikes'],
 }
 
+/**
+ * A barrow wight, native to level 11: the dead of an old war, in the mail it
+ * was buried in. It drains the life of a foe 5 hexes off (`drain_life`,
+ * which no armour turns) and heals by half of it, with mana for one casting
+ * at its native level, and then closes with a blade that goes through much
+ * of a hero's armour. Its half damage from weapons that are not magic is
+ * deferred (long-campaign stage 11, decision 11): a plain block.
+ */
+export const BARROW_WIGHT_STATS: CombatantStats = {
+  name: 'Barrow Wight',
+  maxHp: 70,
+  ac: 54,
+  resistance: 3,
+  toHit: 95,
+  critChance: 5,
+  armorPierce: 8,
+  damage: { count: 2, sides: 8, bonus: 3 },
+  weapon: 'Barrow Blade',
+  attackApCost: 6,
+  attackRange: 1,
+  actionPoints: 8,
+  magic: { maxMana: 6, skill: 90, spells: ['drain_life'] },
+}
+
+/**
+ * A basilisk, native to level 11: slow (7 action points) and tough, in
+ * scales that turn a good part of a blow. Its gaze (`basilisk_gaze`) chills
+ * everyone in a cone before it, and it has the action points to gaze and
+ * bite in one turn; the bite goes through most of a hero's armour.
+ */
+export const BASILISK_STATS: CombatantStats = {
+  name: 'Basilisk',
+  maxHp: 110,
+  ac: 46,
+  resistance: 4,
+  toHit: 95,
+  critChance: 5,
+  armorPierce: 9,
+  damage: { count: 2, sides: 10, bonus: 3 },
+  weapon: 'Jaws',
+  attackApCost: 4,
+  attackRange: 1,
+  actionPoints: 7,
+  abilities: ['basilisk_gaze'],
+}
+
+/**
+ * A hill giant, native to level 12: an ogre's bigger cousin, one blow of its
+ * club a turn, and a rock thrown 4 hexes (`giant_rock`) at whoever it cannot
+ * reach. The rock goes through resistance as a blow does (long-campaign
+ * stage 11, decision 11), so the giant's `armorPierce` serves both: a hero
+ * in the expected kit has resistance 11 to 13 at its levels, and without
+ * piercing the rock and the club would do next to nothing to two of three.
+ */
+export const HILL_GIANT_STATS: CombatantStats = {
+  name: 'Hill Giant',
+  maxHp: 115,
+  ac: 48,
+  resistance: 3,
+  toHit: 95,
+  critChance: 5,
+  armorPierce: 9,
+  damage: { count: 3, sides: 8, bonus: 2 },
+  weapon: 'Club',
+  attackApCost: 6,
+  attackRange: 1,
+  actionPoints: 8,
+  abilities: ['giant_rock'],
+}
+
 /** What each level above the first adds to a monster: this share of its level 1 hit points... */
 export const FOE_HP_PER_LEVEL = 1.15
 /** ...this many points to its chance to hit and to its armour class... */

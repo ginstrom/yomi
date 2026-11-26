@@ -107,6 +107,8 @@ export const ABILITY_IDS = [
   'worg_strikes',
   'ogre_sweep',
   'wyvern_strikes',
+  'basilisk_gaze',
+  'giant_rock',
   'power_attack',
   'cleave',
   'taunt',
@@ -129,7 +131,7 @@ export const ABILITY_IDS = [
 export type AbilityId = (typeof ABILITY_IDS)[number]
 
 /** The abilities only monsters have, in `ABILITY_IDS` order; every other ability is a hero's technique. */
-export const MONSTER_ABILITY_IDS: readonly AbilityId[] = ['troll_claws', 'spider_bite', 'spider_web', 'fire_spit', 'worg_strikes', 'ogre_sweep', 'wyvern_strikes']
+export const MONSTER_ABILITY_IDS: readonly AbilityId[] = ['troll_claws', 'spider_bite', 'spider_web', 'fire_spit', 'worg_strikes', 'ogre_sweep', 'wyvern_strikes', 'basilisk_gaze', 'giant_rock']
 
 /** The Spellsword's Strikes, which Arcane Knight makes at the weapon's own AP. */
 export const SPELLSWORD_STRIKES: readonly AbilityId[] = ['flame_strike', 'frost_strike', 'thunder_strike']
@@ -231,6 +233,29 @@ export const ABILITIES: Record<AbilityId, Ability> = {
       { name: 'Bite', verb: 'bites', damage: { count: 2, sides: 6, bonus: 2 } },
       { name: 'Tail Sting', verb: 'stings', damage: { count: 1, sides: 4, bonus: 0 }, status: { id: 'poisoned', turns: 3 } },
     ],
+  },
+  basilisk_gaze: {
+    name: 'Gaze',
+    verb: 'fixes its gaze',
+    description: 'A cone 3 hexes long: no damage, but each one it catches is chilled for a turn, 3 fewer action points.',
+    apCost: 3,
+    recharge: 2,
+    area: { shape: 'cone', range: 3, status: { id: 'chilled', turns: 1 }, halfOnMiss: false },
+  },
+  giant_rock: {
+    name: 'Rock',
+    verb: 'hurls a rock',
+    description: 'A rock thrown at one foe up to 4 hexes off: 2d10+2, through armour.',
+    apCost: 6,
+    recharge: 1,
+    area: {
+      shape: 'burst',
+      range: 4,
+      radius: 0,
+      throughResistance: true,
+      damage: { count: 2, sides: 10, bonus: 2 },
+      halfOnMiss: false,
+    },
   },
   // ---- The heroes' techniques (design §4.3). `apCost` is ignored where `weaponAp` is set.
   power_attack: {

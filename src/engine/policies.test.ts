@@ -1111,7 +1111,7 @@ describe('policies', () => {
     expect(isPolicyName('toString')).toBe(false)
   })
 
-  describe('the choices of today’s encounters (a snapshot, re-recorded in skill trees step 13 when heroes and bandits learned techniques, in step 16 when a technique came to be weighed by the blows that fit this turn and the Captain took Pin before Heavy Hand, in step 28 when nodes came to cost perk points and the heroes and bandits to save for them, and in step 30 when the knight, swordmaster and evoker_healer plans moved and the bandits at threat 4 went back to plain gear; and in long-campaign stage 9 step 01, when the Bandit Company and Freebooter Host came and the Spider Nest’s, Salamander Pool’s and Source’s bands widened, and in its step 09, when the Source’s guardians were raised to level 6 at most; and in long-campaign stage 10 step 02, when bandits from threat 9 took tiers 3 to 5; and in long-campaign stage 11 step 08, when ring 7’s wolves, worg riders and ogres came: their encounters’ lines added after the rest, every earlier line unchanged; and in long-campaign stage 11 step 09, when the Wyvern Roost came: its lines added after those, every earlier line unchanged)', () => {
+  describe('the choices of today’s encounters (a snapshot, re-recorded in skill trees step 13 when heroes and bandits learned techniques, in step 16 when a technique came to be weighed by the blows that fit this turn and the Captain took Pin before Heavy Hand, in step 28 when nodes came to cost perk points and the heroes and bandits to save for them, and in step 30 when the knight, swordmaster and evoker_healer plans moved and the bandits at threat 4 went back to plain gear; and in long-campaign stage 9 step 01, when the Bandit Company and Freebooter Host came and the Spider Nest’s, Salamander Pool’s and Source’s bands widened, and in its step 09, when the Source’s guardians were raised to level 6 at most; and in long-campaign stage 10 step 02, when bandits from threat 9 took tiers 3 to 5; and in long-campaign stage 11 step 08, when ring 7’s wolves, worg riders and ogres came: their encounters’ lines added after the rest, every earlier line unchanged; and in long-campaign stage 11 step 09, when the Wyvern Roost came: its lines added after those, every earlier line unchanged; and in long-campaign stage 11 step 10, when ring 12’s wights, basilisks and giants came: their encounters’ lines added after those, every earlier line unchanged)', () => {
     /** Every action `aggressive` chooses, both sides, over each encounter at each threat of its band against the ready-made party of that level, a few seeds, 8 rounds at most. */
     function choices(): string[] {
       const lines: string[] = []
@@ -1150,10 +1150,14 @@ describe('policies', () => {
       const RING_7 = 16403
       expect(new Set(lines.slice(EARLIER, RING_7).map((line) => line.split(' ')[0]))).toEqual(new Set(['wolf_pack', 'worg_riders', 'ogre_camp']))
       expect(sha(lines.slice(0, RING_7))).toBe('082484296b928e87debbded89fc5b7b04d81e8513f3a2eab59e23096f076ebc1')
-      // Ring 9's (step 09): the Wyvern Roost's lines only.
-      expect(new Set(lines.slice(RING_7).map((line) => line.split(' ')[0]))).toEqual(new Set(['wyvern_roost']))
-      expect(lines.length).toBe(17051)
-      expect(sha(lines)).toBe('8e432c095a9a75e2639402953d9fefb423c92aaeeda5c631ea5b233ca8514c60')
+      // With ring 9's (step 09), as recorded there, the Wyvern Roost's lines only: ring 12's lines come after them.
+      const RING_9 = 17051
+      expect(new Set(lines.slice(RING_7, RING_9).map((line) => line.split(' ')[0]))).toEqual(new Set(['wyvern_roost']))
+      expect(sha(lines.slice(0, RING_9))).toBe('8e432c095a9a75e2639402953d9fefb423c92aaeeda5c631ea5b233ca8514c60')
+      // Ring 12's (step 10): the Barrow Wights', the Basilisk Lair's and the Hill Giant Steading's lines only.
+      expect(new Set(lines.slice(RING_9).map((line) => line.split(' ')[0]))).toEqual(new Set(['barrow_wights', 'basilisk_lair', 'hill_giant_steading']))
+      expect(lines.length).toBe(19591)
+      expect(sha(lines)).toBe('2c883f09e40d35c09ad548ce31d8f47a2c2c75b01142e3743f4cf6bf3fa10214')
     }, 60_000)
   })
 })

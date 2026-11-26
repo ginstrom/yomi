@@ -2055,7 +2055,7 @@ function fightAt(run: CampaignRun, party: Expedition, target: MonsterLocation): 
   for (const member of members) autoAdvance(member, playerPlan(run.args.plans, member))
   noteMarks(record, members, battles.length, game.world.workshop)
   record.runesFound += takeRunes(game, target.threat, target.encounter, battleSeed).length
-  // The hides and scales of the kinds `TROPHIES` names (wolves and worg riders from stage 11's ring 7, wyverns from ring 9), to the stock.
+  // The hides and scales of the kinds `TROPHIES` names (wolves and worg riders from stage 11's ring 7, wyverns from ring 9, basilisks from ring 12), to the stock.
   takeTrophies(game, encounter.kinds)
   clearLocation(game, target.id)
   return 'won'

@@ -101,6 +101,10 @@ export const ABILITY_LOOKS: Partial<Record<AbilityId, SpellLook>> = {
   fire_spit: { ...FIRE, impact: 'burst' },
   // The Ogre's club swung round it: dust bursting on each foe it catches.
   ogre_sweep: { colour: 0xa1887f, glow: 0xd7ccc8, missile: 'orb', impact: 'burst' },
+  // The Basilisk's gaze: a pale green ring closing on each one it holds.
+  basilisk_gaze: { colour: 0x9ccc65, glow: 0xdcedc8, missile: 'orb', impact: 'ring' },
+  // The Hill Giant's rock: a grey stone thrown, bursting to dust.
+  giant_rock: { colour: 0x8d8d8d, glow: 0xd7ccc8, missile: 'orb', impact: 'burst' },
   volley: { colour: 0xd7ccc8, glow: 0xffffff, missile: 'dart', impact: 'burst', arrows: true },
   consecrate: { ...SPELL_LOOKS.bless, impact: 'burst' },
   taunt: { colour: 0xe53935, glow: 0xffcdd2, missile: 'orb', impact: 'ring', onUser: true },

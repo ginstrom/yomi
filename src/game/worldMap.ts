@@ -310,11 +310,11 @@ export function newWorld(
       farMonsters('deepcrag_roost', 'Deepcrag Roost', 83, 36, 'wyvern_roost', [SAGE_CIRCLET]),
       farMonsters('grey_company', 'Grey Company', 74, 54, 'bandit_company', [STORM_WAND]),
       farMonsters('mere_ogres', 'Mere Ogres', 66, 69, 'ogre_camp', [RING_FORTUNE]),
-      // Threat 12 (81 to 94).
+      // Threat 12 (81 to 94): a barrow, a basilisk lair and a giant steading (long-campaign stage 11), and two bandit companies.
       farMonsters('ravenhill_company', 'Ravenhill Company', 80, 5, 'bandit_company', [SHADOW_CLOAK]),
-      farMonsters('stonegate_company', 'Stonegate Company', 88, 20, 'bandit_company', [HAWK_BOW]),
-      farMonsters('thornwall_company', 'Thornwall Company', 96, 36, 'bandit_company', [AMULET_FOCUS]),
-      farMonsters('marsh_company', 'Marsh Company', 88, 52, 'bandit_company', [EMBERBLADE]),
+      farMonsters('stonegate_barrow', 'Stonegate Barrow', 88, 20, 'barrow_wights', [HAWK_BOW]),
+      farMonsters('thornwall_lair', 'Thornwall Lair', 96, 36, 'basilisk_lair', [AMULET_FOCUS]),
+      farMonsters('marsh_steading', 'Marsh Steading', 88, 52, 'hill_giant_steading', [EMBERBLADE]),
       farMonsters('dustroad_company', 'Dustroad Company', 80, 67, 'bandit_company', [SPARK_WAND]),
       // Threat 15 (95 to 108).
       farMonsters('red_freebooters', 'The Red Freebooters', 95, 6, 'freebooter_host', [STORM_WAND]),

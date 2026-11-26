@@ -44,7 +44,7 @@ describe('abilities', () => {
 
   it('lists the monsters’ abilities first, the high roster’s after Fire Spit, then the heroes’ techniques', () => {
     expect(ABILITY_IDS.slice(0, MONSTER_ABILITY_IDS.length)).toEqual(MONSTER_ABILITY_IDS)
-    expect(MONSTER_ABILITY_IDS).toEqual([...FIRST_MONSTER_ABILITIES, 'worg_strikes', 'ogre_sweep', 'wyvern_strikes'])
+    expect(MONSTER_ABILITY_IDS).toEqual([...FIRST_MONSTER_ABILITIES, 'worg_strikes', 'ogre_sweep', 'wyvern_strikes', 'basilisk_gaze', 'giant_rock'])
   })
 
   it('lists the heroes’ techniques after the monsters’ abilities, in the plan’s order', () => {

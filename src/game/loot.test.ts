@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { mulberry32 } from '../combat/rng.ts'
 import { RUNE_IDS } from '../inventory/runes.ts'
 import type { UnitId } from '../engine/battleEngine.ts'
-import { ENCOUNTER_COUNTS, TROPHIES, banditCamp, ogreCamp, wolfPack, wyvernRoost, type FoeKind, type Trophy, type UnitKind } from './encounters.ts'
+import { ENCOUNTER_COUNTS, TROPHIES, banditCamp, basiliskLair, ogreCamp, wolfPack, wyvernRoost, type FoeKind, type Trophy, type UnitKind } from './encounters.ts'
 import { FAVOURED_CHANCE, FAVOURED_RUNES, lootRng, rollRunes, takeRunes, takeTrophies, trophiesFor } from './loot.ts'
 import { newGame } from './gameState.ts'
 import { SOURCE_THREAT } from './worldMap.ts'
@@ -130,7 +130,7 @@ describe('rune loot', () => {
   })
 
   it('favours venom at a Wyvern Roost, across its band (stage 11 step 09), and no element at ring 7\'s nests', () => {
-    expect(FAVOURED_RUNES).toEqual({ salamander_pool: 'ember', spider_nest: 'venom', wyvern_roost: 'venom' })
+    expect(FAVOURED_RUNES).toEqual({ salamander_pool: 'ember', spider_nest: 'venom', wyvern_roost: 'venom', basilisk_lair: 'rime' })
     for (const threat of [9, 12]) {
       const all = rolls(threat, 'wyvern_roost').flat()
       const venom = all.filter((k) => k.startsWith('venom')).length / all.length
@@ -138,6 +138,16 @@ describe('rune loot', () => {
       expect(venom).toBeLessThan(0.6)
     }
     for (const id of ['wolf_pack', 'worg_riders', 'ogre_camp'] as const) expect(FAVOURED_RUNES[id]).toBeUndefined()
+  })
+
+  it('favours rime at a Basilisk Lair, across its band (stage 11 step 10), and no element at the barrow or the steading', () => {
+    for (const threat of [11, 14]) {
+      const all = rolls(threat, 'basilisk_lair').flat()
+      const rime = all.filter((k) => k.startsWith('rime')).length / all.length
+      expect(rime).toBeGreaterThan(0.5)
+      expect(rime).toBeLessThan(0.6)
+    }
+    for (const id of ['barrow_wights', 'hill_giant_steading'] as const) expect(FAVOURED_RUNES[id]).toBeUndefined()
   })
 
   it('puts the runes in the pouch on top of what it held', () => {
@@ -169,11 +179,12 @@ describe('trophies', () => {
     expect(JSON.stringify({ ...game.world, stock: { gold: 5, wyvern_hide: 1 } })).toBe(rng)
   })
 
-  it('holds the trophies of rings 7 and 9: wolfhide, one a Wolf and one a Worg Rider; wyvern hide, three a Wyvern (gear §4.3; stage 11 steps 08 and 09)', () => {
+  it('holds the trophies of rings 7, 9 and 12: wolfhide, one a Wolf and one a Worg Rider; wyvern hide, three a Wyvern; basilisk scale, three a Basilisk (gear §4.3; stage 11 steps 08 to 10)', () => {
     expect(TROPHIES).toEqual({
       wolf: { material: 'wolfhide', amount: 1 },
       worg_rider: { material: 'wolfhide', amount: 1 },
       wyvern: { material: 'wyvern_hide', amount: 3 },
+      basilisk: { material: 'basilisk_scale', amount: 3 },
     })
   })
 
@@ -184,6 +195,17 @@ describe('trophies', () => {
     const roost = wyvernRoost([], 12)
     expect(takeTrophies(game, roost.kinds)).toEqual({ wyvern_hide: 3 * ENCOUNTER_COUNTS.wyvern_roost[3] })
     expect(game.world.stock.wyvern_hide).toBe(1 + 3 * ENCOUNTER_COUNTS.wyvern_roost[3])
+  })
+
+  it('adds three basilisk scale for each basilisk of a won Basilisk Lair to the stock; its ogres, a wight and a giant leave none', () => {
+    expect(trophiesFor(['basilisk', 'basilisk', 'ogre', 'warrior'])).toEqual({ basilisk_scale: 6 })
+    expect(trophiesFor(['barrow_wight', 'hill_giant', 'ogre'])).toEqual({})
+    const game = newGame(undefined, null, 1)
+    const lair = basiliskLair([], 12)
+    const basilisks = Object.values(lair.kinds).filter((kind) => kind === 'basilisk').length
+    expect(basilisks).toBe(2)
+    expect(takeTrophies(game, lair.kinds)).toEqual({ basilisk_scale: 6 })
+    expect(game.world.stock.basilisk_scale).toBe(6)
   })
 
   it('adds a wolfhide for each wolf of a won Wolf Pack, and for each wolf and rider of an Ogre Camp, to the stock', () => {

@@ -169,7 +169,7 @@ All 13 kinds' sprites are in the atlas (`art/units/<kind>.sprite.toml`); text in
 | 07 | [Sprites: ring 18 and the Source](07-sprites-ring-18-source.md) | `blight_lich`, `elder_wyrm`, `source_horror` (C8) | — | sonnet / opus | done (`95e5046`, `651a4c7`) |
 | 08 | [Ring 7: wolves, worg riders, ogres](08-ring-7.md) | Kinds, abilities, encounters, nests, spawn kinds, wolfhide; save 32; snapshot; cells | 02, 04 | opus / opus | done (`b0fbe7d`, `4ca43d2`) |
 | 09 | [Ring 9: wyverns](09-ring-9.md) | Wyvern, roost (4, 4, 3, 3), nests, wyvern hide, stand-in removed; save 33; cells | 08, 05 | opus / opus | done (`2b35cb9`, `cecd65f`) |
-| 10 | [Ring 12: wights, basilisks, giants](10-ring-12.md) | Three kinds and encounters, nests, basilisk scale; save 34; cells | 09, 05 | opus / opus | pending |
+| 10 | [Ring 12: wights, basilisks, giants](10-ring-12.md) | Three kinds and encounters, nests, basilisk scale; save 34; cells | 09, 05 | opus / opus | in progress |
 | 11 | [Ring 15: golems, cultists, young dragons](11-ring-15.md) | Three kinds (golem `immune`), encounters, nests, drake scale; save 35; cells | 10, 03, 06 | opus / opus | pending |
 | 12 | [Ring 18: the lich and the elder wyrm](12-ring-18.md) | Two kinds and encounters, nests, drake scale; save 36; cells | 11, 07 | opus / opus | pending |
 | 13 | [The Source at 20](13-source.md) | `source_horror`, `SOURCE_AT_20`, `SOURCE_FOE_LEVEL` removed (C7); snapshot; `sgk20` | 12, 07 | opus / opus | pending |

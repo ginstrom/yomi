@@ -1,10 +1,13 @@
 import {
+  BARROW_WIGHT_STATS,
+  BASILISK_STATS,
   ARMORED_TROLL_STATS,
   GIANT_SPIDER_STATS,
   SALAMANDER_STATS,
   BLIGHT_HORROR_STATS,
   GOBLIN_SHAMAN_STATS,
   GOBLIN_STATS,
+  HILL_GIANT_STATS,
   HOBGOBLIN_CHIEF_STATS,
   KOBOLD_STATS,
   OGRE_STATS,
@@ -55,7 +58,7 @@ function partyKinds(party: readonly Fighter[]): Record<UnitId, UnitKind> {
 }
 
 /** Monsters: stat blocks scaled by `foeAtLevel` from their native level. */
-export type MonsterKind = 'goblin' | 'kobold' | 'shaman' | 'horror' | 'hobgoblin' | 'troll' | 'armored_troll' | 'giant_spider' | 'salamander' | 'wolf' | 'worg_rider' | 'ogre' | 'wyvern'
+export type MonsterKind = 'goblin' | 'kobold' | 'shaman' | 'horror' | 'hobgoblin' | 'troll' | 'armored_troll' | 'giant_spider' | 'salamander' | 'wolf' | 'worg_rider' | 'ogre' | 'wyvern' | 'barrow_wight' | 'basilisk' | 'hill_giant'
 
 /** Humanoids built by hero rules (bandits.ts). */
 export type BanditKind = 'bandit_cutthroat' | 'bandit_archer' | 'bandit_brute' | 'bandit_mage' | 'bandit_captain' | 'bandit_crossbowman'
@@ -76,14 +79,16 @@ export interface Trophy {
  * The trophy of each foe kind that leaves one, granted after a win
  * (`takeTrophies`, loot.ts), from gear §4.3's table. It fills ring by ring
  * as long-campaign stage 11 adds the kinds: wolves and worg riders wolfhide 1
- * a foe (ring 7), wyverns wyvern hide 3 (ring 9); still to come, basilisks
- * basilisk scale 3, young dragons drake scale 6, elder wyrms drake scale 10.
+ * a foe (ring 7), wyverns wyvern hide 3 (ring 9), basilisks basilisk scale 3
+ * (ring 12); still to come, young dragons drake scale 6, elder wyrms drake
+ * scale 10.
  * No partner sells a trophy: Elder Glade's wyvern hide went when wyverns came.
  */
 export const TROPHIES: Partial<Record<FoeKind, Trophy>> = {
   wolf: { material: 'wolfhide', amount: 1 },
   worg_rider: { material: 'wolfhide', amount: 1 },
   wyvern: { material: 'wyvern_hide', amount: 3 },
+  basilisk: { material: 'basilisk_scale', amount: 3 },
 }
 
 /**
@@ -99,7 +104,8 @@ export const TROPHIES: Partial<Record<FoeKind, Trophy>> = {
  * its spit and its ward; first values, for the simulator to tune.
  * The kinds of long-campaign stage 11 (first values too): the Wolf a weak
  * foe of its level, the Worg Rider an even one, the Ogre well above one,
- * the Wyvern above one too, for its poison.
+ * the Wyvern above one too, for its poison; ring 12's Barrow Wight an even
+ * one, the Basilisk above it and the Hill Giant well above.
  * Bandits, built by hero rules (bandits.ts), are even foes for a hero of
  * their level, whatever their role, and so worth `EVEN_FOE_XP_PER_LEVEL`.
  */
@@ -118,6 +124,9 @@ export const FOE_XP: Record<UnitKind, number> = {
   worg_rider: 100,
   ogre: 140,
   wyvern: 150,
+  barrow_wight: 110,
+  basilisk: 150,
+  hill_giant: 200,
   bandit_cutthroat: 100,
   bandit_archer: 100,
   bandit_brute: 100,
@@ -164,6 +173,9 @@ const FOE_STATS: Record<MonsterKind, CombatantStats> = {
   worg_rider: WORG_RIDER_STATS,
   ogre: OGRE_STATS,
   wyvern: WYVERN_STATS,
+  barrow_wight: BARROW_WIGHT_STATS,
+  basilisk: BASILISK_STATS,
+  hill_giant: HILL_GIANT_STATS,
 }
 
 /** The level each monster kind's stat block is written for; it grows from there (`foeAtLevel`). */
@@ -181,6 +193,9 @@ export const FOE_NATIVE_LEVEL: Record<MonsterKind, number> = {
   worg_rider: 7,
   ogre: 7,
   wyvern: 9,
+  barrow_wight: 11,
+  basilisk: 11,
+  hill_giant: 12,
 }
 
 function isBandit(kind: FoeKind): kind is BanditKind {
@@ -387,6 +402,29 @@ const WYVERN_ROOST_SLOTS: readonly FoeSlot[] = [
   { id: 'old', kind: 'wyvern', name: 'Old Wyvern', at: [9, 4] },
 ]
 
+// Ring 12 (long-campaign stage 11): the barrow's dead, its king first; a lair of basilisks with the ogres that keep
+// them; a steading of hill giants and their ogres, the chief last.
+const BARROW_WIGHTS_SLOTS: readonly FoeSlot[] = [
+  { id: 'king', kind: 'barrow_wight', name: 'Barrow King', at: [9, 4] },
+  { id: 'wight', kind: 'barrow_wight', name: 'Barrow Wight', at: [8, 3] },
+  { id: 'grave', kind: 'barrow_wight', name: 'Grave Wight', at: [8, 5] },
+  { id: 'pale', kind: 'barrow_wight', name: 'Pale Wight', at: [9, 2] },
+]
+
+const BASILISK_LAIR_SLOTS: readonly FoeSlot[] = [
+  { id: 'basilisk', kind: 'basilisk', name: 'Basilisk', at: [8, 4] },
+  { id: 'keeper', kind: 'ogre', name: 'Ogre Keeper', at: [8, 2] },
+  { id: 'mate', kind: 'basilisk', name: 'Basilisk Mate', at: [8, 6] },
+  { id: 'ogre', kind: 'ogre', name: 'Ogre', at: [9, 4] },
+]
+
+const HILL_GIANT_STEADING_SLOTS: readonly FoeSlot[] = [
+  { id: 'giant', kind: 'hill_giant', name: 'Hill Giant', at: [8, 4] },
+  { id: 'ogre', kind: 'ogre', name: 'Ogre', at: [8, 2] },
+  { id: 'thrall', kind: 'ogre', name: 'Ogre Thrall', at: [8, 6] },
+  { id: 'chief', kind: 'hill_giant', name: 'Giant Chief', at: [9, 4] },
+]
+
 /** Today's encounters are fought at threats 1 to 5, with these many foes at each. */
 const TODAY = { band: { min: 1, max: 5 }, counts: [2, 3, 3, 3, 4] } as const satisfies Omit<EncounterDef, 'slots'>
 
@@ -450,6 +488,15 @@ const OGRE_CAMP: EncounterDef = { slots: OGRE_CAMP_SLOTS, band: { min: 7, max: 1
  * A pair at 9 was won 500 times. The plan's log has the trials.
  */
 const WYVERN_ROOST: EncounterDef = { slots: WYVERN_ROOST_SLOTS, band: { min: 9, max: 12 }, counts: [4, 4, 3, 3] }
+/**
+ * Ring 12's encounters (stage 11 step 10); the cells' tuning is in the plan's log. The Barrow Wights, threats 11 to
+ * 14: three, a fourth from 13.
+ */
+const BARROW_WIGHTS: EncounterDef = { slots: BARROW_WIGHTS_SLOTS, band: { min: 11, max: 14 }, counts: [3, 3, 4, 4] }
+/** The Basilisk Lair, threats 11 to 14: a Basilisk, its keeper and its mate, the second Ogre at 14 (two foes are no battle for a party in the expected kit). */
+const BASILISK_LAIR: EncounterDef = { slots: BASILISK_LAIR_SLOTS, band: { min: 11, max: 14 }, counts: [3, 3, 3, 4] }
+/** The Hill Giant Steading, threats 12 to 15: a Hill Giant and two Ogres, the Giant Chief from 14. */
+const HILL_GIANT_STEADING: EncounterDef = { slots: HILL_GIANT_STEADING_SLOTS, band: { min: 12, max: 15 }, counts: [3, 3, 4, 4] }
 
 /**
  * A Goblin and a Kobold across the board from the party; where the threat is
@@ -576,6 +623,21 @@ export function wyvernRoost(party: readonly Fighter[], threat = 9): Encounter {
   return encounter(party, WYVERN_ROOST, threat)
 }
 
+/** A barrow's wights, fought at threats 11 to 14: each drains the life of a hero from afar, healing by it, then closes with its blade. */
+export function barrowWights(party: readonly Fighter[], threat = 11): Encounter {
+  return encounter(party, BARROW_WIGHTS, threat)
+}
+
+/** A lair of basilisks and the ogres that keep them, fought at threats 11 to 14: the gaze chills a cone of heroes while the ogres close. */
+export function basiliskLair(party: readonly Fighter[], threat = 11): Encounter {
+  return encounter(party, BASILISK_LAIR, threat)
+}
+
+/** A steading of hill giants and their ogres, fought at threats 12 to 15: rocks thrown as the party closes, then clubs. */
+export function hillGiantSteading(party: readonly Fighter[], threat = 12): Encounter {
+  return encounter(party, HILL_GIANT_STEADING, threat)
+}
+
 /**
  * The experience each party member earns for winning `encounter`: what its
  * foes are worth together, a foe of level L being worth L times its kind's
@@ -603,6 +665,9 @@ export const ENCOUNTERS = {
   worg_riders: worgRiders,
   ogre_camp: ogreCamp,
   wyvern_roost: wyvernRoost,
+  barrow_wights: barrowWights,
+  basilisk_lair: basiliskLair,
+  hill_giant_steading: hillGiantSteading,
 } satisfies Record<string, (party: readonly Fighter[], threat?: number) => Encounter>
 
 export type EncounterId = keyof typeof ENCOUNTERS
@@ -623,6 +688,9 @@ export const ENCOUNTER_BANDS: Record<EncounterId, ThreatBand> = {
   worg_riders: WORG_RIDERS.band,
   ogre_camp: OGRE_CAMP.band,
   wyvern_roost: WYVERN_ROOST.band,
+  barrow_wights: BARROW_WIGHTS.band,
+  basilisk_lair: BASILISK_LAIR.band,
+  hill_giant_steading: HILL_GIANT_STEADING.band,
 }
 
 /** How many foes each encounter fields at each threat of its band, from `band.min` up, from its definition. */
@@ -641,6 +709,9 @@ export const ENCOUNTER_COUNTS: Record<EncounterId, readonly number[]> = {
   worg_riders: WORG_RIDERS.counts,
   ogre_camp: OGRE_CAMP.counts,
   wyvern_roost: WYVERN_ROOST.counts,
+  barrow_wights: BARROW_WIGHTS.counts,
+  basilisk_lair: BASILISK_LAIR.counts,
+  hill_giant_steading: HILL_GIANT_STEADING.counts,
 }
 
 /** The encounters whose band holds `threat`, in `ENCOUNTERS` order. */

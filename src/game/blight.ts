@@ -345,6 +345,9 @@ export const SPAWN_KINDS: ReadonlyArray<{ encounter: EncounterId; name: string; 
   { encounter: 'worg_riders', name: 'Worg Band', fromThreat: 7 },
   { encounter: 'ogre_camp', name: 'Ogre Camp', fromThreat: 7 },
   { encounter: 'wyvern_roost', name: 'Wyvern Roost', fromThreat: 7 },
+  { encounter: 'barrow_wights', name: 'Barrow', fromThreat: 7 },
+  { encounter: 'basilisk_lair', name: 'Basilisk Lair', fromThreat: 7 },
+  { encounter: 'hill_giant_steading', name: 'Giant Steading', fromThreat: 7 },
 ]
 
 function spawn(

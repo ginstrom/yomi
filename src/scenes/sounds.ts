@@ -249,6 +249,9 @@ export const FOE_SOUNDS: Record<FoeKind, AttackSound> = {
   worg_rider: light('battle.hit.pierce'),
   ogre: heavy('battle.hit.crush'),
   wyvern: attackSound('battle.swing.bite', 'battle.hit.claw'),
+  barrow_wight: blade,
+  basilisk: attackSound('battle.swing.bite', 'battle.hit.claw'),
+  hill_giant: heavy('battle.hit.crush'),
   bandit_cutthroat: light('battle.hit.pierce'),
   bandit_captain: blade,
   bandit_brute: heavy('battle.hit.slash'),
@@ -333,6 +336,10 @@ export const ABILITY_SOUNDS: Partial<Record<AbilityId, AbilitySound>> = {
   spider_web: { release: 'battle.ability.web', impact: 'battle.impact.web' },
   // The Ogre's club swung round: a heavy swing, and a crushing blow where it lands.
   ogre_sweep: { release: 'battle.swing.heavy', impact: 'battle.hit.crush', miss: 'battle.miss.swing' },
+  // The Basilisk's gaze: a cold breath drawn, and a hex settling on each one it holds.
+  basilisk_gaze: { release: 'battle.cast.frost', impact: 'battle.impact.hex' },
+  // The Hill Giant's rock: a heavy heave, and a crushing blow where it lands.
+  giant_rock: { release: 'battle.swing.heavy', impact: 'battle.hit.crush', miss: 'battle.miss.shot' },
   // A shield struck for a challenge, and the hex of the foes it draws.
   taunt: { release: 'battle.armor.metal', impact: 'battle.impact.hex' },
   volley: { release: 'battle.shot.bow', impact: 'battle.hit.pierce', miss: 'battle.miss.shot' },
@@ -365,6 +372,10 @@ export const DEATH: Record<UnitKind, CueId> = {
   ogre: 'battle.death.brute',
   // No cue of its own: the wyvern falls with the salamander's hiss, the other great lizard.
   wyvern: 'battle.death.salamander',
+  // No cues of their own: the wight falls as the Source's dead thing does, the basilisk as the other great lizards, the giant as a brute.
+  barrow_wight: 'battle.death.horror',
+  basilisk: 'battle.death.salamander',
+  hill_giant: 'battle.death.brute',
 }
 
 type StepClass = 'light' | 'armored' | 'heavy' | 'skitter'
@@ -391,6 +402,9 @@ export const STEP: Record<UnitKind, StepClass> = {
   worg_rider: 'light',
   ogre: 'heavy',
   wyvern: 'heavy',
+  barrow_wight: 'armored',
+  basilisk: 'heavy',
+  hill_giant: 'heavy',
 }
 
 /** A footstep's cue for a unit of `kind` wearing `body`; a kind of none known steps lightly. */
