@@ -9,3 +9,7 @@ Append-only history for [the plan](index.md) and [the feature record](../../feat
 ## Step 04 outcome
 
 Step 04 (sprites, ring 7): engineer sonnet, reviewer opus, verdict clean, 2 review rounds. Commits `21834ec`, `5619234`, `d4d6402`, `e5e6b6b`; clean-tree checks `npm test` runlog #7 and `npm run sprites:check` runlog #8. No simulation run.
+
+## Step 05 outcome
+
+Step 05 (sprites, rings 9 and 12): engineer sonnet, reviewer opus, verdict clean, 2 review rounds. Commits `5bc31dc`, `3d0e480` (records `b46e518`, `5f0f703`); clean-tree checks `npm test` runlog #18 and `npm run sprites:check` runlog #20. No simulation run.

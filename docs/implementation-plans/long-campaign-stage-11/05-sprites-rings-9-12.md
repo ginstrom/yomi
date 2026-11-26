@@ -115,3 +115,7 @@ Found (hill giant, wight, wyvern); all fixed in 3d0e480.
 - Wyvern: the wing's `V` dots became two ribs fanning from the shoulder.
 - Deviation (accepted by the coordinator): the giant is the ogre's height and about 2 px broader, not "visibly larger" as task section 2 asks; the 32px canvas cannot give more.
 - Verification at 3d0e480: `npm test` runlog #18 (2740 passed), `npm run sprites:check` runlog #20 (up to date). Renders: `.../scratchpad/step05-fix-x6.png`, `.../scratchpad/step05-fix-display.png` (scratchpad `/private/tmp/claude-501/-Users-ryan-personal-yomi/6b9b93b7-3933-4bd1-a198-fa82ad0fff0d/scratchpad/`).
+
+### Review round 2
+
+Opus reviewer: clean. Blocking 1 and the small findings resolved; the giant's size stays an accepted deviation. No code change.
