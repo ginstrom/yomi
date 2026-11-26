@@ -112,3 +112,21 @@ Own kit unchanged: `bc3` 455, 0.536, 11.87 and `bco9` 2, 0.801, 5.64, both ident
 ## Step 05 outcome
 
 Step 05 (sprites, rings 9 and 12): engineer sonnet, reviewer opus, verdict clean, 2 review rounds. Commits `5bc31dc`, `3d0e480` (records `b46e518`, `5f0f703`); clean-tree checks `npm test` runlog #18 and `npm run sprites:check` runlog #20. No simulation run.
+
+## Step 02 outcome
+
+Step 02 (expected kit and the kitted yardstick): engineer opus, reviewer opus, verdict clean, 1 review round, no blocking finding. Commits `67a6f0d`, `4c5569a`; clean-tree gates at `67a6f0d`: `npm test` runlog #22, `npm run build` runlog #23; the reviewer's reruns #27 and #28 at `2cd7aca`. Two decisions are with the user: the rune-order reading (socket by socket) and the kitted resistance.
+
+**Correction to "Step 02" above: where the kitted fighter's resistance comes from** (the reviewer's breakdown; the small slots carry no rune). Level 10 / level 20:
+
+| Source | Level 10 | Level 20 |
+| --- | --- | --- |
+| Breastplate: base + grade + one Stone rune | 5 (3+1+1) | 9 (5+2+2) |
+| Helm, gauntlets, greaves: base only | 6 | 9 |
+| Shield | 0 | 1 |
+| Innate (nodes) | 0 | 2 |
+| Total | 11 | 21 |
+
+The breastplate alone gives gear §5.8's "about 5" and "about 8"; the rest is the metal small slots the policy's `armourScore` picks, the shield and the fighter's own nodes.
+
+**Also noted in review:** `expectedGear` reads `BASE_ITEMS`, not what a workshop can forge, so the mage wears hide small slots at tiers 3 to 5 and the archer at tier 4, where a campaign party forges none.

@@ -121,12 +121,12 @@ Test-first: write each test red before the code.
 
 ## 6. Completion criteria
 
-- [ ] `--player-kit` parsed and refused as C1; `expectedGear` built and tested; single battles with `own` unchanged.
-- [ ] `KITTED_FIGHTER_GROWTH` recorded and kept true by a test; `foeYardstick(level, kit)` with `'bare'` unchanged; `STAGE_11_KINDS` in place (empty).
-- [ ] Guard unedited and green; 50-campaign hash identical to step 01's.
-- [ ] The five kitted cells measured and recorded beside step 01's; plausibility judged, and reported if implausible.
-- [ ] Docs as §4.8.
-- [ ] One commit, "Stage 11 step 02: expected kit and the kitted yardstick", files staged by path, no attribution lines; the index's row 02 updated with status and commit.
+- [x] `--player-kit` parsed and refused as C1; `expectedGear` built and tested; single battles with `own` unchanged.
+- [x] `KITTED_FIGHTER_GROWTH` recorded and kept true by a test; `foeYardstick(level, kit)` with `'bare'` unchanged; `STAGE_11_KINDS` in place (empty).
+- [x] Guard unedited and green; 50-campaign hash identical to step 01's.
+- [x] The five kitted cells measured and recorded beside step 01's; plausibility judged, and reported if implausible.
+- [x] Docs as §4.8.
+- [x] One commit, "Stage 11 step 02: expected kit and the kitted yardstick", files staged by path, no attribution lines; the index's row 02 updated with status and commit.
 
 ## 7. Execution record
 
@@ -161,3 +161,8 @@ Test-first: write each test red before the code.
 - Ring steps: add each kind to `STAGE_11_KINDS` (and its exceptions to `STAGE_11_EXCEPTIONS`) in `src/game/encounters.test.ts`; a kind in that list leaves the bare test by itself.
 - A foe's plain weapon damage meets resistance 11 to 21 on the kitted fighter (the archer 11 to 18, the mage 3 to 7): damage that is to tell at rings 12 to 18 has to go through resistance (`throughResistance` areas, spells, elements) or carry `armorPierce`. The cells will show it; decision 4's 300–475 may need this from the first trial.
 - `FIGHTER_GROWTH` (the bare table) no longer matches today's bare fighter (hit 65/83/93/100/100 and hit points 35/59/89/119/149 at levels 1/5/10/15/20); it was left alone (out of scope; stage 12 re-measures).
+
+**Review round 1** (opus reviewer, at `2cd7aca`; reruns runlog #27 and #28): verdict clean, no blocking finding; nothing disputed. Recorded from it, in the closing commit:
+- *The cause of the resistance, corrected.* The small slots carry no rune. Level 10 / level 20: breastplate base + grade + one Stone rune 5 (3+1+1) / 9 (5+2+2); helm, gauntlets and greaves, base only, 6 / 9; shield 0 / 1; innate 0 / 2; total 11 / 21. The breastplate alone gives gear §5.8's "about 5" and "about 8" (`log.md`, "Step 02 outcome").
+- *`expectedGear` reads `BASE_ITEMS`*, not the forge's options, so the mage wears hide small slots at tiers 3 to 5 and the archer at tier 4, where a campaign party forges none; noted in `docs/reference/simulator.md`.
+- Open with the user (the orchestrator holds them): the rune-order reading and the kitted resistance. A follow-up change may come back to this step.
