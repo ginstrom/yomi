@@ -112,3 +112,5 @@ No code change, no tuning, no band or "Now" change, no other plan file than this
 - Long (100, `--log none`): Source 1 of 100 (1%), fell 97, out of days 2; 1414 days; 42.3 battles; battles to level 5/10/15/20 6.8/28.4/55.9/none in 84/53/16/0 campaigns; win rate by threat 7 0.939, 9 0.785, 12 0.367, 15 0.295; 2271 gold on forging; run time 166 s alone.
 - Standard cells: GR3 500, BC3 455, BC4 454, BC5 494, SN5 451, SP5 475, SG7 0, SG10 1; TL5 0.
 - Far cells: BCO9 2, BCO12 0, FH15 0, FH18 0, SG20-18 28, SG20 71.
+
+**Review, round 1 (clean).** The sonnet reviewer confirmed every recorded figure against `logs/s11-01-*`; no findings, nothing fixed or disputed. The step's `npm test` gate is runlog #15 (exit 0, 2740 passed, clean head `d113dbf`, run by the reviewer with Node 26 on PATH); the engineer's own run #11 was on a dirty tree.

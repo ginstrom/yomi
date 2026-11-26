@@ -60,3 +60,5 @@ Kit lines (all / forge-ready): at 5 (84): fighter, archer, mage tier 1.0, 0.0 ru
 | FH18 (report) | 0 | 0.806 | 5.50 | 24 s |
 | SG20-18 (report) | 28 | 0.760 | 19.12 | 26 s |
 | SG20 (report) | 71 | 0.763 | 21.91 | 49 s |
+
+Step 01 outcome: engineer sonnet, reviewer sonnet, verdict clean, 1 review round; commits `42eaff0`, `d113dbf`; `npm test` gate runlog #15 (exit 0, 2740 passed, clean head `d113dbf`, reviewer, Node 26).
