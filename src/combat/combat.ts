@@ -547,16 +547,19 @@ export const WOLF_STATS: CombatantStats = {
 /**
  * A goblin on a worg, native to level 7: in one action the rider's spear and
  * the worg's bite at one foe (`worg_strikes`), or the spear alone after a
- * long move. The rider's leathers turn a little of a blow.
+ * long move. The rider's leathers turn a little of a blow; its spear and
+ * the worg's jaws go through most of a hero's armour (`armorPierce` 6, and
+ * 80 hit points, from 4 and 62: at threat 9 four of the first block's were
+ * won 500 times in 500 by a party in the expected kit, resistance 11).
  */
 export const WORG_RIDER_STATS: CombatantStats = {
   name: 'Worg Rider',
-  maxHp: 62,
+  maxHp: 80,
   ac: 44,
   resistance: 1,
   toHit: 85,
   critChance: 5,
-  armorPierce: 4,
+  armorPierce: 6,
   damage: { count: 1, sides: 8, bonus: 2 },
   weapon: 'Spear',
   attackApCost: 5,

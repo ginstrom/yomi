@@ -352,12 +352,16 @@ const WOLF_PACK_SLOTS: readonly FoeSlot[] = [
   { id: 'young', kind: 'wolf', name: 'Young Wolf', at: [9, 6] },
 ]
 
-// The Chief first, then a wolf and a rider by turns, so three field two riders and a wolf between them.
+// The Chief first. Below threat 8 the wolves stay away and three riders fight (the Chief, the Rider and the Outrider);
+// from 8 the wolves run with them, taking their places in the order, so five field the Chief, a Rider and three
+// wolves and the Outrider waits. Tuned against the cells: a fourth foe at threat 7 was a cliff (184 wins of 500).
 const WORG_RIDERS_SLOTS: readonly FoeSlot[] = [
   { id: 'chief', kind: 'worg_rider', name: 'Worg Rider Chief', at: [8, 4] },
-  { id: 'wolf', kind: 'wolf', name: 'Grey Wolf', at: [8, 2] },
+  { id: 'wolf', kind: 'wolf', name: 'Grey Wolf', at: [8, 2], fromThreat: 8 },
   { id: 'rider', kind: 'worg_rider', name: 'Worg Rider', at: [8, 6] },
-  { id: 'wolf2', kind: 'wolf', name: 'Lean Wolf', at: [9, 4] },
+  { id: 'wolf2', kind: 'wolf', name: 'Lean Wolf', at: [9, 4], fromThreat: 8 },
+  { id: 'wolf3', kind: 'wolf', name: 'Young Wolf', at: [9, 6], fromThreat: 8 },
+  { id: 'outrider', kind: 'worg_rider', name: 'Worg Outrider', at: [9, 2] },
 ]
 
 // An Ogre first, a Worg Rider beside it, then the second Ogre and the camp's wolf: the Ogres hold the middle while
@@ -415,13 +419,16 @@ const FREEBOOTER_HOST: EncounterDef = { slots: FREEBOOTER_HOST_SLOTS, band: { mi
 /**
  * Ring 7's encounters (long-campaign stage 11 step 08), their counts tuned against the ring's cells (a party of the
  * threat's level in the expected kit, 300 to 475 wins of 500 at both ends of the band; the plan's log has the trials).
- * The Wolf Pack, threats 6 to 9.
+ * The Wolf Pack, threats 6 to 9: four wolves, and all five at 9 (three at threat 6 were won 497 times in 500; four, 418).
  */
-const WOLF_PACK: EncounterDef = { slots: WOLF_PACK_SLOTS, band: { min: 6, max: 9 }, counts: [3, 4, 4, 5] }
-/** The Worg Riders, threats 7 to 9 (the rider is native to 7). */
-const WORG_RIDERS: EncounterDef = { slots: WORG_RIDERS_SLOTS, band: { min: 7, max: 9 }, counts: [3, 3, 4] }
-/** The Ogre Camp, threats 7 to 10. */
-const OGRE_CAMP: EncounterDef = { slots: OGRE_CAMP_SLOTS, band: { min: 7, max: 10 }, counts: [2, 3, 3, 4] }
+const WOLF_PACK: EncounterDef = { slots: WOLF_PACK_SLOTS, band: { min: 6, max: 9 }, counts: [4, 4, 4, 5] }
+/**
+ * The Worg Riders, threats 7 to 9 (the rider is native to 7): three at 7 and 8, five at 9. At 7 the three are riders
+ * (463 of 500); two riders and two wolves there were won 184 times, and four foes at 9 498 times, five 326.
+ */
+const WORG_RIDERS: EncounterDef = { slots: WORG_RIDERS_SLOTS, band: { min: 7, max: 9 }, counts: [3, 3, 5] }
+/** The Ogre Camp, threats 7 to 10: both Ogres and the rider to 9, the wolf too at 10 (an Ogre and a rider alone at 7 were won 500 times in 500). */
+const OGRE_CAMP: EncounterDef = { slots: OGRE_CAMP_SLOTS, band: { min: 7, max: 10 }, counts: [3, 3, 3, 4] }
 
 /**
  * A Goblin and a Kobold across the board from the party; where the threat is
@@ -512,25 +519,28 @@ export function freebooterHost(party: readonly Fighter[], threat = 14): Encounte
 }
 
 /**
- * A pack of wolves, fought at threats 6 to 9: fast, so they are round the
- * front rank and on the archer and the mage in their first turn, each biting
- * once a turn through some of any armour.
+ * A pack of wolves, four of them and five at threat 9, fought at threats 6
+ * to 9: fast, so they are round the front rank and on the archer and the
+ * mage in their first turn, each biting once a turn through some of any
+ * armour.
  */
 export function wolfPack(party: readonly Fighter[], threat = 6): Encounter {
   return encounter(party, WOLF_PACK, threat)
 }
 
 /**
- * Goblins on worgs with wolves running beside them, fought at threats 7 to
- * 9: each rider strikes with spear and bite in one action.
+ * Goblins on worgs, fought at threats 7 to 9: each rider strikes with spear
+ * and bite in one action. Three riders at 7; from 8 wolves run beside them,
+ * and at 9 the Chief, a Rider and three wolves fight.
  */
 export function worgRiders(party: readonly Fighter[], threat = 7): Encounter {
   return encounter(party, WORG_RIDERS, threat)
 }
 
 /**
- * Ogres, which sweep their clubs round at everyone beside them, with a Worg
- * Rider and a wolf of their camp; fought at threats 7 to 10.
+ * Two Ogres, which sweep their clubs round at everyone beside them, with a
+ * Worg Rider between them and, at threat 10, a wolf of their camp; fought at
+ * threats 7 to 10.
  */
 export function ogreCamp(party: readonly Fighter[], threat = 7): Encounter {
   return encounter(party, OGRE_CAMP, threat)

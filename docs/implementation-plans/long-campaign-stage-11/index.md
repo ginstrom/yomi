@@ -132,9 +132,9 @@ Ids in `ENCOUNTERS` (after `freebooter_host`, in this order), `ENCOUNTER_BANDS`,
 
 | Id | Band | Slots, in order | Counts | Spawn name | Favoured | Step |
 | --- | --- | --- | --- | --- | --- | --- |
-| `wolf_pack` | 6–9 | wolf ×5 (Pack Leader first) | 3, 4, 4, 5 | Wolf Pack | — | 08 |
-| `worg_riders` | 7–9 | worg_rider, wolf, worg_rider, wolf | 3, 3, 4 | Worg Band | — | 08 |
-| `ogre_camp` | 7–10 | ogre, worg_rider, ogre, wolf | 2, 3, 3, 4 | Ogre Camp | — | 08 |
+| `wolf_pack` | 6–9 | wolf ×5 (Pack Leader first) | 4, 4, 4, 5 | Wolf Pack | — | 08 |
+| `worg_riders` | 7–9 | worg_rider, wolf, worg_rider, wolf, wolf, worg_rider (wolves `fromThreat` 8) | 3, 3, 5 | Worg Band | — | 08 |
+| `ogre_camp` | 7–10 | ogre, worg_rider, ogre, wolf | 3, 3, 3, 4 | Ogre Camp | — | 08 |
 | `wyvern_roost` | 9–12 | wyvern ×3 | 2, 2, 3, 3 | Wyvern Roost | venom | 09 |
 | `barrow_wights` | 11–14 | barrow_wight ×4 | 3, 3, 4, 4 | Barrow | — | 10 |
 | `basilisk_lair` | 11–14 | basilisk, ogre, basilisk, ogre | 2, 3, 3, 4 | Basilisk Lair | rime | 10 |

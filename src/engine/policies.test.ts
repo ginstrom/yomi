@@ -1147,8 +1147,8 @@ describe('policies', () => {
       const EARLIER = 14242
       expect(sha(lines.slice(0, EARLIER))).toBe('b9cef6e182080a3fa26d796534ec1b631e6628d6a140c11525ebee8fabb728ac')
       expect(new Set(lines.slice(EARLIER).map((line) => line.split(' ')[0]))).toEqual(new Set(['wolf_pack', 'worg_riders', 'ogre_camp']))
-      expect(lines.length).toBe(16352)
-      expect(sha(lines)).toBe('66bde211839467642ceea69f0fd5be48a46bbfaafa82e0314151e0405cd50fcf')
+      expect(lines.length).toBe(16403)
+      expect(sha(lines)).toBe('082484296b928e87debbded89fc5b7b04d81e8513f3a2eab59e23096f076ebc1')
     }, 60_000)
   })
 })

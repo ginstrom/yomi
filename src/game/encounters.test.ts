@@ -61,9 +61,9 @@ const party = () => partyFighters([...readyMadeParty(), createWarrior()])
 /** The home rings' threats, today's encounters' band (1 to 5). */
 const HOME_THREATS = 5
 /** Ring 7's counts, from each band's first threat up (stage 11 step 08; the cells' tuning is in the plan's log). */
-const WOLF_PACK_COUNTS = [3, 4, 4, 5]
-const WORG_RIDERS_COUNTS = [3, 3, 4]
-const OGRE_CAMP_COUNTS = [2, 3, 3, 4]
+const WOLF_PACK_COUNTS = [4, 4, 4, 5]
+const WORG_RIDERS_COUNTS = [3, 3, 5]
+const OGRE_CAMP_COUNTS = [3, 3, 3, 4]
 
 describe.each(Object.entries(ENCOUNTERS))('the %s encounter', (_id, build) => {
   const wounded = party().map((fighter, i) => ({ ...fighter, hp: 5 + i }))
@@ -508,15 +508,25 @@ describe('ring 7\'s encounters (long-campaign stage 11 step 08)', () => {
     expect(wolfPack(party(), 5)).toEqual(wolfPack(party(), 6))
   })
 
-  it('fields the Worg Riders, a rider leading, riders and wolves by turns, at both ends of 7 to 9', () => {
-    const band = [
+  it('fields the Worg Riders, the Chief leading: three riders at 7, and from 8 the wolves in the Outrider\'s place, five at 9', () => {
+    expect(fielded(worgRiders, 7)).toEqual([
+      ['worg_rider', 'Worg Rider Chief'],
+      ['worg_rider', 'Worg Rider'],
+      ['worg_rider', 'Worg Outrider'],
+    ])
+    expect(fielded(worgRiders, 8)).toEqual([
+      ['worg_rider', 'Worg Rider Chief'],
+      ['wolf', 'Grey Wolf'],
+      ['worg_rider', 'Worg Rider'],
+    ])
+    expect(fielded(worgRiders, 9)).toEqual([
       ['worg_rider', 'Worg Rider Chief'],
       ['wolf', 'Grey Wolf'],
       ['worg_rider', 'Worg Rider'],
       ['wolf', 'Lean Wolf'],
-    ]
-    expect(fielded(worgRiders, 7)).toEqual(band.slice(0, WORG_RIDERS_COUNTS[0]))
-    expect(fielded(worgRiders, 9)).toEqual(band.slice(0, WORG_RIDERS_COUNTS[2]))
+      ['wolf', 'Young Wolf'],
+    ])
+    expect(WORG_RIDERS_COUNTS).toEqual([3, 3, 5])
     atLevel(worgRiders, 7)
     atLevel(worgRiders, 9)
     expect(worgRiders(party(), 6)).toEqual(worgRiders(party(), 7))

@@ -33,7 +33,7 @@ A stat block's optional `magic` (mana, spell skill, spells known) is what makes 
 
 `ABILITIES`, by id as spells are, which a stat block's `abilities` names: a routine of weapon strikes at one foe, each with its own dice, verb and maybe a status, or an area. Each costs action points, and one with a `recharge` of N is used at most every N turns of its side.
 
-The monsters' four (Troll Claws, Spider Bite, Spider Web, Fire Spit) come first in `ABILITY_IDS` and set none of the heroes' fields. The heroes' techniques (17) come after them, taught by a node's `ability` (`knownAbilities`). A technique:
+The monsters' abilities (`MONSTER_ABILITY_IDS`: Troll Claws, Spider Bite, Spider Web, Fire Spit, then the high roster's of long-campaign stage 11, so far the Worg Rider's Spear and Bite and the Ogre's Sweep) come first in `ABILITY_IDS` and set none of the heroes' cost fields; the high roster's areas may use `centredOnSelf`, `foesOnly` and `throughResistance`. The heroes' techniques (17) come after them, taught by a node's `ability` (`knownAbilities`). A technique:
 
 - may cost mana (`manaCost`);
 - costs the weapon's attack AP plus `weaponAp` (`abilityApCost`, which every reader of an ability's AP goes through), plus nothing for the Spellsword Strikes (`SPELLSWORD_STRIKES`) of a unit with the trait `arcane_knight`;
