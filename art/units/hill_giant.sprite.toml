@@ -1,5 +1,6 @@
-# A hill giant: a vast grey-hided brute in a shaggy fur mantle and a hide
-# belt, a stone gripped in one fist and a studded club dragging from the other.
+# A hill giant: a vast blue-hided brute in a shaggy fur mantle and a hide
+# belt, a boulder hung from one fist and a great studded club held upright
+# over the other shoulder.
 canvas = "unit"
 
 outline = "auto"
@@ -8,38 +9,38 @@ outline = "auto"
 chest = [15, 14]
 
 [frames.idle_0.runs]
-1 = [[12, "NnnN"]]
-2 = [[11, "NnnnnnN"]]
-3 = [[11, "bcccccc"]]
-4 = [[11, "bccccWcc"]]
-5 = [[11, "bcccccccc"]]
-6 = [[11, "bbccWcWcc"]]
-7 = [[12, "bbcccc"]]
-8 = [[6, "NnnnttnnnttnnnttnnnN"]]
-9 = [[4, "NnttnnnttnnnttnnnttnnnN"]]
-10 = [[3, "bcbNnnttnnnttnnnttnnNbccb"]]
-11 = [[2, "bcbcNnnnnnnnnnnnnnnnnNbcccb"]]
-12 = [[2, "bcbcBcccccccccccccccBccccb"]]
-13 = [[2, "bcbcBcccccccccccccccBccccb"]]
-14 = [[2, "bcbcBcccccbcccccbcccBccccb"]]
-15 = [[2, "bcbcbBcccccbbbbcccccBccccb"]]
-16 = [[2, "bcbcbBccccccccccccccBccccb"]]
-17 = [[2, "bcbcbBccccccccccccccBcccBB"]]
-18 = [[2, "bbbbcBcccccccccccccccBccNNB"]]
-19 = [[1, "cccccbNNNNNNNNNNNNNNNNNbbcNnN"]]
-20 = [[1, "cccccBNnnnYnnnnnnnnnnnnNbBNnnN"]]
-21 = [[1, "cccccbBBBBBBBBBBBBBBBBBBbbNnnN"]]
-22 = [[2, "cccbb"], [7, "BccccccccccccccB"], [25, "NnnN"]]
-23 = [[7, "BcccccccccccccB"], [24, "NnnnnnN"]]
-24 = [[7, "BccccB"], [14, "BccccB"], [21, "NnnnnnnnN"]]
-25 = [[7, "BccccB"], [14, "BccccB"], [21, "NnnnnnnnN"]]
-26 = [[7, "BccccB"], [14, "BccccB"], [21, "NnnnnnnnN"]]
-27 = [[7, "BccccB"], [14, "BccccB"], [21, "NnnnnnnnN"]]
-28 = [[7, "BccccB"], [14, "BccccB"], [21, "NnnnnnnnN"]]
-29 = [[6, "bbccccB"], [14, "Bcccbb"], [21, "NnnnnnnnN"]]
-30 = [[5, "bbbccccB"], [14, "Bccccbb"], [21, "NNnnnnnnNN"]]
+1 = [[12, "NnnN"], [25, "NnTnN"]]
+2 = [[11, "NnnnnnN"], [24, "NnTtnnN"]]
+3 = [[11, "bcccccc"], [24, "NntlnnN"]]
+4 = [[11, "bBBBBBBc"], [24, "NntnnnN"]]
+5 = [[11, "bcccWcWcc"], [24, "NnnnlnN"]]
+6 = [[11, "bbcccBBBc"], [26, "NnnnN"]]
+7 = [[12, "bbcccc"], [29, "tn"]]
+8 = [[6, "NnnnttnnnttnnnttnnnN"], [29, "tn"]]
+9 = [[4, "NnttnnnttnnnttnnnttnnnN"], [29, "tn"]]
+10 = [[3, "bcbNnnttnnnttnnnttnnNbccb"], [29, "tn"]]
+11 = [[2, "bcbcNnnnnnnnnnnnnnnnnNbccb"], [29, "tn"]]
+12 = [[2, "bcbcBcccccccccccccccBccccb"], [29, "tn"]]
+13 = [[2, "bcbcBcccccccccccccccBccccb"], [29, "tn"]]
+14 = [[2, "bcbcBcccccccbcccccccBccccb"], [29, "tn"]]
+15 = [[2, "bcbcbBccccccbcccccccBccccb"], [29, "tn"]]
+16 = [[2, "bcbcbBccccccbcccccccBccccb"], [29, "tn"]]
+17 = [[2, "bcbcbBccccccccccccccBcccbb"], [29, "tn"]]
+18 = [[2, "bbbbcBcccccccccccccccBccccb"], [29, "tn"]]
+19 = [[1, "cccccbNNNNNNNNNNNNNNNNNbbccc"], [29, "tn"]]
+20 = [[1, "cccccBNnnnYnnnnnnnnnnnnNbccctn"]]
+21 = [[1, "mammabBBBBBBBBBBBBBBBBBBbbbbtn"]]
+22 = [[1, "mamam"], [6, "b"], [7, "BccccccccccccccB"], [29, "tn"]]
+23 = [[2, "mmam"], [7, "BcccccccccccccB"], [29, "tn"]]
+24 = [[3, "mm"], [7, "BccccB"], [14, "BccccB"]]
+25 = [[7, "BccccB"], [14, "BccccB"]]
+26 = [[7, "BccccB"], [14, "BccccB"]]
+27 = [[7, "BccccB"], [14, "BccccB"]]
+28 = [[7, "BccccB"], [14, "BccccB"]]
+29 = [[6, "bbccccB"], [14, "Bcccbb"]]
+30 = [[5, "bbbccccB"], [14, "Bccccbb"]]
 
-# A breath: the shoulders and head sink a pixel; the legs and club head stay.
+# A breath: the shoulders and head sink a pixel; the legs and boulder stay.
 [frames.idle_1]
 from = "idle_0"
 move = { rows = [0, 23], by = [0, 1] }
@@ -48,14 +49,15 @@ move = { rows = [0, 23], by = [0, 1] }
 frames = ["idle_0", "idle_1"]
 ms = 700
 
-# A stride: the left leg reaches back; everything above the shins stays put.
+# A stride: both legs part, the left reaching back and the right forward; everything above the hips stays put.
 [frames.walk_0]
 from = "idle_0"
 [frames.walk_0.runs]
-27 = [[6, "BccccB."]]
-28 = [[6, "BccccB."]]
-29 = [[4, "bbccccB.."]]
-30 = [[3, "bbbccccB.."]]
+26 = [[6, "BccccB...BccccB"]]
+27 = [[6, "BccccB...BccccB"]]
+28 = [[5, "BccccB.....BccccB"]]
+29 = [[4, "bbccccB.....Bcccbb"]]
+30 = [[3, "bbbccccB.....Bccccbb"]]
 
 # The feet lift in turn: the left, then the right. Only the leg rows change.
 [frames.walk_1]
