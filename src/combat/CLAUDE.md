@@ -13,7 +13,7 @@ Loaded when working in `src/combat/`. This is the data and arithmetic the engine
 
 `foeAtLevel(base, level, native)` scales a stat block from its kind's native level: a level below the native counts as it; armour class, chance to hit, damage (abilities' too, `abilityDamageBonus`) and a caster's mana and skill grow with the levels above; hit points are as written at the native level and grow as a level 1 block's would.
 
-`foeYardstick(level)` gives the ranges (armour class, chance to hit, hit points, mean damage a turn) a foe of that level should sit in, from the ready-made fighter's measured growth. A test in `src/game/encounters.test.ts` holds every monster kind to it at its native level; a field outside the range must be a named exception there. A new or retuned monster must pass it.
+`foeYardstick(level)` gives the ranges (armour class, chance to hit, hit points, mean damage a turn) a foe of that level should sit in, from the ready-made fighter's measured growth. A test in `src/game/encounters.test.ts` holds every monster kind to it at its native level; a field outside the range must be a named exception there. A new or retuned monster must pass it. `foeYardstick(level, 'expected')` reads the fighter in the expected kit (`KITTED_FIGHTER_GROWTH`): stage 11's kinds (`STAGE_11_KINDS` there) are held to it until stage 12.
 
 ## When you add data
 

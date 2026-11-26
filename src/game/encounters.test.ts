@@ -561,6 +561,14 @@ describe('the foe yardstick', () => {
     { kind: 'armored_troll', field: 'toHit', reason: 'level 1 foes hit less often than the band; they catch up by 5 a level' },
   ]
 
+  /**
+   * The kinds added in long-campaign stage 11, held to the kitted yardstick (`foeYardstick(level, 'expected')`) until
+   * stage 12 measures again; every other kind stays on the bare one. Each ring step adds its kinds here.
+   */
+  const STAGE_11_KINDS: readonly MonsterKind[] = []
+  /** The fields a stage 11 kind is meant to sit outside the kitted yardstick on, and why. */
+  const STAGE_11_EXCEPTIONS: typeof EXCEPTIONS = []
+
   const mean = (roll: DamageRoll, bonus = 0) => (roll.count * (roll.sides + 1)) / 2 + roll.bonus + bonus
   /** A routine's turn: its strikes' means, times the uses a turn its AP allow, once at most if it recharges. */
   const routineTurn = (s: CombatantStats, id: AbilityId) => {
@@ -575,16 +583,34 @@ describe('the foe yardstick', () => {
       ...(s.abilities ?? []).map((id) => routineTurn(s, id)),
     )
 
-  it.each(Object.keys(BLOCKS) as MonsterKind[])('holds the %s to the yardstick at its native level, but for named exceptions', (kind) => {
+  /** Holds `kind` at its native level to the yardstick of `kit`: the fields outside it are exactly those `exceptions` names for it. */
+  const holds = (kind: MonsterKind, kit: 'bare' | 'expected', exceptions: typeof EXCEPTIONS) => {
     const level = FOE_NATIVE_LEVEL[kind]
     const stats = foeStats(kind, level)
-    const yardstick = foeYardstick(level)
+    const yardstick = foeYardstick(level, kit)
     const values: Record<Field, number> = { ac: stats.ac, toHit: stats.toHit, maxHp: stats.maxHp, meanDamage: meanDamage(stats) }
     const outside = (Object.keys(values) as Field[]).filter(
       (field) => values[field] < yardstick[field][0] || values[field] > yardstick[field][1],
     )
-    const named = EXCEPTIONS.filter((e) => e.kind === kind).map((e) => e.field)
+    const named = exceptions.filter((e) => e.kind === kind).map((e) => e.field)
     expect(outside.sort(), `${kind}: ${outside.map((f) => `${f} ${values[f]} outside [${yardstick[f]}]`).join('; ')}`).toEqual(named.sort())
+  }
+
+  it.each((Object.keys(BLOCKS) as MonsterKind[]).filter((kind) => !STAGE_11_KINDS.includes(kind)))(
+    'holds the %s to the yardstick at its native level, but for named exceptions',
+    (kind) => holds(kind, 'bare', EXCEPTIONS),
+  )
+
+  // Empty until ring 7 lands (vitest refuses an `it.each` of no cases).
+  if (STAGE_11_KINDS.length > 0) {
+    it.each(STAGE_11_KINDS)('holds the %s to the kitted yardstick at its native level, but for named exceptions', (kind) => holds(kind, 'expected', STAGE_11_EXCEPTIONS))
+  }
+
+  it('holds each kind to one yardstick: stage 11\'s kinds are monster kinds, named once, their exceptions theirs', () => {
+    expect(new Set(STAGE_11_KINDS).size).toBe(STAGE_11_KINDS.length)
+    for (const kind of STAGE_11_KINDS) expect(Object.keys(BLOCKS)).toContain(kind)
+    for (const e of STAGE_11_EXCEPTIONS) expect(STAGE_11_KINDS).toContain(e.kind)
+    for (const e of EXCEPTIONS) expect(STAGE_11_KINDS).not.toContain(e.kind)
   })
 
   it('counts a routine’s turn: the Troll’s claws are its two weapon claws, a recharging routine once a turn', () => {
@@ -595,6 +621,6 @@ describe('the foe yardstick', () => {
   })
 
   it('names a reason for every exception', () => {
-    for (const e of EXCEPTIONS) expect(e.reason.length).toBeGreaterThan(10)
+    for (const e of [...EXCEPTIONS, ...STAGE_11_EXCEPTIONS]) expect(e.reason.length).toBeGreaterThan(10)
   })
 })

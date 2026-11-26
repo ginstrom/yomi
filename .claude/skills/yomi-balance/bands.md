@@ -51,6 +51,7 @@ A cell is `--encounter E --threat T --party-level L`, 500 battles from seed 1 (`
 | BCO9, BCO12 | `bandit_company` 9, 12, L9, L12 | report only |
 | FH15, FH18 | `freebooter_host` 15, 18, L15, L18 | report only |
 | SG20-18, SG20 | `source_guardians` 20, L18 and L20 | report only |
+| BCO9K, BCO12K, FH15K, FH18K, SGK20 | BCO9, BCO12, FH15, FH18 and SG20 with `--player-kit expected` | report only |
 
 ## Measure names for `yomi-measure`
 
@@ -68,6 +69,7 @@ Each runs from the seed and count the brief gives (default seed 1, 500). The ban
 | `long-tp4` | `long` with `--trading-post 4` (report only) |
 | `gr3`, `bc3`, `bc4`, `bc5`, `sn5`, `sp5`, `tl5`, `sg7`, `sg10`, `f1`, `f2`, `f3` | the cell code's `--encounter`, `--threat`, `--party-level` |
 | `bc7`, `sn7`, `sn9`, `sp7`, `sp9`, `bco9`, `bco12`, `fh15`, `fh18`, `sg20-18`, `sg20` | the cell code's flags (report only) |
+| `bco9k`, `bco12k`, `fh15k`, `fh18k`, `sgk20` | `bco9`, `bco12`, `fh15`, `fh18`, `sg20` with `--player-kit expected` (report only) |
 | `parity-L4` | `--encounter bandit_camp --threat 4 --party-level 4 --plans <role>=<plan>`, one run per plan of `AUTO_PLANS`, in its role's slot (`melee`, `archery` or `magic`) |
 | `parity-L8` | `--encounter hobgoblin_warband --threat 5 --party-level 8 --plans <role>=<plan>`, one run per plan (reported, not gated) |
 | `parity-L14` | `--encounter bandit_camp --threat 7 --party-level 14 --plans <role>=<plan>`, one run per plan (reported, not gated) |

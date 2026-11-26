@@ -12,7 +12,7 @@ An attack is percentile: a roll of 1 to 100 hits when it is within the attacker'
 
 A monster stat block is written for its kind's native level. `foeAtLevel(base, level, native)` scales it: a level below the native counts as the native; armour class, chance to hit, damage (its abilities' too, as `abilityDamageBonus`) and a caster's mana and skill grow by the levels above it; hit points are scaled so that the block is as written at its native level and grows as a level 1 block would from there.
 
-`foeYardstick(level)` gives the ranges a foe of a level should sit in: armour class, chance to hit, hit points and mean damage a turn (the better of its weapon's turn and a routine's), from the ready-made fighter's measured growth. A test in `encounters.test.ts` holds every monster kind to it at its native level, each field outside it a named exception.
+`foeYardstick(level)` gives the ranges a foe of a level should sit in: armour class, chance to hit, hit points and mean damage a turn (the better of its weapon's turn and a routine's), from the ready-made fighter's measured growth. A test in `encounters.test.ts` holds every monster kind to it at its native level, each field outside it a named exception. `foeYardstick(level, 'expected')` gives the same bands from the fighter in gear §5.8's expected kit (`KITTED_FIGHTER_GROWTH`, measured at levels 5, 10, 15 and 20 by the simulator's `kittedFighterRow`): the kinds of long-campaign stage 11 (`STAGE_11_KINDS` in that test) are held to it, until stage 12 measures again; today's kinds stay on the bare one.
 
 A stat block's optional `magic` (mana, spell skill, spells known) is what makes a unit a caster; without it a unit behaves as it always did.
 

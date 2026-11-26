@@ -13,7 +13,7 @@
 //
 // Usage: node scripts/simulate.ts [--battles 1000] [--out logs/battles.jsonl] [--seed 1] [--max-rounds 200]
 //                                 [--player-policy aggressive] [--enemy-policy aggressive]
-//                                 [--player-weapon iron_sword]
+//                                 [--player-weapon iron_sword] [--player-kit own|expected]
 //                                 [--encounter goblin_raid] [--threat 1] [--party-level 1]
 //                                 [--log jsonl|none]
 //                                 [--campaign] [--ready-level 18] [--parties 3] [--waiting] [--trading-post 4] [--near-source]
@@ -107,15 +107,18 @@ import {
 import { HexBoard, hexDistance, hexEquals, type Hex } from '../src/grid/hex.ts'
 import type { FamilyId, Tier } from '../src/inventory/catalog.ts'
 import type { ItemStats } from '../src/inventory/inventory.ts'
-import { GRADES, type Grade } from '../src/inventory/grades.ts'
-import { baseItem, craftedItem, itemById, strengthShortfall, type EquipmentSlot, type Item } from '../src/inventory/inventory.ts'
+import { GRADES, GRADE_DEFS, type Grade } from '../src/inventory/grades.ts'
+import { BASE_ITEMS, baseItem, craftedItem, itemById, withRunes, strengthShortfall, type EquipmentSlot, type Item } from '../src/inventory/inventory.ts'
 import { MODIFIERS, type ModifierId } from '../src/inventory/modifiers.ts'
 import { RANKS, pouchCount, pouchKeys, runeFits, runeKey, slotClass, socketsOf, type Rank, type RuneId, type RuneKey, type SlotClass } from '../src/inventory/runes.ts'
-import { clampHp, maxHp } from '../src/character/character.ts'
+import { clampHp, deriveCombatStats, maxHp } from '../src/character/character.ts'
 import { removeAt, replaceAt, type ItemPlace } from '../src/game/itemPlace.ts'
 import { takeRunes, takeTrophies } from '../src/game/loot.ts'
 import { embed, extract, extractCost, extractRefusal, fuse, fuseCost, fuseRefusal, embedCost } from '../src/game/runecraft.ts'
 import { buyRune, buyRuneRefusal, runePrice, runeWares } from '../src/game/tradingPost.ts'
+
+/** What a single battle's party wears: its `own` starting gear, or gear §5.8's `expected` kit for its level (`expectedGear`). */
+export type PlayerKit = 'own' | 'expected'
 
 export interface CliArgs {
   /** How many battles to fight, or with `campaign` how many campaigns. */
@@ -128,6 +131,8 @@ export interface CliArgs {
   policies: Record<Side, PolicyName>
   /** The weapon every party member fights with, graded or modified if its id says so; null leaves the starting gear as it is. */
   playerWeapon: Item | null
+  /** `'expected'` (single battles only, never with `playerWeapon`) dresses every member in `expectedGear` for `partyLevel`; `'own'`, the default, leaves the starting gear. */
+  playerKit: PlayerKit
   encounter: EncounterId
   /** How dangerous the encounter is made: 1 is the party's home country. */
   threat: number
@@ -223,6 +228,7 @@ export function parseArgs(argv: string[]): CliArgs {
     maxRounds: 200,
     policies: { player: 'aggressive', enemy: 'aggressive' },
     playerWeapon: null,
+    playerKit: 'own',
     encounter: 'goblin_raid',
     threat: 1,
     partyLevel: 1,
@@ -270,6 +276,12 @@ export function parseArgs(argv: string[]): CliArgs {
       case '--player-weapon':
         args.playerWeapon = weapon(flag, value())
         break
+      case '--player-kit': {
+        const raw = value()
+        if (raw !== 'own' && raw !== 'expected') throw new Error(`--player-kit must be own or expected, got "${raw}"`)
+        args.playerKit = raw
+        break
+      }
       case '--encounter':
         args.encounter = encounterId(flag, value())
         break
@@ -316,6 +328,10 @@ export function parseArgs(argv: string[]): CliArgs {
   if (args.campaign && refused.length > 0) {
     throw new Error(`${refused.join(', ')} cannot be used with --campaign, which fights each location at its own threat`)
   }
+  if (args.campaign && args.playerKit === 'expected') {
+    throw new Error('--player-kit expected cannot be used with --campaign, whose parties buy, forge and rune their own gear')
+  }
+  if (args.playerKit === 'expected' && args.playerWeapon) throw new Error('choose one of --player-kit expected and --player-weapon')
   if (!args.campaign && argv.includes('--ready-level')) {
     throw new Error('--ready-level applies only to --campaign, which marches on the Source when the party is ready')
   }
@@ -383,8 +399,36 @@ export function raisedParty(args: CliArgs): Party {
   return party
 }
 
-export function runBattle(battleId: number, seed: number, args: CliArgs): LoggedEvent[] {
+/**
+ * The resistance of `encounter`'s lead foe (its first enemy unit) built for `members` at `threat`; 0 if it has none.
+ * Building an encounter draws nothing.
+ */
+export function encounterLeadResistance(encounter: EncounterId, threat: number, members: Party): number {
+  const { setup } = ENCOUNTERS[encounter](partyFighters(members), threat)
+  return setup.units.find((unit) => unit.side === 'enemy')?.stats.resistance ?? 0
+}
+
+/** The party of one battle: `raisedParty`, and with `--player-kit expected` each member in `expectedGear` for `--party-level`, against the encounter's lead foe at `--threat`. */
+function battleParty(args: CliArgs): Party {
   const party = raisedParty(args)
+  if (args.playerKit === 'expected') {
+    const lead = encounterLeadResistance(args.encounter, args.threat, party)
+    for (const member of party) expectedGear(member, args.partyLevel, lead)
+  }
+  return party
+}
+
+/** What the single-battle summary line says of the party's kit: nothing for `own`; for `expected`, its tier, low grade and low runes. */
+export function kitLabel(args: CliArgs): string {
+  if (args.playerKit !== 'expected') return ''
+  const kit = expectedKit(args.partyLevel)
+  const grade = GRADE_DEFS[kit.grades[0]].prefix.trim() || 'plain'
+  const runes = kit.sockets[0] === 0 ? '0 runes' : `${kit.sockets[0]} ${kit.sockets[0] === 1 ? 'rune' : 'runes'} of rank ${kit.ranks[0]}`
+  return `, expected kit (tier ${kit.tier} ${grade}, ${runes})`
+}
+
+export function runBattle(battleId: number, seed: number, args: CliArgs): LoggedEvent[] {
+  const party = battleParty(args)
   const { setup } = ENCOUNTERS[args.encounter](partyFighters(party), args.threat)
   const meta = { encounter: args.encounter, threat: args.threat, partyLevel: args.partyLevel }
   return fight(setup, seed, party, args, meta).getLog().map((event) => ({ ...event, battleId }))
@@ -752,9 +796,7 @@ export const HAMMER_RESISTANCE = 4
  * Building an encounter draws nothing.
  */
 export function leadFoeResistance(party: Expedition, target: MonsterLocation | null): number {
-  if (!target) return 0
-  const { setup } = ENCOUNTERS[target.encounter](partyFighters(party.members), target.threat)
-  return setup.units.find((unit) => unit.side === 'enemy')?.stats.resistance ?? 0
+  return target ? encounterLeadResistance(target.encounter, target.threat, party.members) : 0
 }
 
 /**
@@ -795,6 +837,65 @@ export function wantsFamily(hero: Character, slot: EquipmentSlot, family: Family
     default:
       return role === 'mage' ? ['cap', 'gloves', 'boots'].includes(family) : strong
   }
+}
+
+/**
+ * The runes `expectedGear` fills an item's sockets with, by where it sits (decision 10 of stage 11's plan): the
+ * first socket the first kind, every later socket the second. Gear §5.8 step 3's ring wards stay out.
+ */
+export const EXPECTED_RUNES: Record<SlotClass, readonly [RuneId, RuneId]> = {
+  weapon: ['ember', 'stone'],
+  shield: ['stone', 'life'],
+  armour: ['stone', 'life'],
+}
+
+/**
+ * Dresses `character` in gear §5.8's expected kit for `level` (`--player-kit expected`), its worn gear replaced:
+ * in each slot of `FORGE_SLOTS`, of the plain items of `expectedKit(level).tier` in a family the gear policy
+ * wants for its role (`wantsFamily`, against a lead foe of `leadResistance`; but the archer's bow, not the
+ * crossbow, below tier 3, as the policy forges from tier 3 only), the best `armourScore`, then the first in
+ * `BASE_ITEMS` order (`forgeChoice`'s rule); at the low grade (`grades[0]`). Then the low count of runes
+ * (`sockets[0]`) at the low rank (`ranks[0]`), slot by slot in `FORGE_SLOTS` order (the main hand first), each
+ * item's sockets by `EXPECTED_RUNES`. Every row of the table fits the sockets its gear has (the main hand's
+ * and one of the body armour's), so none is left over; one that did not fit would go unfilled. Draws nothing.
+ */
+export function expectedGear(character: Character, level: number, leadResistance: number): void {
+  const kit = expectedKit(level)
+  const role = kitRole(character)
+  const before = maxHp(character)
+  character.equipment = {}
+  let runes = kit.sockets[0]
+  for (const slot of FORGE_SLOTS) {
+    let best: Item | null = null
+    for (const item of BASE_ITEMS) {
+      if (item.slot !== slot || item.tier !== kit.tier) continue
+      const wanted =
+        slot === 'mainHand' && role === 'archer' && kit.tier < 3 ? item.family === 'bow' : wantsFamily(character, slot, item.family!, item.stats ?? {}, leadResistance)
+      if (wanted && (!best || armourScore(item.stats ?? {}) > armourScore(best.stats ?? {}))) best = item
+    }
+    if (!best) continue
+    const graded = craftedItem(best, kit.grades[0])
+    const [first, later] = EXPECTED_RUNES[slotClass(slot)]
+    const keys = Array.from({ length: Math.min(socketsOf(graded), runes) }, (_, socket) => runeKey(socket === 0 ? first : later, kit.ranks[0]))
+    runes -= keys.length
+    character.equipment[slot] = withRunes(graded, keys)!
+  }
+  clampHp(character, before)
+}
+
+/**
+ * One row of `KITTED_FIGHTER_GROWTH` (`src/combat/combat.ts`), measured: the ready-made fighter raised to
+ * `level` (`raisedParty`) in `expectedGear(fighter, level, 0)`: [level, chance to hit, hit points, mean damage a
+ * turn], the last its attacks a turn (floor(actionPoints / attackApCost)) times the mean of its damage roll plus
+ * the damage its on-hit entries add to every hit (a bane entry, which only some foes take, not counted).
+ */
+export function kittedFighterRow(level: number): [number, number, number, number] {
+  const [fighter] = raisedParty({ ...parseArgs([]), partyLevel: level })
+  expectedGear(fighter, level, 0)
+  const stats = deriveCombatStats(fighter)
+  const onHit = (stats.onHit ?? []).reduce((sum, entry) => sum + (entry.bane ? 0 : entry.damage), 0)
+  const hit = (stats.damage.count * (stats.damage.sides + 1)) / 2 + stats.damage.bonus + onHit
+  return [level, stats.toHit, stats.maxHp, Math.floor(stats.actionPoints / stats.attackApCost) * hit]
 }
 
 /**
@@ -2886,7 +2987,7 @@ function main(): void {
   const versus = `seed ${baseSeed}, player ${args.policies.player} vs enemy ${args.policies.enemy}`
   if (!args.campaign) {
     console.log(
-      `Simulated ${args.battles} battles of ${args.encounter} at threat ${args.threat}, party level ${args.partyLevel} (${versus}) -> ${destination}`,
+      `Simulated ${args.battles} battles of ${args.encounter} at threat ${args.threat}, party level ${args.partyLevel}${kitLabel(args)} (${versus}) -> ${destination}`,
     )
     const { playerTechniques, enemyTechniques, ...scalars } = tally.summary(battles)
     console.table(scalars)

@@ -7,7 +7,7 @@ Every flag in full: `docs/reference/simulator.md`, "Flags and single battles". T
 The ones most runs need:
 
 - `--battles` (default 1000), `--seed`, `--out` (default `logs/battles.jsonl`, gitignored), `--log jsonl|none` (`none` writes no `.jsonl`, `--out` ignored; every printed figure is the same), `--player-policy` / `--enemy-policy` (`aggressive` or `random`), `--player-weapon <id>` (quote ids with `#`).
-- One cell of scaling: `--encounter` (an `ENCOUNTERS` id), `--threat`, `--party-level`; refused with `--campaign`.
+- One cell of scaling: `--encounter` (an `ENCOUNTERS` id), `--threat`, `--party-level`; refused with `--campaign`. `--player-kit expected` (default `own`) dresses the party in `expectedKit`'s low end for `--party-level` (`expectedGear`): for stage 11's ring cells; refused with `--campaign` and with `--player-weapon`.
 - `--plans role=plan[,...]` (roles `melee`, `archery`, `magic`; plans `PLAN_IDS`): the player's heroes only. Path parity: `--encounter bandit_camp --threat 4 --party-level 4 --plans melee=swordmaster,archery=ranger,magic=cryomancer`.
 - `--campaign`, with `--ready-level` (default `SOURCE_READY_LEVEL`, 18: the long campaign), `--parties` (1 to 3, default 3; the refactor guard and the early-game figure use 1), `--near-source` (the Source where it stood before stage 9, at threat 5), `--waiting` (runs each campaign's waiting twin and prints the waiting check) and `--trading-post N` (starts the post at level N, for measuring routes only; no band is read with it). A campaign is called off after `MAX_CAMPAIGN_DAYS` (6000).
 - The early-game figure, its bands and the refactor guard run with `--ready-level 7 --near-source` (`rl10` with `--ready-level 10 --near-source`); the measure names in `bands.md` carry the flags.

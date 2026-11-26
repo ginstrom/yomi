@@ -576,14 +576,29 @@ const FIGHTER_GROWTH: ReadonlyArray<readonly [number, number, number, number]> =
   [20, 124, 133, 13.5],
 ]
 
-/** The fighter's `column` at `level`: linear between the levels measured, held at the first and the last outside them. */
-function fighterGrowth(level: number, column: 1 | 2 | 3): number {
-  const last = FIGHTER_GROWTH[FIGHTER_GROWTH.length - 1]
-  if (level <= FIGHTER_GROWTH[0][0]) return FIGHTER_GROWTH[0][column]
+/**
+ * The same fighter in gear §5.8's expected kit at the low end of each range (long-campaign stage 11, decision 5):
+ * [level, hero hit, hit points, mean damage a turn] of the ready-made fighter raised to each level and dressed by
+ * `expectedGear(fighter, level, 0)` (`scripts/simulate.ts`), read from `deriveCombatStats`: its chance to hit,
+ * its hit points, and its attacks a turn times the mean of its damage roll and on-hit damage. Measured
+ * 2026-11-26 by `kittedFighterRow`; a test in `scripts/simulate.test.ts` recomputes the rows and must match.
+ * Stage 12's measurement replaces it.
+ */
+export const KITTED_FIGHTER_GROWTH: ReadonlyArray<readonly [number, number, number, number]> = [
+  [5, 83, 59, 15.5],
+  [10, 98, 89, 18.5],
+  [15, 105, 119, 21.5],
+  [20, 115, 149, 28.5],
+]
+
+/** The fighter's `column` of `table` at `level`: linear between the levels measured, held at the first and the last outside them. */
+function fighterGrowth(table: typeof FIGHTER_GROWTH, level: number, column: 1 | 2 | 3): number {
+  const last = table[table.length - 1]
+  if (level <= table[0][0]) return table[0][column]
   if (level >= last[0]) return last[column]
-  const next = FIGHTER_GROWTH.findIndex((row) => row[0] >= level)
-  const from = FIGHTER_GROWTH[next - 1]
-  const to = FIGHTER_GROWTH[next]
+  const next = table.findIndex((row) => row[0] >= level)
+  const from = table[next - 1]
+  const to = table[next]
   return from[column] + ((to[column] - from[column]) * (level - from[0])) / (to[0] - from[0])
 }
 
@@ -601,12 +616,16 @@ export interface FoeYardstick {
  * growth: armour class 35 to 55 below the hero's chance to hit, a chance to
  * hit of 80 to 100, hit points 3 to 6 of the fighter's blows, and a turn's
  * damage a sixth to a tenth of the fighter's hit points. A yardstick for
- * a new kind, not a rule: a kind outside it should say why.
+ * a new kind, not a rule: a kind outside it should say why. `kit` picks the
+ * fighter: `'bare'`, in its starting gear (`FIGHTER_GROWTH`), which today's
+ * kinds are held to; `'expected'`, in the expected kit (`KITTED_FIGHTER_GROWTH`),
+ * which the kinds of long-campaign stage 11 are held to until stage 12 measures again.
  */
-export function foeYardstick(level: number): FoeYardstick {
-  const hit = fighterGrowth(level, 1)
-  const hp = fighterGrowth(level, 2)
-  const damage = fighterGrowth(level, 3)
+export function foeYardstick(level: number, kit: 'bare' | 'expected' = 'bare'): FoeYardstick {
+  const table = kit === 'expected' ? KITTED_FIGHTER_GROWTH : FIGHTER_GROWTH
+  const hit = fighterGrowth(table, level, 1)
+  const hp = fighterGrowth(table, level, 2)
+  const damage = fighterGrowth(table, level, 3)
   return {
     ac: [hit - 55, hit - 35],
     toHit: [80, 100],

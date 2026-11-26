@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BLIGHT_HORROR_STATS, GOBLIN_SHAMAN_STATS, GOBLIN_STATS, TROLL_STATS, baneApplies, damageThrough, effectiveResistance, foeAtLevel, foeYardstick, formatDamage, hitChance, resolveAttack, rollDamage, rollDie, rollHitDamage, sameCombatStats, warded, type CombatantStats } from './combat.ts'
+import { BLIGHT_HORROR_STATS, GOBLIN_SHAMAN_STATS, GOBLIN_STATS, KITTED_FIGHTER_GROWTH, TROLL_STATS, baneApplies, damageThrough, effectiveResistance, foeAtLevel, foeYardstick, formatDamage, hitChance, resolveAttack, rollDamage, rollDie, rollHitDamage, sameCombatStats, warded, type CombatantStats } from './combat.ts'
 
 const WARRIOR_STATS: CombatantStats = {
   name: 'Warrior',
@@ -334,6 +334,30 @@ describe('foeYardstick', () => {
     expect(foeYardstick(25)).toEqual(foeYardstick(20))
     expect(foeYardstick(20).ac).toEqual([69, 89])
     expect(foeYardstick(20).meanDamage[0]).toBeCloseTo(13.3)
+  })
+
+  it('is the bare fighter\'s by default and for \'bare\', as before stage 11', () => {
+    // [level, hit, hit points, damage a turn] of the bare table.
+    for (const [level, hit, hp, damage] of [[1, 60, 32, 10.5], [5, 82, 58, 10.5], [10, 104, 83, 12.5], [20, 124, 133, 13.5]]) {
+      const today = { ac: [hit - 55, hit - 35], toHit: [80, 100], maxHp: [3 * damage, 6 * damage], meanDamage: [hp / 10, hp / 6] }
+      expect(foeYardstick(level)).toEqual(today)
+      expect(foeYardstick(level, 'bare')).toEqual(today)
+    }
+  })
+
+  it('gives the same bands from the kitted fighter for \'expected\': linear between its rows, held outside them', () => {
+    expect(KITTED_FIGHTER_GROWTH).toEqual([[5, 83, 59, 15.5], [10, 98, 89, 18.5], [15, 105, 119, 21.5], [20, 115, 149, 28.5]])
+    expect(foeYardstick(10, 'expected')).toEqual({ ac: [43, 63], toHit: [80, 100], maxHp: [55.5, 111], meanDamage: [8.9, 89 / 6] })
+    expect(foeYardstick(20, 'expected')).toEqual({ ac: [60, 80], toHit: [80, 100], maxHp: [85.5, 171], meanDamage: [14.9, 149 / 6] })
+    // Level 18 is three fifths of the way from 15 to 20: hit 111, fighter 137 HP, 25.7 damage.
+    const y = foeYardstick(18, 'expected')
+    expect(y.ac).toEqual([56, 76])
+    expect(y.maxHp[0]).toBeCloseTo(77.1)
+    expect(y.maxHp[1]).toBeCloseTo(154.2)
+    expect(y.meanDamage[0]).toBeCloseTo(13.7)
+    expect(y.meanDamage[1]).toBeCloseTo(137 / 6)
+    expect(foeYardstick(1, 'expected')).toEqual(foeYardstick(5, 'expected'))
+    expect(foeYardstick(25, 'expected')).toEqual(foeYardstick(20, 'expected'))
   })
 })
 
