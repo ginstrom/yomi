@@ -229,14 +229,57 @@ No other ring's kinds or nests; no wolf pack bonus; no new `Ability` or `Combata
 
 ## 6. Completion criteria
 
-- [ ] `wolf`, `worg_rider`, `ogre` (C3) with blocks, XP, native levels, sounds and deaths; held to the kitted yardstick or named exceptions.
-- [ ] `worg_strikes` and `ogre_sweep` (C4) built from existing fields, with engine tests; sounds and looks.
-- [ ] `wolf_pack`, `worg_riders`, `ogre_camp` (C5) with bands, slots, counts and spawn kinds appended; composition tested at both band ends.
-- [ ] Ring 7's nests as C6; old ids fixed everywhere; `SAVE_VERSION` 32.
-- [ ] `TROPHIES` holds wolf and worg_rider wolfhide 1; the simulator's comment fixed.
-- [ ] Policy snapshot re-recorded with only the new lines; title extended.
-- [ ] Cells recorded in `log.md` and `bands.md`; tuning trials logged; any cell outside 300–475 brought to the orchestrator.
-- [ ] Guard green and unedited; 50-campaign hash identical to step 01's.
-- [ ] Docs fixed; one commit "Stage 11 step 08: ring 7", files staged by path, no attribution lines; the index's row 08 updated with status and commit.
+- [x] `wolf`, `worg_rider`, `ogre` (C3) with blocks, XP, native levels, sounds and deaths; held to the kitted yardstick or named exceptions.
+- [x] `worg_strikes` and `ogre_sweep` (C4) built from existing fields, with engine tests; sounds and looks.
+- [x] `wolf_pack`, `worg_riders`, `ogre_camp` (C5) with bands, slots, counts and spawn kinds appended; composition tested at both band ends.
+- [x] Ring 7's nests as C6; old ids fixed everywhere; `SAVE_VERSION` 32.
+- [x] `TROPHIES` holds wolf and worg_rider wolfhide 1; the simulator's comment fixed.
+- [x] Policy snapshot re-recorded with only the new lines; title extended.
+- [x] Cells recorded in `log.md` and `bands.md`; tuning trials logged; any cell outside 300–475 brought to the orchestrator.
+- [x] Guard green and unedited; 50-campaign hash identical to step 01's.
+- [x] Docs fixed; one commit "Stage 11 step 08: ring 7", files staged by path, no attribution lines; the index's row 08 updated with status and commit.
 
 ## 7. Execution record
+
+2026-11-26 to 27, engineer (model unset). Code commits `b0fbe7d` (first values) and `4ca43d2` (tuned; the final code). Figures, trials and proofs: [`log.md`](log.md), "Step 08: ring 7".
+
+**Built**
+
+- Kinds (`src/combat/combat.ts`, `src/game/encounters.ts`): `WOLF_STATS` (native 6, 80 XP), `WORG_RIDER_STATS` (native 7, 100 XP, `worg_strikes`), `OGRE_STATS` (native 7, 140 XP, `ogre_sweep`); all three in `STAGE_11_KINDS`, inside the kitted yardstick with no exception. Numbers and bands in the log.
+- Abilities (`src/combat/abilities.ts`), after `fire_spit`: `worg_strikes` "Spear and Bite" (6 AP, recharge 0, Spear 1d8+2 then Bite 1d6+1) and `ogre_sweep` "Sweep" (C4's area exactly; 2d8+2, 6 AP, recharge 1). Both built from existing fields: no engine change. `ABILITY_SOUNDS.ogre_sweep` (heavy swing, crush, swing miss) and `ABILITY_LOOKS.ogre_sweep` (a dust burst); `worg_strikes` sounds as its attacks (`SOUNDS_AS_ATTACKS` in `sounds.test.ts`).
+- Encounters: `wolf_pack` 6–9, `worg_riders` 7–9, `ogre_camp` 7–10, after `freebooter_host`; spawn kinds Wolf Pack, Worg Band, Ogre Camp appended, `fromThreat: 7`.
+- Nests (C6): `greyfang_pack`, `hollow_riders`, `ashen_ogres`, same hexes and loot. `SAVE_VERSION` 32.
+- Trophies: wolf and worg_rider wolfhide 1.
+- Sounds: `FOE_SOUNDS` (wolf a bite, rider a light pierce, ogre a heavy crush), `DEATH` (wolf the brutes' cue, as no beast's exists; rider goblinoid; ogre brute), `STEP` (wolf and rider light, ogre heavy). No new cue.
+- Tests: `src/engine/highRoster.test.ts` (new: the wolf's 10 AP, the routine's two named attacks, the sweep's roll for each adjacent foe, no ally, through resistance, recharge), `encounters.test.ts` (composition at both band ends, the blocks, the yardstick), `loot.test.ts`, `worldMap.test.ts`, `blight.test.ts`, `save.test.ts`, `abilities.test.ts`, `sounds.test.ts`.
+
+**Deviations from the task, and why**
+
+1. **C5's counts and the Worg Riders' slots changed by tuning** (the index's C5 rows are updated): `wolf_pack` 4, 4, 4, 5 (C5: 3, 4, 4, 5); `ogre_camp` 3, 3, 3, 4 (C5: 2, 3, 3, 4); `worg_riders` 3, 3, 5 with slots Chief, wolf, rider, wolf, wolf, Outrider, the wolves `fromThreat: 8` (C5: rider, wolf, rider, wolf; 3, 3, 4). So threat 7 fields three riders and threat 9 the Chief, a rider and three wolves. The Worg Rider's block was raised once (62 → 80 hit points, pierce 4 → 6).
+2. **`armorPierce` on all three kinds** (wolf 4, rider 6, ogre 5), a number C3 does not name: the user's direction for damage that tells through the kit's resistance. The Sweep keeps C4's `throughResistance: true`, which in this engine means the damage is *cut* by resistance (less the piercing), as a blow's is; an area without the flag ignores resistance. Noted for the later rings' Rock and breaths.
+3. **`MONSTER_ABILITY_IDS`** exported from `abilities.ts`, replacing three private copies of the monsters' list (`foeInfo.ts`, `simulate.ts`, `abilities.test.ts`): without it the foe panel and the simulator's summary would have counted the two new abilities as heroes' techniques. `abilities.test.ts`'s rule that a monster's area uses none of the techniques' area fields is relaxed for the high roster's (`centredOnSelf`, `foesOnly`, `throughResistance`), as decision 11 requires. The checklist `ability.md` names the list. Later ring steps add their abilities to it.
+4. **Three characterization hashes on the far world re-pinned** (`blight.test.ts` twice, `worldMap.test.ts` once), the change proven confined to the renamed nests and the far spawns' kinds (log). These are not the refactor guard (unedited, green) and the 50-campaign hash is identical; decision 15's stop did not apply.
+5. **The policy snapshot test now proves its own claim**: it asserts the first 14,242 lines against the old hash and that the rest are ring 7's. Later ring steps can extend the same way (move `EARLIER` up, or add a second prefix check).
+6. Trial 1 changed, for the Ogre Camp, its own counts and (through the shared Worg Rider) a block at once; the log says which figure shows which.
+
+**Verification** (clean tree at `4ca43d2`)
+
+| Check | Result |
+| --- | --- |
+| `npm test` | runlog #69: 2826 passed |
+| `npm run build` | runlog #70: exit 0 |
+| `npm run sprites:check` | runlog #71: exit 0 |
+| `npm run test:browser` (run because `foeInfo.ts`, `sounds.ts` and `battleEffects.ts` changed) | No clean full pass on a loaded machine (load average 20 to 34: a podman VM and other projects' processes, not this step's). runlog #72: 4 failed, #73: 7 failed, every one `Test timed out in 60000ms`, a different set each run. runlog #74 with `--testTimeout=240000`: 191 passed, 1 failed (`saves.test.ts` "lists the three slots under Load…", Playwright's own 30 s frame wait in `skipStory`). runlog #75, `e2e/saves.test.ts` alone: 7 passed. Every browser test passed in #74 or #75; no failure names a ring-7 thing |
+| 50-campaign check | `1e85d023…ed216`, identical |
+| Refactor guard | unedited, green (in `npm test`) |
+| Policy snapshot | earlier 14,242 lines unchanged, 2,161 added |
+| Cells | wp6 418, wp9 358, wr7 463, wr9 326, oc7 405, oc10 308: all inside 300–475; measured again by `yomi-measure` at `4ca43d2` (`logs/s11-08-final-*`), the same six figures |
+
+Budgets: tuning trials 1 (wolf pack), 3 (worg riders), 1 (ogre camp) of 3 each; no paid call.
+
+**For later steps**
+
+- `oc10` (308) and `wr9` (326) are near the bottom of the reading: do not strengthen the Wolf, the Worg Rider or the Ogre without re-running ring 7's cells.
+- The foes' damage at 9 and 10 lands mostly on the mage (the fighter and archer have resistance 11); ring 9's kinds will meet the same wall and need piercing or an element.
+- A new monster ability goes in `MONSTER_ABILITY_IDS`; a routine of its own dice goes in `sounds.test.ts`'s `SOUNDS_AS_ATTACKS`.
+- New spawn kinds at a threat an outer ring already had change which kind a far spawn draws (not how many draws): the far-world pins in `blight.test.ts` and `worldMap.test.ts` move and are re-pinned with a before/after diff; `--near-source` runs do not move.

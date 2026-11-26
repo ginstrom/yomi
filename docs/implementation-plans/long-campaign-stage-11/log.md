@@ -156,3 +156,42 @@ Step 07 (sprites, ring 18 and the Source): engineer sonnet, reviewer opus, verdi
 ## Step 03 outcome
 
 Step 03 (the golem's immunity): engineer opus, reviewer opus, verdict clean, 1 review round, no blocking finding. Commits `d94188b`, `85eaefd` (record); clean-tree gates at `d94188b`: `npm test` runlog #58, `npm run build` runlog #59; the reviewer's reruns #62 and #63 at `dd09f70`. The events-hash re-record (schema 27 only, above) was verified independently by the reviewer: the schema-27 50-campaign log equals the baseline byte for byte with the version put back to 26.
+
+## Step 08: ring 7
+
+2026-11-26 to 27. Code `b0fbe7d` (first values), `4ca43d2` (tuned: the final code). Cells: 500 battles from seed 1, `--encounter E --threat T --party-level T --player-kit expected`, run by `yomi-measure` one at a time, read against the working reading 300–475 (report only). Logs `logs/s11-08-*` (gitignored): `s11-08-<cell>` the first values, `s11-08-t1-…`, `-t2-…`, `-t3-…` the trials, measured on the dirty tree of each trial over `b0fbe7d`; `s11-08-final-…` the six again on the clean tree at `4ca43d2`.
+
+**50-campaign check:** `1e85d023a1b58697ec36724720f6ad5ba8b4a5dc2362f4ff6b22605ce37ed216`, **identical** to the reference, at the first values and again at the tuned tree (`logs/s11-08-guard-50.jsonl`; 26 of 50, 325 days, 18.9 battles). The refactor guard is unedited and green.
+
+**The kitted party the cells fight** (`expectedGear`, read from `deriveCombatStats`): at 6 and 7 the fighter has resistance 7, armour class 41, 65–71 hit points; the archer resistance 4, armour class 41; the mage resistance 2, armour class 20. At 9 and 10 the fighter and the archer both have resistance 11 (armour class 53 and 39), the mage 3 (armour class 22).
+
+**The blocks** at their native levels against `foeYardstick(native, 'expected')` (no exception needed):
+
+| Kind | Native | Armour class (band) | To hit (80–100) | Hit points (band) | Mean damage a turn (band) | Besides |
+| --- | --- | --- | --- | --- | --- | --- |
+| Wolf | 6 | 40 (31–51) | 85 | 55 (48.3–96.6) | 10: one bite 2d6+3 at 6 AP of 10 (6.5–10.8) | `armorPierce` 4, no resistance |
+| Worg Rider | 7 | 44 (34–54) | 85 | 80, first 62 (50.1–100.2) | 11: `worg_strikes` Spear 1d8+2 and Bite 1d6+1, 6 AP of 8, no recharge (7.1–11.8); spear alone 1d8+2 at 5 AP | resistance 1, `armorPierce` 6, first 4 |
+| Ogre | 7 | 34 (34–54) | 85 | 90 (50.1–100.2) | 11: club 2d8+2 at 6 AP of 8 (7.1–11.8) | resistance 2, `armorPierce` 5; `ogre_sweep` 2d8+2, 6 AP, recharge 1 |
+
+**What each kind needed to tell through the kit's resistance** (the yardstick does not see it): each is one heavy blow a turn, not several light ones, and each pierces: the Wolf 4 (a bite of 10 does 7 to the fighter at 6 and 4 at 9), the Ogre 5 (its club and its Sweep, which goes *through* resistance as C4 has it, so less the piercing), the Worg Rider 6 after the first measurement (at 4, its two light strikes did about 1 each to resistance 11, and `wr9` was won 500 of 500 taking 53 damage a battle). No element was used. Even so the foes' damage at 9 and 10 falls mostly on the mage: the cells at the top of each band are held in the reading by numbers (five foes at `wp9` and `wr9`, four at `oc10`).
+
+**Cells and trials** (wins of 500; player / enemy hit rate; rounds; damage dealt / taken a battle):
+
+| Trial | Change | wp6 | wp9 | wr7 | wr9 | oc7 | oc10 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| First values (`b0fbe7d`) | C5's counts: wolf pack 3, 4, 4, 5; worg riders 3, 3, 4 (rider, wolf, rider, wolf); ogre camp 2, 3, 3, 4; rider 62 hit points, pierce 4 | **497** (0.52 / 0.51; 6.9; 184 / 44) | 358 (0.59 / 0.73; 12.9; 428 / 138) | **499** (0.51 / 0.52; 8.0; 208 / 45) | **500** (0.57 / 0.58; 10.4; 360 / 53) | **500** (0.56 / 0.44; 6.2; 165 / 25) | 385 (0.64 / 0.67; 14.2; 452 / 150) |
+| 1 | wolf pack counts 4, 4, 4, 5; the Worg Rider's block (80 hit points, pierce 6), which the Ogre Camp's rider shares; ogre camp counts 3, 3, 3, 4 | 418 (0.55 / 0.58; 9.1; 232 / 90) | 358 (unchanged) | **476** (0.52 / 0.53; 9.9; 241 / 80) | **498** (0.59 / 0.58; 11.8; 407 / 77) | 405 (0.57 / 0.53; 11.3; 268 / 108) | 308 (0.65 / 0.68; 14.8; 457 / 169) |
+| 2 | worg riders: a fifth slot (a third wolf), counts 4, 4, 5 | — | — | **184** (0.54 / 0.62; 11.3; 249 / 158) | 326 (0.60 / 0.70; 13.9; 456 / 148) | — | — |
+| 3 | worg riders: counts 3, 3, 5; the wolves `fromThreat` 8 and a third rider (the Outrider) last, so 7 fields three riders and 9 the same five as trial 2 | — | — | 463 (0.52 / 0.52; 11.0; 252 / 86) | 326 (the log identical to trial 2's, sha256 `94137485…46a6`) | — | — |
+| **Final (`4ca43d2`)** | | **418** | **358** | **463** | **326** | **405** | **308** |
+
+All six end inside 300–475. Trials used: wolf pack 1, ogre camp 1, worg riders 3. Bold in a trial row marks a cell outside the reading. Notes for the reader of the table:
+
+- Trial 1 changed one lever of each encounter's own (the pack's counts, the riders' kind, the camp's counts); the Ogre Camp also fields a Worg Rider, so `oc7` and `oc10` moved by its own counts and by the rider's block together and the two are not told apart (`oc10` has no count change, so its 385 → 308 is the rider's block alone).
+- A fourth foe at threat 7 is a cliff for the riders (476 with three, 184 with four), as a fifth foe was at threat 5 in the home rings; trial 3 swaps the wolf of the three for a third rider instead.
+- `oc10` at 308 and `wr9` at 326 sit near the bottom of the reading: a later step that strengthens the Wolf, the Worg Rider or the Ogre will push them out (ring 9 places an Ogre Camp at threat 9 and must not change `ogre_camp`'s data).
+- Threat 8 of `worg_riders` (the Chief, a wolf and a rider: trial 1's `wr7` line-up) is in the band but no ring has threat 8, so no cell reads it.
+
+**The policy snapshot:** re-recorded with ring 7's lines only. The test now asserts it: the first 14,242 lines hash to stage 10 step 02's `b9cef6e1…28ac` unchanged, every line after them begins `wolf_pack`, `worg_riders` or `ogre_camp`, 16,403 lines in all, `08248429…ebc1`.
+
+**Characterization pins on the far world, re-pinned with the change proven confined** (the digested JSON dumped before and after and diffed): `blight.test.ts`'s two pinned 30-day runs (two spawns at threat 9 are a Bandit Troop where they were a Salamander Spring: with six eligible kinds where three were, the same draw picks another; the event counts, the world RNG, the spawn places and the blight's hash are unchanged) and `worldMap.test.ts`'s seeded session (the three renamed nests' id, name and encounter and ten far spawns' name and encounter; `SESSION_TURN` unchanged). Neither is the refactor guard, and neither runs `--near-source`.

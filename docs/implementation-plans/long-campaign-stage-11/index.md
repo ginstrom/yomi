@@ -188,7 +188,7 @@ Each listed location keeps its position and loot and takes the new id, name and 
 | 05 | [Sprites: rings 9 and 12](05-sprites-rings-9-12.md) | `wyvern`, `barrow_wight`, `basilisk`, `hill_giant` (C8) | — | sonnet / opus | done (`5bc31dc`, `3d0e480`) |
 | 06 | [Sprites: ring 15](06-sprites-ring-15.md) | `stone_golem`, `blight_cultist`, `young_dragon` (C8) | — | sonnet / opus | done (`7ebb9c6`, `943e193`) |
 | 07 | [Sprites: ring 18 and the Source](07-sprites-ring-18-source.md) | `blight_lich`, `elder_wyrm`, `source_horror` (C8) | — | sonnet / opus | done (`95e5046`, `651a4c7`) |
-| 08 | [Ring 7: wolves, worg riders, ogres](08-ring-7.md) | Kinds, abilities, encounters, nests, spawn kinds, wolfhide; save 32; snapshot; cells | 02, 04 | opus / opus | in progress |
+| 08 | [Ring 7: wolves, worg riders, ogres](08-ring-7.md) | Kinds, abilities, encounters, nests, spawn kinds, wolfhide; save 32; snapshot; cells | 02, 04 | opus / opus | done (`b0fbe7d`, `4ca43d2`) |
 | 09 | [Ring 9: wyverns](09-ring-9.md) | Wyvern, roost, nests, wyvern hide, stand-in removed; save 33; cells | 08, 05 | opus / opus | pending |
 | 10 | [Ring 12: wights, basilisks, giants](10-ring-12.md) | Three kinds and encounters, nests, basilisk scale; save 34; cells | 09, 05 | opus / opus | pending |
 | 11 | [Ring 15: golems, cultists, young dragons](11-ring-15.md) | Three kinds (golem `immune`), encounters, nests, drake scale; save 35; cells | 10, 03, 06 | opus / opus | pending |
