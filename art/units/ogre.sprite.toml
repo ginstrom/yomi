@@ -1,0 +1,78 @@
+# An ogre: a hulking, pot-bellied brute in sallow hide and a rough cloth
+# loincloth, a bone-studded club raised in one great fist, ready to sweep.
+canvas = "unit"
+
+outline = "auto"
+
+[points]
+chest = [15, 13]
+
+[frames.idle_0.runs]
+1 = [[25, "Tnn"]]
+2 = [[14, "nNn"], [24, "TtnnT"]]
+3 = [[13, "NnnnN"], [23, "tTtntnt"]]
+4 = [[12, "nSssssSn"], [23, "tTdtndt"]]
+5 = [[12, "SssssRsRS"], [23, "ttTtntt"]]
+6 = [[12, "SssssssshS"], [24, "tTtntt"]]
+7 = [[13, "SssWsWsS"], [24, "tttntt"]]
+8 = [[13, "SSsssssS"], [25, "nnt"]]
+9 = [[8, "SSsssssssssssssS"], [26, "tn"]]
+10 = [[6, "SshhsssssssssssssssS"], [26, "tn"]]
+11 = [[5, "SshhhssssssssssssssssS"], [27, "n"]]
+12 = [[4, "SSshssssssssssssssssssS"], [27, "n"]]
+13 = [[4, "SssSsssshsssssssshssSsS"], [27, "n"]]
+14 = [[4, "SssSssnsssssssssshssSsS"], [27, "n"]]
+15 = [[4, "SssSsssnnsssssssssssSsS"], [27, "n"]]
+16 = [[4, "SssSssssnnsssssssssssSsS"], [27, "n"]]
+17 = [[4, "SssSsssssnnsssssssssSsssS"]]
+18 = [[3, "SsSSSsssssssnnssssssssSsssSS"]]
+19 = [[3, "SssSSssTTTTWTTTTTTSsSsssSS"]]
+20 = [[3, "SssSSsnnnnnnnnnnnnnSsSSttn"]]
+21 = [[3, "SSsSSnnNnnnnnnnnnnNnS"]]
+22 = [[4, "SSS"], [9, "NnnnnnnnnnnN"]]
+23 = [[9, "NnnnnNnnnnN"]]
+24 = [[9, "SssSS"], [16, "sssSS"]]
+25 = [[9, "SssSS"], [16, "sssSS"]]
+26 = [[9, "SssSS"], [16, "sssSS"]]
+27 = [[9, "SssSS"], [16, "sssSS"]]
+28 = [[9, "SssSS"], [16, "sssSS"]]
+29 = [[8, "SsssSS"], [16, "ssssSS"]]
+30 = [[7, "SsssssSS"], [16, "sssssSS"]]
+
+# A breath: the shoulders and club rise and sink a pixel; the feet stay put.
+[frames.idle_1]
+from = "idle_0"
+move = { rows = [0, 26], by = [0, 1] }
+
+[anim.idle]
+frames = ["idle_0", "idle_1"]
+ms = 640
+
+# A stride: the legs part and nothing above them moves.
+[frames.walk_0]
+from = "idle_0"
+[frames.walk_0.runs]
+26 = [[9, "SssSS"], [16, "sssSS"]]
+27 = [[8, "SssSS"], [17, "sssSS"]]
+28 = [[7, "SssSS"], [18, "sssSS"]]
+29 = [[11, "..."], [6, "SssSS"], [16, "....."], [18, "ssssSS"]]
+30 = [[5, "SsssssSS"], [13, "......"], [16, "..."], [19, "sssssSS"]]
+
+# The near foot lifts: the left, then the right. Only the leg rows change.
+[frames.walk_1]
+from = "idle_0"
+[frames.walk_1.runs]
+28 = [[9, "SssSS"]]
+29 = [[8, "......"]]
+30 = [[7, "........"]]
+
+[frames.walk_2]
+from = "idle_0"
+[frames.walk_2.runs]
+28 = [[16, "sssSS"]]
+29 = [[16, "......"]]
+30 = [[16, "......."]]
+
+[anim.walk]
+frames = ["walk_0", "walk_1", "walk_0", "walk_2"]
+ms = 170

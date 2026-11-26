@@ -62,3 +62,7 @@ Kit lines (all / forge-ready): at 5 (84): fighter, archer, mage tier 1.0, 0.0 ru
 | SG20 (report) | 71 | 0.763 | 21.91 | 49 s |
 
 Step 01 outcome: engineer sonnet, reviewer sonnet, verdict clean, 1 review round; commits `42eaff0`, `d113dbf`; `npm test` gate runlog #15 (exit 0, 2740 passed, clean head `d113dbf`, reviewer, Node 26).
+
+## Step 04 outcome
+
+Step 04 (sprites, ring 7): engineer sonnet, reviewer opus, verdict clean, 2 review rounds. Commits `21834ec`, `5619234`, `d4d6402`, `e5e6b6b`; clean-tree checks `npm test` runlog #7 and `npm run sprites:check` runlog #8. No simulation run.
