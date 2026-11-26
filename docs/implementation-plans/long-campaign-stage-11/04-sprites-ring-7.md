@@ -72,12 +72,12 @@ No game code changes: only the sprite sources and the exported atlas.
 
 ## 6. Completion criteria
 
-- [ ] `art/units/wolf.sprite.toml`, `worg_rider.sprite.toml`, `ogre.sprite.toml` drawn, with `idle`, `walk` and `[points] chest`.
-- [ ] Built into `public/assets/sprites/` (atlas, anims, manifest); `sprites:check` and the asset check pass; atlas names checked by hand.
-- [ ] Looked at beside today's units; the ogre bigger than the troll, the wolf low and fast; preview paths noted.
-- [ ] Provenance README updated.
-- [ ] No simulation run (stated in the record).
-- [ ] One commit, "Stage 11 step 04: sprites for ring 7", on the worktree branch, files staged by path, no attribution lines; the index's row 04 updated with status and commit; merged by the orchestrator before step 08.
+- [x] `art/units/wolf.sprite.toml`, `worg_rider.sprite.toml`, `ogre.sprite.toml` drawn, with `idle`, `walk` and `[points] chest`.
+- [x] Built into `public/assets/sprites/` (atlas, anims, manifest); `sprites:check` and the asset check pass; atlas names checked by hand.
+- [x] Looked at beside today's units; the ogre bigger than the troll, the wolf low and fast; preview paths noted.
+- [x] Provenance README updated.
+- [x] No simulation run (stated in the record).
+- [x] One commit, "Stage 11 step 04: sprites for ring 7", on the worktree branch, files staged by path, no attribution lines; the index's row 04 updated with status and commit; merged by the orchestrator before step 08.
 
 ## 7. Execution record
 
@@ -85,7 +85,10 @@ No game code changes: only the sprite sources and the exported atlas.
 - Drew `art/units/wolf.sprite.toml` (low grey skirmisher, tail raised, 10 AP look), `worg_rider.sprite.toml` (goblin in the goblin's palette and face, level spear, on a dark worg with red eye and fangs) and `ogre.sprite.toml` (sallow hide, loincloth, bone-studded club; rows 1 to 30 and wider than the troll, which spans rows 3 to 30). All on the 32px `unit` canvas, `outline = "auto"`, `idle` (2 frames) and `walk` (4 beats), `[points] chest`.
 - `sprite check --project art`: ok, 134 sprites, 283 frames. `npm run sprites` built; `npm run sprites:check`: up to date. `yomi-asset-check`: sprites:check PASS, pin v0.7.0 no drift.
 - Atlas by hand: `atlas.json` holds `wolf/idle_0` etc. and `atlas.anims.json` holds `wolf/idle`, `wolf/walk` (likewise `worg_rider`, `ogre`); each source has `[points] chest`.
-- `npm test` (runlog 3, after cloning `node_modules` into the worktree; a symlink broke the jsdom project): 107 files, 2740 tests pass. Nothing in `src/` changed.
+- `npm test` (first pass, before review; superseded below; after cloning `node_modules` into the worktree; a symlink broke the jsdom project): 107 files, 2740 tests pass. Nothing in `src/` changed.
 - Previews (outside the repo): `/private/tmp/claude-501/s11/ring7-beside-roster.png` (ogre, troll, armored_troll, worg_rider, wolf, giant_spider, goblin, bandit_brute, scale 6), and `wolf.plain.png`, `worg_rider.plain.png`, `ogre.plain.png` in the same folder (scale 8).
 - No simulation run. README provenance row added in `public/assets/sprites/README.md`.
 - For later steps: walk_0 of wolf and worg_rider is a stretch pose; nothing else needed from step 08 beyond the kinds.
+
+- Review round 1 (found: wolf was the worg recoloured and as big; ogre `walk_0` row 29 notch; wolf legs stiff; record cited a dirty-tree run). Fixed in `d4d6402`: the wolf redrawn about 23 columns long with a back at row 22 and 4-row legs (`chest` [17, 23]), far legs slanted in `walk_0`; the worg unchanged and now clearly bigger; the ogre's row 29 left foot solid. Finding 4 (ogre face faint) accepted as not required.
+- Verification on the clean tree at `d4d6402`: `npm test` runlog #7 (exit 0), `npm run sprites:check` runlog #8 (exit 0); `sprite check` ok. Previews: `/private/tmp/claude-501/s11/wolf-beside-worg_rider.png`, `/private/tmp/claude-501/s11/ring7-beside-roster-v2.png`.
