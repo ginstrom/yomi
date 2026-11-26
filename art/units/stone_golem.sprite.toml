@@ -40,10 +40,14 @@ chest = [15, 14]
 29 = [[9, "ammmmM"], [17, "ammmmM"]]
 30 = [[8, "aammmmM"], [17, "aammmmM"]]
 
-# A breath: the head and shoulders sink a pixel; arms and legs stay.
+# A breath: the head, shoulders and upper-arm slabs (rows 0-13) sink a pixel; the
+# forearms, fists and legs stay. The rune ring sinks whole: its lower two rows are redrawn.
 [frames.idle_1]
 from = "idle_0"
 move = { rows = [0, 13], by = [0, 1] }
+[frames.idle_1.runs]
+15 = [[11, "mmmzmmzmmm"]]
+16 = [[11, "mmmmzzmmmm"]]
 
 [anim.idle]
 frames = ["idle_0", "idle_1"]
