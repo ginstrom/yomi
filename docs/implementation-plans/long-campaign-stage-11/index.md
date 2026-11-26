@@ -185,7 +185,7 @@ Each listed location keeps its position and loot and takes the new id, name and 
 | 02 | [Expected kit and the kitted yardstick](02-expected-kit.md) | `--player-kit expected`, `expectedGear` (C1), `KITTED_FIGHTER_GROWTH`, `foeYardstick(level, kit)` (C2); kitted far cells | 01 | opus / opus | pending |
 | 03 | [The golem's immunity](03-immunity.md) | `CombatantStats.immune`, the `immune` outcome field, log 27, policy value (decision 12) | 01 | opus / opus | pending |
 | 04 | [Sprites: ring 7](04-sprites-ring-7.md) | `wolf`, `worg_rider`, `ogre` (C8) | — | sonnet / opus | done (branch `long-campaign-stage-11-sprites-04`, commits `21834ec`, `d4d6402`) |
-| 05 | [Sprites: rings 9 and 12](05-sprites-rings-9-12.md) | `wyvern`, `barrow_wight`, `basilisk`, `hill_giant` (C8) | — | sonnet / opus | done: sprites commit 5bc31dc (record follow-up commit cites runlog #10, #12); awaiting review |
+| 05 | [Sprites: rings 9 and 12](05-sprites-rings-9-12.md) | `wyvern`, `barrow_wight`, `basilisk`, `hill_giant` (C8) | — | sonnet / opus | done: sprites 5bc31dc, review fixes 3d0e480 (runlog #18 npm test, #20 sprites:check); awaiting re-review |
 | 06 | [Sprites: ring 15](06-sprites-ring-15.md) | `stone_golem`, `blight_cultist`, `young_dragon` (C8) | — | sonnet / opus | pending |
 | 07 | [Sprites: ring 18 and the Source](07-sprites-ring-18-source.md) | `blight_lich`, `elder_wyrm`, `source_horror` (C8) | — | sonnet / opus | pending |
 | 08 | [Ring 7: wolves, worg riders, ogres](08-ring-7.md) | Kinds, abilities, encounters, nests, spawn kinds, wolfhide; save 32; snapshot; cells | 02, 04 | opus / opus | pending |

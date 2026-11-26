@@ -106,3 +106,12 @@ Sprites commit 5bc31dc, on `long-campaign-stage-11-sprites-05` (cut from step 04
 - Renders (outside the repo): `/private/tmp/claude-501/-Users-ryan-personal-yomi/6b9b93b7-3933-4bd1-a198-fa82ad0fff0d/scratchpad/step05-roster-x6.png` (troll, ogre, hill_giant, wyvern, basilisk, barrow_wight, salamander, horror; idle, walk frames, and display scale).
 - Verification: `npm test` runlog #10 (107 files, 2740 tests passed); `npm run sprites:check` runlog #12 (up to date: 138 sprites, 303 frames); `sprite check --project art` ok. No simulation run. Nothing in `src/` changed.
 - For the reviewer: the club (a plain brown block with the head resting on the ground) is the weakest read; the wyvern's wing is a triangular sail; the wight's walk_0 stride spreads the pale shins.
+
+### Review round 1
+
+Found (hill giant, wight, wyvern); all fixed in 3d0e480.
+- Giant: club now upright over the right shoulder with a shaded wood head, `l` studs and a two-pixel shaft; chest smile replaced by one vertical shade line; face is a brow row over two eyes; the boulder in the left fist shows `m`/`a` stone; header comment matches the pixels; the walk parts both legs (rows 26-30) with non-overlapping runs.
+- Wight: legs are dark greaves (no white stockings); `walk_0` strides 1-2 px, no X.
+- Wyvern: the wing's `V` dots became two ribs fanning from the shoulder.
+- Deviation (accepted by the coordinator): the giant is the ogre's height and about 2 px broader, not "visibly larger" as task section 2 asks; the 32px canvas cannot give more.
+- Verification at 3d0e480: `npm test` runlog #18 (2740 passed), `npm run sprites:check` runlog #20 (up to date). Renders: `.../scratchpad/step05-fix-x6.png`, `.../scratchpad/step05-fix-display.png` (scratchpad `/private/tmp/claude-501/-Users-ryan-personal-yomi/6b9b93b7-3933-4bd1-a198-fa82ad0fff0d/scratchpad/`).
