@@ -82,10 +82,20 @@ No game code changes: only the sprite sources and the exported atlas.
 
 ## 6. Completion criteria
 
-- [ ] `blight_lich`, `elder_wyrm` and `source_horror` drawn on the largest unit canvas, each with `idle`, `walk` and `[points] chest`, reading as described.
-- [ ] Today's `horror` unchanged.
-- [ ] The atlas rebuilt over every earlier sprite step merged; `npm run sprites:check` and the `yomi-asset-check` agent pass.
-- [ ] Provenance updated.
-- [ ] One commit, "Stage 11 step 07: sprites for ring 18 and the Source", on this step's worktree branch, files staged by path, no attribution lines; the index's row 07 updated with status and commit; the orchestrator told it must merge before step 12.
+- [x] `blight_lich`, `elder_wyrm` and `source_horror` drawn on the largest unit canvas, each with `idle`, `walk` and `[points] chest`, reading as described.
+- [x] Today's `horror` unchanged.
+- [x] The atlas rebuilt over every earlier sprite step merged; `npm run sprites:check` and the `yomi-asset-check` agent pass.
+- [x] Provenance updated.
+- [x] One commit, "Stage 11 step 07: sprites for ring 18 and the Source", on this step's worktree branch, files staged by path, no attribution lines; the index's row 07 updated with status and commit; the orchestrator told it must merge before step 12.
 
 ## 7. Execution record
+
+Engineer (sonnet-tier brief), worktree `yomi-s11-sprites`, branch `long-campaign-stage-11-sprites-07`, cut from step 06 (76779ff). Sprite commit 95e5046.
+
+- Drawn on the 32px `unit` canvas (the only unit canvas), each with `idle` (2 frames), `walk` (4 beats, leg/hem rows only) and `[points] chest`: `blight_lich` (violet-robed skeletal sorcerer, acid crown, ember eyes, open ribcage with a green light, tan staff with a violet crystal), `elder_wyrm` (darker hulking red drake on four angled legs, thrust horned head with ember jaws, tall rust wing, ivory horns, tan belly plates, spiked tail), `source_horror` (the horror grown: ridge of tall bone spikes, two pale eyes under a dark brow, wide maw, cracked glowing blight core, forward claw). `art/units/horror.sprite.toml` untouched.
+- Contact: `sprite check --project art` ok (144 sprites, 333 frames); `npm run sprites` then `npm run sprites:check` up to date (runlog #38); `yomi-asset-check` agent: PASS, sprite 0.7.0, no pin drift. Atlas rebuilt over steps 04-06 (all earlier sprites kept).
+- `npm test` on the clean tree at 95e5046: 2740 passed with `-- --testTimeout=120000` (runlog #41). Two runs with the default 5 s timeout (#37, #40) failed only with "Test timed out" in unrelated files (hex, blight, buildings, progression, debugCommands) because the host was at load average ~15 from another engineer's simulations; no assertion failed.
+- No simulation run. No `src/` change; `docs/reference/sprites.md` lists no unit sprites (unchanged); provenance row added to `public/assets/sprites/README.md`.
+- Previews (outside the repo): `/private/tmp/claude-501/-Users-ryan-personal-yomi/6b9b93b7-3933-4bd1-a198-fa82ad0fff0d/scratchpad/roster-display.png` (display scale: lich, wight, cultist, shaman, wyrm, young dragon, golem, ogre, hill giant, source_horror, horror, troll), and `blight_lich-6x.png`, `elder_wyrm-6x.png`, `source_horror-6x.png` in the same folder.
+- For the reviewer: the kinds do not exist in `src/` yet, so none can be seen in battle until steps 12 and 13. Judge at display scale beside the roster: wyrm vs young dragon (pose, mass, darker value), source_horror vs horror, lich vs wight and cultist.
+- The orchestrator must merge this branch before step 12.
