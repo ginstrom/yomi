@@ -11,7 +11,7 @@ Design first, then the references, then the code (the code wins, per the stages 
 1. **Encounter compositions and first counts** *(for the user, Q1)*: the design names each encounter's band but not its foes or counts. Default: C5's table (lead kind first, minions from the same or nearer rings), first values that the ring's step tunes against its cells.
 2. **Each ring's nests** *(for the user, Q2)*: nests keep their positions and unique loot, and change encounter, id and name; each ring keeps its nest count; bandits keep about a third (2 of 5 in rings 7 to 15, 1 of 4 in ring 18). Spiders and salamanders leave the fixed nests of rings 7 and 9 (they still spawn there). Table: C6.
 3. **The Source at 20** *(for the user, Q3)*: a new kind `source_horror` ("Blight Horror", native 20, its own sprite) leads two Blight Cultists at threat 20. **The near-home Source keeps today's `horror` block and slots for threats 1 to 5**, so `--near-source` (the early figures, the refactor guard, the 50-campaign check) fights exactly as before. `SOURCE_FOE_LEVEL` and `maxFoeLevel` are removed. C7.
-4. **The cells' reading of "most but not all"** *(for the user, Q4)*: per-ring cells are report-only (the user's bands are not extended); the plan's working reading is **300 to 475 wins of 500** at both band ends, with `--player-kit expected`, a party of the threat's level. A ring step tunes only its own encounters toward it, at most three trials an encounter, then reports. C9.
+4. **The cells' reading of "most but not all"** *(for the user, Q4)*: per-ring cells are report-only (the user's bands are not extended); the plan's working reading is **300 to 475 wins of 500** at both band ends, with `--player-kit expected`, a party of the threat's level. A ring step tunes only its own encounters toward it, at most three trials an encounter, then reports. **Standing rule (the user, 2026-11-27, from step 09):** when a band's two ends cannot both land inside in three trials, tune so the band's top end is inside, let the bottom run easy, record both figures for stage 12 and carry on; only a top-end miss after three trials goes to the orchestrator. C9.
 5. **The yardstick for the new kinds** *(for the user, Q5)*: stage 12's measurement is not ready, so the new kinds are held to a **kitted** fighter growth table measured once in step 02 from `expectedKit` (the "stage 10 `expectedKit` readings" of the design); today's kinds stay on today's bare table, unchanged. C2.
 6. **Favoured runes of the new nests** *(for the user, Q6)*: in `FAVOURED_RUNES` (it exists, `loot.ts`): `wyvern_roost` venom, `basilisk_lair` rime, `blight_cult` and `blight_lich_court` storm, `young_dragon` and `elder_wyrm` ember; none for the rest and none for the Source (its encounter id is also the near-home Source's).
 7. **Blight Breath** *(for the user, Q7)*: element `blight` (gear §4.6; campaign §5.5's "acid" is read as its Corroded), lays Corroded, **foes only** (the Horror's guardians are the blight's own).
@@ -85,7 +85,7 @@ Each a `MonsterKind`, `UnitKind` id = sprite id, block `<NAME>_STATS` in `src/co
 | `elder_wyrm` | Elder Wyrm | 18 | 450 | res 5, regeneration 2, wards fire 15 | `wyrm_breath`, `wyrm_strikes` | 12 |
 | `source_horror` | Blight Horror | 20 | 500 | res 3, regeneration 2, blightborn | `blight_breath`, `horror_claws` | 13 |
 
-Piercing (the yardstick does not see `armorPierce`; step 08, against the kit's resistance): wolf 4, worg rider 6, ogre 5; wyvern 11 (step 09, not settled).
+Piercing (the yardstick does not see `armorPierce`; step 08, against the kit's resistance): wolf 4, worg rider 6, ogre 5; wyvern 11 (step 09).
 
 ### C4. The new abilities (steps 08 to 13)
 
@@ -114,7 +114,7 @@ Ids in `ENCOUNTERS` (after `freebooter_host`, in this order), `ENCOUNTER_BANDS`,
 | `wolf_pack` | 6–9 | wolf ×5 (Pack Leader first) | 4, 4, 4, 5 | Wolf Pack | — | 08 |
 | `worg_riders` | 7–9 | worg_rider, wolf, worg_rider, wolf, wolf, worg_rider (wolves `fromThreat` 8) | 3, 3, 5 | Worg Band | — | 08 |
 | `ogre_camp` | 7–10 | ogre, worg_rider, ogre, wolf | 3, 3, 3, 4 | Ogre Camp | — | 08 |
-| `wyvern_roost` | 9–12 | wyvern ×3 | 2, 2, 3, 3 | Wyvern Roost | venom | 09 |
+| `wyvern_roost` | 9–12 | wyvern ×4 (the Old Wyvern last) | 4, 4, 3, 3 (falls: the user's decision, step 09) | Wyvern Roost | venom | 09 |
 | `barrow_wights` | 11–14 | barrow_wight ×4 | 3, 3, 4, 4 | Barrow | — | 10 |
 | `basilisk_lair` | 11–14 | basilisk, ogre, basilisk, ogre | 2, 3, 3, 4 | Basilisk Lair | rime | 10 |
 | `hill_giant_steading` | 12–15 | hill_giant, ogre, ogre, hill_giant | 3, 3, 4, 4 | Giant Steading | — | 10 |

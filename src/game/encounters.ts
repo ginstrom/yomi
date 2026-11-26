@@ -379,11 +379,12 @@ const OGRE_CAMP_SLOTS: readonly FoeSlot[] = [
   { id: 'wolf', kind: 'wolf', name: 'Camp Wolf', at: [9, 4] },
 ]
 
-// Ring 9 (long-campaign stage 11): wyverns only, the roost's pair first and their young.
+// Ring 9 (long-campaign stage 11): wyverns only, the roost's pair first and their young; the Old Wyvern last, so it is the one that is gone from threat 11.
 const WYVERN_ROOST_SLOTS: readonly FoeSlot[] = [
   { id: 'wyvern', kind: 'wyvern', name: 'Wyvern', at: [8, 4] },
   { id: 'mate', kind: 'wyvern', name: 'Wyvern Mate', at: [8, 2] },
   { id: 'young', kind: 'wyvern', name: 'Young Wyvern', at: [8, 6] },
+  { id: 'old', kind: 'wyvern', name: 'Old Wyvern', at: [9, 4] },
 ]
 
 /** Today's encounters are fought at threats 1 to 5, with these many foes at each. */
@@ -443,11 +444,12 @@ const WORG_RIDERS: EncounterDef = { slots: WORG_RIDERS_SLOTS, band: { min: 7, ma
 /** The Ogre Camp, threats 7 to 10: both Ogres and the rider to 9, the wolf too at 10 (an Ogre and a rider alone at 7 were won 500 times in 500). */
 const OGRE_CAMP: EncounterDef = { slots: OGRE_CAMP_SLOTS, band: { min: 7, max: 10 }, counts: [3, 3, 3, 4] }
 /**
- * Ring 9's encounter (stage 11 step 09). The Wyvern Roost, threats 9 to 12: three at every threat (a pair at 9 was won
- * 500 times in 500). Not settled: with one block and three wyverns the cells at 9 and 12 do not both sit in the
- * reading (498 and 399 here; 459 and 175 with a stronger block); the plan's log has the trials.
+ * Ring 9's encounter (stage 11 step 09). The Wyvern Roost, threats 9 to 12: four at 9 and 10, three at 11 and 12,
+ * the one encounter whose numbers fall as the threat rises (the user's decision). The expected kit is the same
+ * across the band while the wyverns grow, so three were won 498 times in 500 at 9 and 399 at 12; four at 9, 312.
+ * A pair at 9 was won 500 times. The plan's log has the trials.
  */
-const WYVERN_ROOST: EncounterDef = { slots: WYVERN_ROOST_SLOTS, band: { min: 9, max: 12 }, counts: [3, 3, 3, 3] }
+const WYVERN_ROOST: EncounterDef = { slots: WYVERN_ROOST_SLOTS, band: { min: 9, max: 12 }, counts: [4, 4, 3, 3] }
 
 /**
  * A Goblin and a Kobold across the board from the party; where the threat is
@@ -566,7 +568,7 @@ export function ogreCamp(party: readonly Fighter[], threat = 7): Encounter {
 }
 
 /**
- * A roost of wyverns, fought at threats 9 to 12: each closes fast, bites
+ * A roost of wyverns, four at threats 9 and 10 and three at 11 and 12: each closes fast, bites
  * hard through armour and stings with its tail, and the sting's poison works
  * on whatever the armour is.
  */

@@ -1152,8 +1152,8 @@ describe('policies', () => {
       expect(sha(lines.slice(0, RING_7))).toBe('082484296b928e87debbded89fc5b7b04d81e8513f3a2eab59e23096f076ebc1')
       // Ring 9's (step 09): the Wyvern Roost's lines only.
       expect(new Set(lines.slice(RING_7).map((line) => line.split(' ')[0]))).toEqual(new Set(['wyvern_roost']))
-      expect(lines.length).toBe(17092)
-      expect(sha(lines)).toBe('e72a3c039794005aeba49c09cd16930226d59ae6630b159d5b8aa7a15186ee28')
+      expect(lines.length).toBe(17051)
+      expect(sha(lines)).toBe('8e432c095a9a75e2639402953d9fefb423c92aaeeda5c631ea5b233ca8514c60')
     }, 60_000)
   })
 })

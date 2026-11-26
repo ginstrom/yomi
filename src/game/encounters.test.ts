@@ -67,7 +67,7 @@ const WOLF_PACK_COUNTS = [4, 4, 4, 5]
 const WORG_RIDERS_COUNTS = [3, 3, 5]
 const OGRE_CAMP_COUNTS = [3, 3, 3, 4]
 /** Ring 9's counts (stage 11 step 09; the cells' tuning is in the plan's log). */
-const WYVERN_ROOST_COUNTS = [3, 3, 3, 3]
+const WYVERN_ROOST_COUNTS = [4, 4, 3, 3]
 
 describe.each(Object.entries(ENCOUNTERS))('the %s encounter', (_id, build) => {
   const wounded = party().map((fighter, i) => ({ ...fighter, hp: 5 + i }))
@@ -102,6 +102,12 @@ describe.each(Object.entries(ENCOUNTERS))('the %s encounter', (_id, build) => {
 describe.each(Object.entries(ENCOUNTERS))('the %s encounter, as the threat rises through its band', (id, build) => {
   const { min, max } = ENCOUNTER_BANDS[id as EncounterId]
   const foes = (threat: number) => build(party(), threat).setup.units.filter((u) => u.side === 'enemy')
+  /**
+   * The one encounter whose numbers fall as the threat rises, by the user's decision (stage 11 step 09): the Wyvern
+   * Roost fields four at 9 and 10 and three at 11 and 12, as the expected kit is the same across its band while the
+   * wyverns grow. So threat 11 fields fewer than 10 and is worth less (three wyverns of 11 against four of 10).
+   */
+  const falls = id === 'wyvern_roost'
 
   it('fields foes of that level, never fewer than before, each with a name and a hex of its own', { timeout: 20_000 }, () => {
     // Each threat's encounter is built once, its foes kept for the next threat's comparison.
@@ -114,7 +120,8 @@ describe.each(Object.entries(ENCOUNTERS))('the %s encounter, as the threat rises
       expect(new Set(state.units.map((u) => `${u.position.q},${u.position.r}`)).size).toBe(state.units.length)
       expect(new Set(now.map((u) => u.stats.name)).size).toBe(now.length)
       if (before !== null) {
-        expect(now.length).toBeGreaterThanOrEqual(before.length)
+        if (falls) expect([threat, now.length - before.length]).toEqual([threat, threat === 11 ? -1 : 0])
+        else expect(now.length).toBeGreaterThanOrEqual(before.length)
         // The Source's guardians stop growing at SOURCE_FOE_LEVEL (stage 9 step 09), and hold there.
         const held = id === 'source_guardians' && threat > SOURCE_FOE_LEVEL
         if (held) expect(now[0].stats.maxHp).toBe(before[0].stats.maxHp)
@@ -124,12 +131,13 @@ describe.each(Object.entries(ENCOUNTERS))('the %s encounter, as the threat rises
     }
     // More at the top than at the bottom, unless the band's counts are flat by design (stage 9 decision 6).
     const flat = new Set(ENCOUNTER_COUNTS[id as EncounterId]).size === 1
-    if (max > min && !flat) expect(foes(max).length).toBeGreaterThan(foes(min).length)
+    if (max > min && !flat && !falls) expect(foes(max).length).toBeGreaterThan(foes(min).length)
   })
 
   it('is worth more the higher the threat', () => {
     for (let threat = min + 1; threat <= max; threat++) {
-      expect(xpReward(build(party(), threat))).toBeGreaterThan(xpReward(build(party(), threat - 1)))
+      if (falls && threat === 11) expect(xpReward(build(party(), threat))).toBeLessThan(xpReward(build(party(), threat - 1)))
+      else expect(xpReward(build(party(), threat))).toBeGreaterThan(xpReward(build(party(), threat - 1)))
     }
   })
 
@@ -567,7 +575,7 @@ describe('ring 9\'s encounter (long-campaign stage 11 step 09)', () => {
     const { setup, kinds } = wyvernRoost(party(), threat)
     return setup.units.filter((u) => u.side === 'enemy').map((u) => [kinds[u.id], u.stats.name, u.stats])
   }
-  const ROOST = ['Wyvern', 'Wyvern Mate', 'Young Wyvern']
+  const ROOST = ['Wyvern', 'Wyvern Mate', 'Young Wyvern', 'Old Wyvern']
 
   it('is registered after ring 7\'s, with its band and counts', () => {
     expect(Object.keys(ENCOUNTERS).slice(-1)).toEqual(['wyvern_roost'])
@@ -584,6 +592,11 @@ describe('ring 9\'s encounter (long-campaign stage 11 step 09)', () => {
     expect(wyvernRoost(party(), threat).threat).toBe(threat)
     expect(foes.map(([kind, name]) => [kind, name])).toEqual(ROOST.slice(0, WYVERN_ROOST_COUNTS[index]).map((name) => ['wyvern', name]))
     for (const [, name, stats] of foes) expect(stats).toEqual({ ...foeStats('wyvern', threat), name })
+  })
+
+  it('fields four at 9 and 10 and three at 11 and 12: the Old Wyvern keeps to the roost\'s near threats', () => {
+    expect([9, 10, 11, 12].map((threat) => fielded(threat).length)).toEqual([4, 4, 3, 3])
+    expect(fielded(11).map(([, name]) => name)).toEqual(['Wyvern', 'Wyvern Mate', 'Young Wyvern'])
   })
 
   it('is fought below its band as at 9 and above it as at 12', () => {
