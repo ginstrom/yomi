@@ -85,7 +85,7 @@ No game code changes: only the sprite sources and the exported atlas.
 - Drew `art/units/wolf.sprite.toml` (low grey skirmisher, tail raised, 10 AP look), `worg_rider.sprite.toml` (goblin in the goblin's palette and face, level spear, on a dark worg with red eye and fangs) and `ogre.sprite.toml` (sallow hide, loincloth, bone-studded club; rows 1 to 30 and wider than the troll, which spans rows 3 to 30). All on the 32px `unit` canvas, `outline = "auto"`, `idle` (2 frames) and `walk` (4 beats), `[points] chest`.
 - `sprite check --project art`: ok, 134 sprites, 283 frames. `npm run sprites` built; `npm run sprites:check`: up to date. `yomi-asset-check`: sprites:check PASS, pin v0.7.0 no drift.
 - Atlas by hand: `atlas.json` holds `wolf/idle_0` etc. and `atlas.anims.json` holds `wolf/idle`, `wolf/walk` (likewise `worg_rider`, `ogre`); each source has `[points] chest`.
-- `npm test` (runlog 2, after cloning `node_modules` into the worktree; a symlink broke the jsdom project): 107 files, 2740 tests pass. Nothing in `src/` changed.
+- `npm test` (runlog 3, after cloning `node_modules` into the worktree; a symlink broke the jsdom project): 107 files, 2740 tests pass. Nothing in `src/` changed.
 - Previews (outside the repo): `/private/tmp/claude-501/s11/ring7-beside-roster.png` (ogre, troll, armored_troll, worg_rider, wolf, giant_spider, goblin, bandit_brute, scale 6), and `wolf.plain.png`, `worg_rider.plain.png`, `ogre.plain.png` in the same folder (scale 8).
 - No simulation run. README provenance row added in `public/assets/sprites/README.md`.
 - For later steps: walk_0 of wolf and worg_rider is a stretch pose; nothing else needed from step 08 beyond the kinds.
