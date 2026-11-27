@@ -170,7 +170,7 @@ All 13 kinds' sprites are in the atlas (`art/units/<kind>.sprite.toml`); text in
 | 08 | [Ring 7: wolves, worg riders, ogres](08-ring-7.md) | Kinds, abilities, encounters, nests, spawn kinds, wolfhide; save 32; snapshot; cells | 02, 04 | opus / opus | done (`b0fbe7d`, `4ca43d2`) |
 | 09 | [Ring 9: wyverns](09-ring-9.md) | Wyvern, roost (4, 4, 3, 3), nests, wyvern hide, stand-in removed; save 33; cells | 08, 05 | opus / opus | done (`2b35cb9`, `cecd65f`) |
 | 10 | [Ring 12: wights, basilisks, giants](10-ring-12.md) | Three kinds and encounters (4 wights; lair and steading of 3), nests, basilisk scale; save 34; cells | 09, 05 | opus / opus | done (`5257f59`, `65ac1c0`, `9f692dc`) |
-| 11 | [Ring 15: golems, cultists, young dragons](11-ring-15.md) | Three kinds (golem `immune`), encounters (ruin of 4, 5 at 17; cult of 5; lair of 2, 3 from 17), nests, drake scale; save 35; cells | 10, 03, 06 | opus / opus | done (`5c83ec8`, `1b78a7e`, `eab9959`) |
+| 11 | [Ring 15: golems, cultists, young dragons](11-ring-15.md) | Three kinds (golem `immune`), encounters (ruin of 4, 5 at 17; cult of 5, 4 at 15 and 16; lair of 2, 3 from 17), nests, drake scale; save 35; cells | 10, 03, 06 | opus / opus | done (`5c83ec8`, `1b78a7e`, `eab9959`, `3f4f90c`, `4ccac5e`) |
 | 12 | [Ring 18: the lich and the elder wyrm](12-ring-18.md) | Two kinds and encounters, nests, drake scale; save 36; cells | 11, 07 | opus / opus | pending |
 | 13 | [The Source at 20](13-source.md) | `source_horror`, `SOURCE_AT_20`, `SOURCE_FOE_LEVEL` removed (C7); snapshot; `sgk20` | 12, 07 | opus / opus | pending |
 | 14 | [Measure and record](14-measure.md) | Early figures vs step 01; `long` (100) vs stage 10: Source share, battles to level for stage 12; every cell | 13 | opus / opus | pending |
