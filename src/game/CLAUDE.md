@@ -45,7 +45,7 @@ Loaded when working in `src/game/`: encounters and bandits, the company and its 
 
 ## The rules
 
-World map, blight and territory, scaling, encounters, bandits and saving each have a section in `docs/reference/game.md`; read it before changing one. Three easy to get wrong: the encampment's name is the player's (read through `encampmentName`, never assumed); a site lost razes its improvement; and the home country is stage 8's map moved by `EARLY_SHIFT`, so a test's fixed world hex is `earlyHex(col, row)` of stage 8's offset (threat comes from `THREAT_RINGS`). Scaling (stage 10, `--near-source`): `one` 288 and `company` 289 (stage 9's figures, accepted until stage 12), unchanged by stage 10: nothing it adds reaches the early campaign (the gear policy starts at tier 3, bandits above threat 8 and the workshop above level 3 are far-ring things).
+World map, blight and territory, scaling, encounters, bandits and saving each have a section in `docs/reference/game.md`; read it before changing one. Three easy to get wrong: the encampment's name is the player's (read through `encampmentName`, never assumed); a site lost razes its improvement; and the home country is stage 8's map moved by `EARLY_SHIFT`, so a test's fixed world hex is `earlyHex(col, row)` of stage 8's offset (threat comes from `THREAT_RINGS`). Scaling (stage 11, `--near-source`): `one` 287, `company` 288 (accepted until stage 12), `rl10` 371 (409 in stage 10; accepted): ring 7's and 9's kinds join the `SPAWN_KINDS` that `spawn` draws from at threats 7 and 9, so early campaigns that spawn there meet them. The 50-campaign check never spawns at 7 and cannot catch this; run `one` and `rl10`.
 
 ## Adding content
 

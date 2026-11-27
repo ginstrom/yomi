@@ -8,11 +8,11 @@ The bands, set by the user (the targets; keep them):
 
 | Measure | Band | Now (seed 1: stage 10, 8 or 7 where marked, else the skill trees' step 30) |
 | --- | --- | --- |
-| One party (`--parties 1`) | 215 to 250 | 288 (331 days, 18.8 battles, 1.2 dead; stage 10, = stage 9), accepted until stage 12 |
-| Default company | 220 to 260 | 289 (stage 10, = stage 9), accepted until stage 12 |
-| `--ready-level 10` | 370 to 420 | 409 (533 days, 34.0 battles; stage 10; stage 8's 433 was accepted up to 445) |
-| Heroes dead a campaign | at most 2.0 | 1.2 (stage 10) |
-| Days a campaign | 243 to 297 | 331 (stage 10), accepted until stage 12 |
+| One party (`--parties 1`) | 215 to 250 | 287 (331 days, 18.8 battles, 1.2 dead; stage 11), accepted until stage 12 |
+| Default company | 220 to 260 | 288 (stage 11), accepted until stage 12 |
+| `--ready-level 10` | 370 to 420 | 371 (541 days, 35.0 battles; stage 11, accepted: ring 7 and 9 spawns) |
+| Heroes dead a campaign | at most 2.0 | 1.2 (stage 11) |
+| Days a campaign | 243 to 297 | 331 (stage 11), accepted until stage 12 |
 | GR3 | at least 470 | 500 |
 | BC3 | 400 to 470 | 455 |
 | BC4 | 430 to 490 | 454 |

@@ -479,3 +479,5 @@ Kit lines (all / forge-ready), against `expectedKit`: at 5 (84): every role tier
 | 13 | sgk20 445 | yes |
 
 No cell differs from its step's figure; no new cell outside the reading.
+
+**The user's decision (2026-11-28, `docs/features/long-campaign-stage-11.md`'s decision log): (a) accepted.** `rl10` 371, `one` 287 and `company` 288 are recorded with the cause found (ring 7's and 9's spawn kinds at threats 7 and 9); `bands.md`'s early "Now" rows and `src/game/CLAUDE.md`'s scaling line now carry them. The long run (Source 0 of 100, 739 days, campaigns ending at rings 7 to 9) is recorded for stage 12; the stage carries on. **For stage 12:** the 50-campaign check never spawns at threat 7, so it cannot catch an early-campaign change from far spawn kinds; measure `one` and `rl10` whenever `SPAWN_KINDS` or an encounter's band changes.

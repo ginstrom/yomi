@@ -150,3 +150,5 @@ No rule or constant change, no tuning, no new simulator flag or measure, no band
 - Runtime: `long` 76 s alone (stage 10 4:07, step 01 166 s); `one` 141 s, `company` 152 s, `rl10` 361 s.
 
 **Gate.** `npm test` runlog #203 at `6b4fce3` (clean tree): exit 0, 109 files, 3025 passed, the refactor guard (`scripts/simulate.test.ts`) among them, unedited. No build or browser run (no code or scene change). The index's row 14 stays `in progress` until the orchestrator answers the `rl10` question.
+
+**Answer (the user, 2026-11-28; `docs/features/long-campaign-stage-11.md`'s decision log): option (a).** `rl10` 371, `one` 287, `company` 288 accepted with the cause found; the long run recorded for stage 12, the stage carries on. Done in the close-up commit: `bands.md`'s early "Now" rows (one, company, `rl10`, heroes dead, days: stage 11's figures; 7,957 bytes) and `src/game/CLAUDE.md`'s scaling line (7,717 bytes). For stage 12: the 50-campaign check never spawns at threat 7, so it cannot catch early-campaign changes from far spawn kinds; run `one` and `rl10` when `SPAWN_KINDS` or an encounter's band changes. Row 14: awaiting review.
