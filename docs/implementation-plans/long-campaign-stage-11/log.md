@@ -405,7 +405,7 @@ Step 13 (the Source at 20: the Blight Horror of native 20 and two cultists): eng
 
 - `one`: in 500 campaigns two spawns are at threat 7 (campaigns 70 and 403, both `bandit_camp`, now `spider_nest`); campaign 70 then fights one more battle and its party falls. `one` at `b0fbe7d` (worktree) is 287 with the same battle list as at head (`diff` of every `battle_start`'s campaign, day, site, encounter, threat and levels): step 08 moved it.
 - `company`: 289 → 288; step 01's run has three threat-7 spawns (campaigns 70, 316, 403, all `bandit_camp`); not re-logged, read as the same cause.
-- `rl10`: threat-7 and threat-9 spawns are 3.6% of the battles (about 1,700 of 17,000), and half are now the new kinds. Win rates by kind (step 01 → now):
+- `rl10`: battles at threats 7 and 9 are about 15% of the whole (2,632 of 16,998 at step 01, 2,739 of 17,494 now), and 1,354 of them are now the new kinds. Win rates by kind (step 01 → now):
 
 | Kind | Threat 7 battles, won | Threat 9 battles, won |
 | --- | --- | --- |
