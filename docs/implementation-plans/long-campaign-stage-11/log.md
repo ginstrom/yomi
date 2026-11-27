@@ -339,9 +339,13 @@ Step 11 (ring 15: golems, cultists, young dragons): engineer opus, reviewer opus
 
 The final logs are byte-identical to their trials' (`cmp`): `lc18` trial 1's, `lc17`, `lc20` trial 2's, `ew18`, `ew20` trial 3's.
 
+**The user's decision (2026-11-27): `ew18` 482 accepted as it stands (trial 3)**, an in-play miss recorded for stage 12 beside `yd15` 491; no further trials.
+
 **Read against the standing rule.** The court is inside at 18, where the map has it, and at 20; `lc17` 497 is a band-end miss (the bottom runs easy: the five slots are all fielded, so only the lich's block could move it, and that would move 18 and 20 too). **`ew18` 482 is an in-play miss after three trials: brought to the orchestrator.** The lair at two foes slopes gently (482 at 18, 408 at 20); a third foe is a cliff (6 wins at 20 with the first wyrm).
 
 **What each kind needed against the kit** (fighter and archer resistance 21 from 17): the lich pierces 14 (its touch is a sideline: the policy has it cast Lightning Bolt about 3 times a battle and Dark Shield 2, Drain Life almost never and Death Cloud never at the first values); the wyrm pierces all 21 (at 16 its three strikes lost 5 each on the fighters). The breath carries no flag (only the heroes' fire wards cut it). The wyrm at 100 to hit and armour class 66 was weaker than the young dragon raised to 18 beside it (115, 73, 150 hit points).
+
+**For stage 12:** `ew18` 482 (the Last Wyrm at 18, two foes; a third is a cliff); `lc17` 497 (a band end). The AI has the lich cast Lightning Bolt about 3 times a battle and Dark Shield 2, Drain Life almost never and Death Cloud never (`aggressive` in `lc18`'s first-value log: 1,496 bolts, 958 shields, 2 drains, no cloud in 500 battles), so its caster kit is mostly unused.
 
 **The policy snapshot:** re-recorded with ring 18's lines only. The test keeps step 11's prefix checks and adds a fifth: the first 22,394 lines against `aed88277…f007c` (step 11's whole snapshot after trial 4), every line after them beginning `blight_lich_court` or `elder_wyrm`; 24,048 lines, `b41a6374…ee3c` (24,092 and `e078b975…c094` at the first values).
 

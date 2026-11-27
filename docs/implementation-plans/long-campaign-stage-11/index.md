@@ -85,7 +85,7 @@ Each a `MonsterKind`, `UnitKind` id = sprite id, block `<NAME>_STATS` in `src/co
 | `elder_wyrm` | Elder Wyrm | 18 | 450 | res 5, regeneration 2, wards fire 15 | `wyrm_breath`, `wyrm_strikes` | 12 |
 | `source_horror` | Blight Horror | 20 | 500 | res 3, regeneration 2, blightborn | `blight_breath`, `horror_claws` | 13 |
 
-Piercing (the yardstick does not see `armorPierce`; step 08, against the kit's resistance): wolf 4, worg rider 6, ogre 5; wyvern 11 (step 09); barrow wight 8, basilisk 9, hill giant 9 (step 10; the Rock keeps `throughResistance`); stone golem 9, blight cultist 10 (a Blight Dart thrown 4 hexes), young dragon 10 (step 11; the breath has no flag).
+Piercing (the yardstick does not see `armorPierce`; step 08, against the kit's resistance): wolf 4, worg rider 6, ogre 5; wyvern 11 (step 09); barrow wight 8, basilisk 9, hill giant 9 (step 10; the Rock keeps `throughResistance`); stone golem 9, blight cultist 10 (a Blight Dart thrown 4 hexes), young dragon 10 (step 11; the breath has no flag); blight lich 14, elder wyrm 21, all of the kit's 21 from 17 (step 12; the Elder Wyrm also 115 to hit and 185 hit points, named exceptions).
 
 ### C4. The new abilities (steps 08 to 13)
 
