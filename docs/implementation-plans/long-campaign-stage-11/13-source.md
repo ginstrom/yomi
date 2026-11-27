@@ -211,4 +211,8 @@ No change to the near-home Source, the Source's location, its rune loot row, the
 | `story` | #199 | 9 passed |
 | `world` | #200 | 66 passed |
 
-Status: awaiting review.
+**Review:** opus reviewer, clean, 1 round, no blocking finding. The reviewer recomputed the near-home hash at `2ca3559` (identical) and the snapshot's filtered and segment hashes (all match), re-ran `sgk20` at head (445, byte-identical) and `npm test` #201 (3025 passed). Fixed after it: the `sourceGuardians` doc comment said the shaman stands behind at threat 5; it fights from threat 2, only the Sneak waits for 5 (`a0b056e`, comment only; `npm test` #202, 3025 passed).
+
+**For step 14 and stage 12:** the ready-made party in its own gear now wins 0 of 500 at the Source (`sg20-18`, `sg20`; 28 and 71 before). Every threat from 6 to 19 builds the Source at threat 20, so debug `fight` or simulator runs at those threats get threat-20 rewards (on the map the Source is only ever at 20).
+
+Status: done.
