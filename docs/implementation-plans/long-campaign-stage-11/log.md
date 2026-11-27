@@ -239,3 +239,35 @@ Three trials used with `wy9` outside (498) at the third, so the step stopped for
 ## Step 09 outcome
 
 Step 09 (ring 9: wyverns): engineer opus, reviewer opus, verdict clean, 1 review round, no blocking finding. Commits `d901faf` (index trim), `2b35cb9`, `cecd65f` (final code), `818b7d0` (record); clean-tree gates at `cecd65f`: `npm test` runlog #84, `npm run build` #85, `npm run sprites:check` #86; the reviewer's `npm test` #89 at `818b7d0`; browser: the engineer's #87 (187 passed, 5 failed: timeouts and the known narration-fade error) and #88 (the five files, 103 passed), the reviewer's #90, 184 passed and 8 timeouts, all passing on the rerun #91. Cells wy9 312, wy12 399, both inside 300–475 (the reviewer's re-run at `818b7d0` byte-identical); 50-campaign hash identical; the roost's falling counts (4, 4, 3, 3) are the user's decision.
+
+## Step 10: ring 12
+
+2026-11-27. Code `5257f59` (first values), `65ac1c0` (tuned: the final code), `9f692dc` (reference docs). Cells: 500 battles from seed 1, `node scripts/simulate.ts --encounter E --threat T --party-level T --player-kit expected --battles 500 --seed 1 --out logs/s11-10-<label>.jsonl`, run by the engineer in the foreground one at a time (about 20 seconds each), read against 300–475 (report only). Logs (gitignored): `logs/s11-10-<cell>` the first values at `5257f59`, `-t1-`, `-t2-`, `-t3-` the trials on the dirty tree of each, `-final-` on the clean tree at `65ac1c0`.
+
+**50-campaign check:** `1e85d023a1b58697ec36724720f6ad5ba8b4a5dc2362f4ff6b22605ce37ed216`, **identical**, at the first values and at the tuned tree (`logs/s11-10-guard-50.jsonl`). The refactor guard is unedited and green.
+
+**Yardstick** (`foeYardstick(n, 'expected')`): at 11 armour class 44.4–64.4, to hit 80–100, hit points 57.3–114.6, damage a turn 9.5–15.8; at 12, 45.8–65.8, 80–100, 59.1–118.2, 10.1–16.8. Every block tried sits inside, no exception (the blocks: the execution record).
+
+**Cells and trials** (wins of 500; player / enemy hit rate; rounds; damage dealt / taken a battle). Bold is outside the reading. The kit is tier 3 Fine with 2 runes of rank 2 at 11 and 12, tier 4 Fine with 3 at 14 and 15.
+
+| Trial | Change | bw11 | bw14 | bl11 | bl14 | hg12 | hg15 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| First values (`5257f59`) | wights 3, 3, 4, 4 (70 hit points); lair 3, 3, 3, 4 (basilisk, ogre, basilisk, ogre); steading 3, 3, 4, 4 (giant, ogre, ogre, giant; the giant 115 hit points, Club 3d8+2, Rock 2d10+2) | **500** (0.60 / 0.46; 6.8; 241 / 49) | **297** (0.61 / 0.70; 11.1; 353 / 223) | 425 (0.67 / 0.56; 12.0; 376 / 135) | **0** (0.64 / 0.79; 10.8; 336 / 290) | **476** (0.69 / 0.61; 12.8; 452 / 133) | **19** (0.56 / 0.75; 13.3; 491 / 303) |
+| 1 | counts: wights 4, 4, 4, 4; lair 3, 3, 3, 3; steading 3, 3, 3, 3 | **482** (0.63 / 0.59; 8.7; 315 / 104) | **297** (unchanged) | 425 (unchanged) | 304 (0.63 / 0.65; 14.5; 444 / 210) | **476** (unchanged) | **200** (0.56 / 0.72; 16.0; 494 / 255) |
+| 2 | wights: the block, 66 hit points. Steading: slot order, the Giant Chief second (two giants and an ogre) | **485** (0.62 / 0.58; 8.2; 300 / 96) | 327 (0.60 / 0.69; 10.8; 344 / 209) | — | — | 455 (0.75 / 0.57; 11.0; 407 / 129) | **240** (0.60 / 0.68; 13.9; 455 / 246) |
+| 3 | steading: the Hill Giant's block (100 hit points, Club 3d6+3, Rock 2d8+2) | — | — | — | — | **495** (0.73 / 0.54; 9.7; 383 / 86) | 400 (0.59 / 0.65; 13.5; 463 / 176) |
+| **Final (`65ac1c0`)** | | **485** | 327 | 425 | 304 | **495** | 400 |
+
+The final logs are byte-identical to their trials' for the wights and the lair; the steading's differ only in the ogre's name (the unused slots were dropped and the one ogre is the Ogre Thrall), with the same figures.
+
+**Read against the standing rule.** All three top ends are inside (327, 304, 400), and the lair's bottom (425). Two bottoms run easy and are recorded for stage 12: **`bw11` 485** (trials used 2 of 3: the one lever left that hardens 11 without 14 is a fifth wight at 11 and 12, falling to four, as the roost; not taken, the bottom being 10 over) and **`hg12` 495** (trials 3 of 3: trial 3 overshot, `hg15` 400 where about 320 would have left `hg12` nearer 475; a block between trials 2 and 3, or a fourth foe at 12 and 13, is the option).
+
+**What the party meets on the map** (`THREAT_RINGS`: only 12 and 15 of these bands): the barrow and the lair at 12 only (a nest each and spawns), the steading at 12 (a nest and spawns) and at 15 (spawns). Measured beside the cells on the final code: `bw12` **477** (0.65 / 0.65; 8.9; 325 / 121), `bl12` 445 (0.70 / 0.59; 13.0; 414 / 134), `hg12` **495**, `hg15` 400. So in play ring 12's three new nests are on the easy side of the reading (the Wyvern Roost at 12 is 399 and a Bandit Company in the kit 254), and threats 11, 13 and 14 are reached only through the debug `fight` command, the simulator, tests and the snapshot.
+
+**Why the bands slope.** The kit steps up at 13, but not by as much as three levels of foe: at the top each line-up's enemy hit rate is 0.65 to 0.70 against 0.54 to 0.59 at the bottom. A fourth foe at the top is a cliff (the lair 0, the steading 19). And an Ogre raised from native 7 to 15 (195 hit points, 125 to hit) is tougher than a Hill Giant written at 12 inside the yardstick (115 hit points at first, 110 to hit at 15): two giants and an ogre were easier at 15 than a giant and two ogres (240 against 200). For stage 12: the Hill Giant is worth 200 XP a level and is now the weaker of the steading's two kinds.
+
+**What each kind needed against the kit:** piercing (wight 8, basilisk 9, giant 9), and for the wight a spell no armour turns. The Rock keeps `throughResistance` and is cut by resistance less the giant's 9.
+
+**The policy snapshot:** re-recorded with ring 12's lines only, at the first values and at the final code. The test asserts the first 14,242 lines against `b9cef6e1…28ac`, the first 16,403 against `08248429…ebc1`, the first 17,051 against step 09's `8e432c09…4c60`, every line after them beginning `barrow_wights`, `basilisk_lair` or `hill_giant_steading`; 19,649 lines, `96ec580b…9136` (19,591 and `2c883f09…0214` at the first values).
+
+**Far-world pins re-pinned, the change proven confined** (the digested JSON dumped before and after, diffed): `blight.test.ts`'s two 30-day runs differ in one spawned event's name each (a Wyvern Roost at 12 is a Giant Steading: five eligible kinds at 12 where two were; counts, places, RNG and the blight's hash unchanged); `worldMap.test.ts`'s session differs in 18 values: the three renamed nests' id, name and encounter (9), three far spawns' name and encounter (6) and their spawned events' names (3); `SESSION_TURN` unchanged.

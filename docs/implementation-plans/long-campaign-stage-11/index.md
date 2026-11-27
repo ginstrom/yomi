@@ -85,7 +85,7 @@ Each a `MonsterKind`, `UnitKind` id = sprite id, block `<NAME>_STATS` in `src/co
 | `elder_wyrm` | Elder Wyrm | 18 | 450 | res 5, regeneration 2, wards fire 15 | `wyrm_breath`, `wyrm_strikes` | 12 |
 | `source_horror` | Blight Horror | 20 | 500 | res 3, regeneration 2, blightborn | `blight_breath`, `horror_claws` | 13 |
 
-Piercing (the yardstick does not see `armorPierce`; step 08, against the kit's resistance): wolf 4, worg rider 6, ogre 5; wyvern 11 (step 09).
+Piercing (the yardstick does not see `armorPierce`; step 08, against the kit's resistance): wolf 4, worg rider 6, ogre 5; wyvern 11 (step 09); barrow wight 8, basilisk 9, hill giant 9 (step 10; the Rock keeps `throughResistance`).
 
 ### C4. The new abilities (steps 08 to 13)
 
@@ -115,9 +115,9 @@ Ids in `ENCOUNTERS` (after `freebooter_host`, in this order), `ENCOUNTER_BANDS`,
 | `worg_riders` | 7–9 | worg_rider, wolf, worg_rider, wolf, wolf, worg_rider (wolves `fromThreat` 8) | 3, 3, 5 | Worg Band | — | 08 |
 | `ogre_camp` | 7–10 | ogre, worg_rider, ogre, wolf | 3, 3, 3, 4 | Ogre Camp | — | 08 |
 | `wyvern_roost` | 9–12 | wyvern ×4 (the Old Wyvern last) | 4, 4, 3, 3 (falls: the user's decision, step 09) | Wyvern Roost | venom | 09 |
-| `barrow_wights` | 11–14 | barrow_wight ×4 | 3, 3, 4, 4 | Barrow | — | 10 |
-| `basilisk_lair` | 11–14 | basilisk, ogre, basilisk, ogre | 2, 3, 3, 4 | Basilisk Lair | rime | 10 |
-| `hill_giant_steading` | 12–15 | hill_giant, ogre, ogre, hill_giant | 3, 3, 4, 4 | Giant Steading | — | 10 |
+| `barrow_wights` | 11–14 | barrow_wight ×4 | 4, 4, 4, 4 | Barrow | — | 10 |
+| `basilisk_lair` | 11–14 | basilisk, ogre, basilisk | 3, 3, 3, 3 | Basilisk Lair | rime | 10 |
+| `hill_giant_steading` | 12–15 | hill_giant, hill_giant, ogre | 3, 3, 3, 3 | Giant Steading | — | 10 |
 | `golem_ruin` | 14–17 | stone_golem, barrow_wight, stone_golem, barrow_wight | 3, 3, 4, 4 | Golem Ruin | — | 11 |
 | `blight_cult` | 14–18 | blight_cultist, barrow_wight, blight_cultist, barrow_wight, blight_cultist | 3, 3, 4, 4, 5 | Blight Cult | storm | 11 |
 | `young_dragon` | 15–18 | young_dragon, wyvern, wyvern | 2, 2, 3, 3 | Dragon Lair | ember | 11 |
@@ -169,7 +169,7 @@ All 13 kinds' sprites are in the atlas (`art/units/<kind>.sprite.toml`); text in
 | 07 | [Sprites: ring 18 and the Source](07-sprites-ring-18-source.md) | `blight_lich`, `elder_wyrm`, `source_horror` (C8) | — | sonnet / opus | done (`95e5046`, `651a4c7`) |
 | 08 | [Ring 7: wolves, worg riders, ogres](08-ring-7.md) | Kinds, abilities, encounters, nests, spawn kinds, wolfhide; save 32; snapshot; cells | 02, 04 | opus / opus | done (`b0fbe7d`, `4ca43d2`) |
 | 09 | [Ring 9: wyverns](09-ring-9.md) | Wyvern, roost (4, 4, 3, 3), nests, wyvern hide, stand-in removed; save 33; cells | 08, 05 | opus / opus | done (`2b35cb9`, `cecd65f`) |
-| 10 | [Ring 12: wights, basilisks, giants](10-ring-12.md) | Three kinds and encounters, nests, basilisk scale; save 34; cells | 09, 05 | opus / opus | in progress |
+| 10 | [Ring 12: wights, basilisks, giants](10-ring-12.md) | Three kinds and encounters (4 wights; lair and steading of 3), nests, basilisk scale; save 34; cells | 09, 05 | opus / opus | done (`5257f59`, `65ac1c0`, `9f692dc`) |
 | 11 | [Ring 15: golems, cultists, young dragons](11-ring-15.md) | Three kinds (golem `immune`), encounters, nests, drake scale; save 35; cells | 10, 03, 06 | opus / opus | pending |
 | 12 | [Ring 18: the lich and the elder wyrm](12-ring-18.md) | Two kinds and encounters, nests, drake scale; save 36; cells | 11, 07 | opus / opus | pending |
 | 13 | [The Source at 20](13-source.md) | `source_horror`, `SOURCE_AT_20`, `SOURCE_FOE_LEVEL` removed (C7); snapshot; `sgk20` | 12, 07 | opus / opus | pending |
