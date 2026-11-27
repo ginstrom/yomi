@@ -148,3 +148,5 @@ No rule or constant change, no tuning, no new simulator flag or measure, no band
 - Long run against step 01 and stage 10 (the same figures): Source 0 (1), 739 days (1414), 26.8 battles (42.3).
 - Cells per ring against the reading: as `log.md`'s cells table; out of reading and accepted earlier: `bw11` 485, `hg12` 495 (step 10), `yd15` 491 (step 11, the user), `lc17` 497, `ew18` 482 (step 12, the user); `bco12k` 254 (step 02, a yardstick cell).
 - Runtime: `long` 76 s alone (stage 10 4:07, step 01 166 s); `one` 141 s, `company` 152 s, `rl10` 361 s.
+
+**Gate.** `npm test` runlog #203 at `6b4fce3` (clean tree): exit 0, 109 files, 3025 passed, the refactor guard (`scripts/simulate.test.ts`) among them, unedited. No build or browser run (no code or scene change). The index's row 14 stays `in progress` until the orchestrator answers the `rl10` question.
