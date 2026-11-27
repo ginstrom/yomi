@@ -716,21 +716,23 @@ export const STONE_GOLEM_STATS: CombatantStats = {
 /**
  * A blight cultist, native to level 14: a frail caster and the blight's own
  * (Dawn's bane applies). It throws a Lightning Bolt down a line of heroes,
- * which no armour turns, curses one, and heals its fellows; its knife is a
- * last resort. Mana for two bolts at its native level.
+ * which no armour turns, curses one, and heals its fellows; between spells
+ * it throws darts of blight from 4 hexes off, which go through most of a
+ * hero's armour (with a knife it was no danger: five of the cult were beaten
+ * 499 times in 500). Mana for two bolts at its native level.
  */
 export const BLIGHT_CULTIST_STATS: CombatantStats = {
   name: 'Blight Cultist',
-  maxHp: 66,
+  maxHp: 76,
   ac: 52,
   resistance: 1,
-  toHit: 85,
+  toHit: 100,
   critChance: 5,
-  armorPierce: 4,
-  damage: { count: 1, sides: 6, bonus: 3 },
-  weapon: 'Ritual Knife',
+  armorPierce: 10,
+  damage: { count: 1, sides: 8, bonus: 4 },
+  weapon: 'Blight Dart',
   attackApCost: 4,
-  attackRange: 1,
+  attackRange: 4,
   actionPoints: 8,
   magic: { maxMana: 16, skill: 95, spells: ['heal', 'curse', 'lightning_bolt'] },
   blightborn: true,
@@ -741,21 +743,22 @@ export const BLIGHT_CULTIST_STATS: CombatantStats = {
  * (`dragon_breath`) burns a cone 3 hexes long whatever the armour (a breath
  * ignores resistance; only a fire ward cuts it), then recharges for 3 turns,
  * in which it bites and claws (`dragon_strikes`) through most of a hero's
- * armour. Warded against fire by 10, so Flame Arrow scarcely touches it.
+ * armour; with 10 action points it breathes and strikes in one turn. Warded
+ * against fire by 10, so Flame Arrow scarcely touches it.
  */
 export const YOUNG_DRAGON_STATS: CombatantStats = {
   name: 'Young Dragon',
   maxHp: 125,
   ac: 58,
   resistance: 4,
-  toHit: 95,
+  toHit: 100,
   critChance: 5,
   armorPierce: 10,
   damage: { count: 1, sides: 8, bonus: 3 },
   weapon: 'Claws',
   attackApCost: 4,
   attackRange: 1,
-  actionPoints: 8,
+  actionPoints: 10,
   wards: { fire: 10 },
   abilities: ['dragon_breath', 'dragon_strikes'],
 }

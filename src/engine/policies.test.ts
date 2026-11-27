@@ -1160,8 +1160,8 @@ describe('policies', () => {
       expect(sha(lines.slice(0, RING_12))).toBe('96ec580b1bd37e00f14c2c1b4df2f33f528dc178aa964bc8fe91fc85e6ca9136')
       // Ring 15's (step 11): the Golem Ruin's, the Blight Cult's and the Dragon Lair's lines only.
       expect(new Set(lines.slice(RING_12).map((line) => line.split(' ')[0]))).toEqual(new Set(['golem_ruin', 'blight_cult', 'young_dragon']))
-      expect(lines.length).toBe(22633)
-      expect(sha(lines)).toBe('7aaae1d4631850f16f18e51905ae26bf3fcec008e6bfc8ccd591ab287c805acc')
+      expect(lines.length).toBe(22385)
+      expect(sha(lines)).toBe('2177afc9c2884539f2ae1732f1aa2ffbfe70548a968b387c417fae4b526e4dc5')
     }, 60_000)
   })
 })

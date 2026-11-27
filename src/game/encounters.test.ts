@@ -85,9 +85,9 @@ const BARROW_WIGHTS_COUNTS = [4, 4, 4, 4]
 const BASILISK_LAIR_COUNTS = [3, 3, 3, 3]
 const HILL_GIANT_STEADING_COUNTS = [3, 3, 3, 3]
 /** Ring 15's counts (stage 11 step 11; the cells' tuning is in the plan's log). */
-const GOLEM_RUIN_COUNTS = [3, 3, 3, 3]
-const BLIGHT_CULT_COUNTS = [4, 4, 4, 4, 4]
-const YOUNG_DRAGON_COUNTS = [3, 3, 3, 3]
+const GOLEM_RUIN_COUNTS = [4, 4, 4, 5]
+const BLIGHT_CULT_COUNTS = [5, 5, 5, 5, 5]
+const YOUNG_DRAGON_COUNTS = [2, 2, 3, 3]
 
 describe.each(Object.entries(ENCOUNTERS))('the %s encounter', (_id, build) => {
   const wounded = party().map((fighter, i) => ({ ...fighter, hp: 5 + i }))
@@ -699,7 +699,7 @@ describe('ring 15\'s encounters (long-campaign stage 11 step 11)', () => {
     for (const u of foes) expect(u.stats).toEqual({ ...foeStats(kinds[u.id] as MonsterKind, threat), name: u.stats.name })
     return foes.map((u) => [kinds[u.id], u.stats.name])
   }
-  const RUIN = [['stone_golem', 'Stone Golem'], ['barrow_wight', 'Ruin Wight'], ['stone_golem', 'Stone Warden'], ['barrow_wight', 'Pale Wight']]
+  const RUIN = [['stone_golem', 'Stone Golem'], ['barrow_wight', 'Ruin Wight'], ['stone_golem', 'Stone Warden'], ['barrow_wight', 'Pale Wight'], ['stone_golem', 'Stone Sentinel']]
   const CULT = [['blight_cultist', 'Blight Cultist'], ['barrow_wight', 'Risen Wight'], ['blight_cultist', 'Cult Acolyte'], ['barrow_wight', 'Grave Wight'], ['blight_cultist', 'Cult Elder']]
   const LAIR = [['young_dragon', 'Young Dragon'], ['wyvern', 'Lair Wyvern'], ['wyvern', 'Wyvern Mate']]
 
@@ -741,9 +741,10 @@ describe('ring 15\'s encounters (long-campaign stage 11 step 11)', () => {
     expect([FOE_NATIVE_LEVEL.stone_golem, FOE_NATIVE_LEVEL.blight_cultist, FOE_NATIVE_LEVEL.young_dragon]).toEqual([14, 14, 15])
   })
 
-  it('pierces enough of the expected kit\'s resistance (13 at these levels) for the golem\'s and the dragon\'s blows to tell; the cultist\'s danger is its spells', () => {
-    // The line under the plan's C3: wolf 4, worg rider 6, ogre 5, wyvern 11, wight 8, basilisk 9, giant 9; the golem 9, the cultist 4, the dragon 10.
-    expect([STONE_GOLEM_STATS.armorPierce, BLIGHT_CULTIST_STATS.armorPierce, YOUNG_DRAGON_STATS.armorPierce]).toEqual([9, 4, 10])
+  it('pierces enough of the expected kit\'s resistance (13 at 14 to 16) for each kind\'s blow to tell; the cultist\'s is a dart thrown 4 hexes', () => {
+    // The line under the plan's C3: wolf 4, worg rider 6, ogre 5, wyvern 11, wight 8, basilisk 9, giant 9; the golem 9, the cultist 10, the dragon 10.
+    expect([STONE_GOLEM_STATS.armorPierce, BLIGHT_CULTIST_STATS.armorPierce, YOUNG_DRAGON_STATS.armorPierce]).toEqual([9, 10, 10])
+    expect(BLIGHT_CULTIST_STATS).toMatchObject({ weapon: 'Blight Dart', attackRange: 4 })
   })
 })
 

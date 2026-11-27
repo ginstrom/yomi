@@ -439,13 +439,14 @@ const HILL_GIANT_STEADING_SLOTS: readonly FoeSlot[] = [
   { id: 'ogre', kind: 'ogre', name: 'Ogre Thrall', at: [8, 6] },
 ]
 
-// Ring 15 (long-campaign stage 11): a ruin's golems and the wights that haunt it; a cult of the blight and the dead
-// it has raised; a young dragon and the wyverns of its lair.
+// Ring 15 (long-campaign stage 11): a ruin's golems and the wights that haunt it, the Stone Sentinel waking at the
+// band's top; a cult of the blight and the dead it has raised; a young dragon and the wyverns of its lair.
 const GOLEM_RUIN_SLOTS: readonly FoeSlot[] = [
   { id: 'golem', kind: 'stone_golem', name: 'Stone Golem', at: [8, 4] },
   { id: 'wight', kind: 'barrow_wight', name: 'Ruin Wight', at: [9, 3] },
   { id: 'warden', kind: 'stone_golem', name: 'Stone Warden', at: [8, 2] },
   { id: 'pale', kind: 'barrow_wight', name: 'Pale Wight', at: [9, 5] },
+  { id: 'sentinel', kind: 'stone_golem', name: 'Stone Sentinel', at: [8, 6] },
 ]
 
 const BLIGHT_CULT_SLOTS: readonly FoeSlot[] = [
@@ -536,14 +537,19 @@ const BASILISK_LAIR: EncounterDef = { slots: BASILISK_LAIR_SLOTS, band: { min: 1
 /** The Hill Giant Steading, threats 12 to 15: the Hill Giant, the Giant Chief and their Ogre (an Ogre raised to these levels is the tougher of the two kinds, so the steading fields one, not two). */
 const HILL_GIANT_STEADING: EncounterDef = { slots: HILL_GIANT_STEADING_SLOTS, band: { min: 12, max: 15 }, counts: [3, 3, 3, 3] }
 /**
- * Ring 15's encounters (stage 11 step 11); the cells' tuning is in the plan's log. The Golem Ruin, threats 14 to 17:
- * the Stone Golem, a wight and the Stone Warden.
+ * Ring 15's encounters (stage 11 step 11); the cells' tuning is in the plan's log. The expected kit steps up at 17
+ * (tier 5), by more than the foes do, so here the top of a band is the easier end and the counts rise to it. The
+ * Golem Ruin, threats 14 to 17: two golems and two wights, the Stone Sentinel with them at 17 (three foes were won
+ * 500 times in 500, and four at 17).
  */
-const GOLEM_RUIN: EncounterDef = { slots: GOLEM_RUIN_SLOTS, band: { min: 14, max: 17 }, counts: [3, 3, 3, 3] }
-/** The Blight Cult, threats 14 to 18: two cultists and the two wights they have raised. */
-const BLIGHT_CULT: EncounterDef = { slots: BLIGHT_CULT_SLOTS, band: { min: 14, max: 18 }, counts: [4, 4, 4, 4, 4] }
-/** The Dragon Lair, threats 15 to 18: the Young Dragon and two wyverns (two foes are no battle for a party in the expected kit). */
-const YOUNG_DRAGON: EncounterDef = { slots: YOUNG_DRAGON_SLOTS, band: { min: 15, max: 18 }, counts: [3, 3, 3, 3] }
+const GOLEM_RUIN: EncounterDef = { slots: GOLEM_RUIN_SLOTS, band: { min: 14, max: 17 }, counts: [4, 4, 4, 5] }
+/** The Blight Cult, threats 14 to 18: three cultists and the two wights they have raised, at every threat. */
+const BLIGHT_CULT: EncounterDef = { slots: BLIGHT_CULT_SLOTS, band: { min: 14, max: 18 }, counts: [5, 5, 5, 5, 5] }
+/**
+ * The Dragon Lair, threats 15 to 18: the Young Dragon and a wyvern, the Wyvern Mate from 17 (a wyvern raised to 15
+ * is the harder of the two kinds to hit: with two of them at 15 the lair was won 64 times in 500).
+ */
+const YOUNG_DRAGON: EncounterDef = { slots: YOUNG_DRAGON_SLOTS, band: { min: 15, max: 18 }, counts: [2, 2, 3, 3] }
 
 /**
  * A Goblin and a Kobold across the board from the party; where the threat is
