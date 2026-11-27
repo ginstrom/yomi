@@ -182,3 +182,33 @@ No change to the near-home Source, the Source's location, its rune loot row, the
 
 - The snapshot is 21,963 lines (`631a06bf…f88c`); its checks now run on the lines less the far Source's, then three segments (near, the Source at 20, the rest).
 - Step 14's long campaign meets a much harder Source: a ready-made party in its own gear wins none at 18 or 20 (`sg20-18`, `sg20`).
+
+**Verification**
+
+| Check | Result |
+| --- | --- |
+| `npm test` | runlog #183 (first values, dirty over `2ca3559`): 3025 passed; #184 (trial 1): 3025 passed; #182 (first values before the docs): 1 assertion, `scripts/claudeMd.test.ts` stale `SOURCE_FOE_LEVEL` in the docs, fixed |
+| 50-campaign check | `1e85d023…ed216`, identical (first values and `8c30db6`) |
+| Refactor guard | unedited, green |
+| Policy snapshot | only `source_guardians` above threat 5 changed: 4,301 lines out, 2,216 in; the other 19,747 lines identical, in order |
+| Near-home Source | hash `baf63044…008a` before and after |
+
+**Gates at `ca9685c`** (clean tree, the code `8c30db6`'s, awake: no sleep in the power log through the runs): `npm test` #185, 3025 passed; `npm run build` #186, exit 0; `npm run sprites:check` #187, exit 0.
+
+| Browser file | Runlog | Result |
+| --- | --- | --- |
+| `audio` | #188 | 5 passed |
+| `battle` | #189 | 31 passed; 1 failed, the known A9 "labels Auto with its estimate…" (assertion, line 672) |
+| `character` | #190 | 16 passed |
+| `debug` | #191 | 5 passed |
+| `encampment` | #192 | 33 passed |
+| `exchange` | #193 | 4 passed |
+| `menu` | #194 | 3 passed |
+| `overlayScale` | #195 | 2 passed |
+| `party` | #196 | 7 passed |
+| `saves` | #197 | 7 passed |
+| `sounds` | #198 | 3 passed |
+| `story` | #199 | 9 passed |
+| `world` | #200 | 66 passed |
+
+Status: awaiting review.

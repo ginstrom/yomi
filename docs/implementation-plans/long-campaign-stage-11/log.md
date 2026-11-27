@@ -380,3 +380,5 @@ Step 12 (ring 18: the Blight Lich and the Elder Wyrm): engineer opus, reviewer o
 **The policy snapshot:** re-recorded with the `source_guardians` lines above threat 5 only. Step 12's 24,048 lines (`b41a6374…ee3c`) less their 4,301 far-Source lines are 19,747 lines (`a30c30ea…abed`), and the lines now less theirs are the same 19,747 in the same order (asserted). The first 4,218 lines (to `source_guardians 5`) hash `f1de7975…e871` as before; the Source at 20's 2,216 lines follow (`b66cf7d2…0f95`; 2,317 and `98b4cab4…c29a` at the first values); the 15,529 after them hash `8ad17fbb…3d1f` as before. 21,963 lines, `631a06bf…f88c`. The earlier rings' boundaries are kept as kind checks, 2,085 lines earlier.
 
 **The estimate fixture** (`forecast.test.ts`): its three `source_guardians` entries (threats 10 and 20) re-recorded, nothing else: their `logs` digests, and the level-18 tier-5 tally 4 wins of 4 before, 0 now.
+
+**Gates at `ca9685c`** (clean tree, the code `8c30db6`'s): `npm test` #185 (3025 passed), `npm run build` #186, `npm run sprites:check` #187; browser #188 to #200, all passed but the known A9 in `battle` (#189, line 672).

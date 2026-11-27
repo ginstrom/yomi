@@ -172,7 +172,7 @@ All 13 kinds' sprites are in the atlas (`art/units/<kind>.sprite.toml`); text in
 | 10 | [Ring 12: wights, basilisks, giants](10-ring-12.md) | Three kinds and encounters (4 wights; lair and steading of 3), nests, basilisk scale; save 34; cells | 09, 05 | opus / opus | done (`5257f59`, `65ac1c0`, `9f692dc`) |
 | 11 | [Ring 15: golems, cultists, young dragons](11-ring-15.md) | Three kinds (golem `immune`), encounters (ruin of 4, 5 at 17; cult of 5, 4 at 15 and 16; lair of 2, 3 from 17), nests, drake scale; save 35; cells | 10, 03, 06 | opus / opus | done (`5c83ec8`, `1b78a7e`, `eab9959`, `3f4f90c`, `4ccac5e`) |
 | 12 | [Ring 18: the lich and the elder wyrm](12-ring-18.md) | Two kinds and encounters, nests, drake scale; save 36; cells | 11, 07 | opus / opus | done (`adb0921`, `921b3f7`, `14fc294`, `2ef2fb6`, `ad45e84`, `8916789`, `6061296`) |
-| 13 | [The Source at 20](13-source.md) | `source_horror`, `SOURCE_AT_20`, `SOURCE_FOE_LEVEL` removed (C7); snapshot; `sgk20` | 12, 07 | opus / opus | in progress (`0709692`, `8c30db6`; gates and review to come) |
+| 13 | [The Source at 20](13-source.md) | `source_horror`, `SOURCE_AT_20`, `SOURCE_FOE_LEVEL` removed (C7); snapshot; `sgk20` | 12, 07 | opus / opus | in progress, awaiting review (`0709692`, `8c30db6`, `ca9685c`) |
 | 14 | [Measure and record](14-measure.md) | Early figures vs step 01; `long` (100) vs stage 10: Source share, battles to level for stage 12; every cell | 13 | opus / opus | pending |
 | 15 | [Document and play](15-document-and-play.md) | CLAUDE.md files, `docs/reference/`, skills, manual and screenshots, implementation notes, stages index; play script walked | 14 | sonnet / opus | pending |
 
