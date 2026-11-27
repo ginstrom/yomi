@@ -6,7 +6,7 @@
   > Merge PR #12 (stage 10), then start stage 11, the high roster. [...] Its design, docs/designs/long-campaign/stage-11-high-roster.md, is marked "ready for planning". It covers ogres, wyverns, wights, basilisks, giants, golems, cultists, dragons, the lich, the elder wyrm, and the Source rebuilt at 20, each with a sprite. Stage 11 picks up two things stage 10 left for it. The trophies table is empty until then, and the Source Guardians stay capped at level 6 until then.
 - Slug `long-campaign-stage-11` · Phase 4, implementation · Next action: step 11, ring 15, in review (cause of blight_cult 345 at threat 14, 99 at 15); then the engineer's one targeted cult trial, then 12 → … → 15.
 - Branch: `long-campaign-stage-11`, off main at c138d83 (stage 10 merged as PR #12, e801f5c).
-- Path: Large, but the stage design is the approved design. Straight to planning, as stages 2–10 did.
+- Path: the stage design is the approved design; straight to planning, as stages 2–10.
 - Links:
   - Stages overview: `docs/designs/long-campaign/index.md`
   - Design: `docs/designs/long-campaign/stage-11-high-roster.md` (status "ready for planning")
