@@ -85,7 +85,7 @@ Each a `MonsterKind`, `UnitKind` id = sprite id, block `<NAME>_STATS` in `src/co
 | `elder_wyrm` | Elder Wyrm | 18 | 450 | res 5, regeneration 2, wards fire 15 | `wyrm_breath`, `wyrm_strikes` | 12 |
 | `source_horror` | Blight Horror | 20 | 500 | res 3, regeneration 2, blightborn | `blight_breath`, `horror_claws` | 13 |
 
-Piercing (the yardstick does not see `armorPierce`; step 08, against the kit's resistance): wolf 4, worg rider 6, ogre 5; wyvern 11 (step 09); barrow wight 8, basilisk 9, hill giant 9 (step 10; the Rock keeps `throughResistance`).
+Piercing (the yardstick does not see `armorPierce`; step 08, against the kit's resistance): wolf 4, worg rider 6, ogre 5; wyvern 11 (step 09); barrow wight 8, basilisk 9, hill giant 9 (step 10; the Rock keeps `throughResistance`); stone golem 9, blight cultist 10 (a Blight Dart thrown 4 hexes), young dragon 10 (step 11; the breath has no flag).
 
 ### C4. The new abilities (steps 08 to 13)
 
@@ -118,8 +118,8 @@ Ids in `ENCOUNTERS` (after `freebooter_host`, in this order), `ENCOUNTER_BANDS`,
 | `barrow_wights` | 11–14 | barrow_wight ×4 | 4, 4, 4, 4 | Barrow | — | 10 |
 | `basilisk_lair` | 11–14 | basilisk, ogre, basilisk | 3, 3, 3, 3 | Basilisk Lair | rime | 10 |
 | `hill_giant_steading` | 12–15 | hill_giant, hill_giant, ogre | 3, 3, 3, 3 | Giant Steading | — | 10 |
-| `golem_ruin` | 14–17 | stone_golem, barrow_wight, stone_golem, barrow_wight | 3, 3, 4, 4 | Golem Ruin | — | 11 |
-| `blight_cult` | 14–18 | blight_cultist, barrow_wight, blight_cultist, barrow_wight, blight_cultist | 3, 3, 4, 4, 5 | Blight Cult | storm | 11 |
+| `golem_ruin` | 14–17 | stone_golem, barrow_wight, stone_golem, barrow_wight, stone_golem | 4, 4, 4, 5 | Golem Ruin | — | 11 |
+| `blight_cult` | 14–18 | blight_cultist, barrow_wight, blight_cultist, barrow_wight, blight_cultist | 5, 5, 5, 5, 5 | Blight Cult | storm | 11 |
 | `young_dragon` | 15–18 | young_dragon, wyvern, wyvern | 2, 2, 3, 3 | Dragon Lair | ember | 11 |
 | `blight_lich_court` | 17–20 | blight_lich, barrow_wight, blight_cultist, barrow_wight, blight_cultist | 3, 4, 4, 5 | Lich Court | storm | 12 |
 | `elder_wyrm` | 18–20 | elder_wyrm, young_dragon, young_dragon | 2, 2, 3 | Wyrm Lair | ember | 12 |

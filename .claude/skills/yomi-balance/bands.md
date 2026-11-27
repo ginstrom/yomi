@@ -25,7 +25,7 @@ Accepted out of band (the user, stage 9 step 09): `one` 288, `company` 289 and `
 
 The waiting check (`--waiting`, stage 7's design): income a day campaigning must stay above the waiting twin's, or idling at home pays; stage 7 measured 1.3 against 1.0 a day (one party and the company alike), the twin never ahead in any campaign. The careful simulated party rarely builds past an outpost or raises the post past 2, so works, forts and market gold barely show in these figures.
 
-Also: TL5 0 (report-only), F1 to F3 500, 500, 463. Far cells, report only (stage 10, bandits in tiers 3 to 5): BCO9 2, BCO12 0, FH15 0, FH18 0, SG20-18 28, SG20 71. The long campaign (100, `--log none`; stage 10): Source 1, fell 97, 1414 days, 42.3 battles (stage 9's step 01 baseline 15, 1272, 46.4); its kit lags `expectedKit` (accepted until stage 12). Stage 11's ring cells (report only, the expected kit, a working reading of 300 to 475 that is the plan's and not a band; step 08): WP6 418, WP9 358, WR7 463, WR9 326, OC7 405, OC10 308; step 09: WY9 312, WY12 399; step 10: BW11 485, BW14 327, BL11 425, BL14 304, HG12 495, HG15 400 (the two bottoms above the reading by the user's standing rule: the top end inside, the bottom may run easy; at threat 12, where the map has them, BW 477 and BL 445). Capstones barely show at level 7 or 10; `--ready-level 12` is where they do.
+Also: TL5 0 (report-only), F1 to F3 500, 500, 463. Far cells, report only (stage 10, bandits in tiers 3 to 5): BCO9 2, BCO12 0, FH15 0, FH18 0, SG20-18 28, SG20 71. The long campaign (100, `--log none`; stage 10): Source 1, fell 97, 1414 days, 42.3 battles (stage 9's step 01 baseline 15, 1272, 46.4); its kit lags `expectedKit` (accepted until stage 12). Stage 11's ring cells (report only, the expected kit, a working reading of 300 to 475 that is the plan's and not a band; step 08): WP6 418, WP9 358, WR7 463, WR9 326, OC7 405, OC10 308; step 09: WY9 312, WY12 399; step 10: BW11 485, BW14 327, BL11 425, BL14 304, HG12 495, HG15 400 (the two bottoms above the reading by the user's standing rule: the top end inside, the bottom may run easy; at threat 12, where the map has them, BW 477 and BL 445); step 11: GO14 468, GO17 438, CU14 345, CU18 471, YD15 491, YD18 396 (YD15 above the reading, by the same rule; at threat 15, where the map has them, GO 366 and CU 99: the cult at 15 is for stage 12). Capstones barely show at level 7 or 10; `--ready-level 12` is where they do.
 
 Path parity: every plan of `AUTO_PLANS` within 50 of its role's best at Bandit Camp threat 4, level 4. All hold but the evoker, 54 behind the healer (accepted). At levels 8 (Hobgoblin Warband) and 14 (Bandit Camp threat 7) gaps are reported, not gated; at 14 `rogue_archer` 75, cryomancer 59, saint 84 and arcanist 444 behind were accepted by the user.
 
@@ -57,6 +57,7 @@ A cell is `--encounter E --threat T --party-level L`, 500 battles from seed 1 (`
 | OC7, OC10 | `ogre_camp` 7, 10, L7, L10, with `--player-kit expected` | report only (300 to 475) |
 | WY9, WY12 | `wyvern_roost` 9, 12, L9, L12, with `--player-kit expected` | report only (300 to 475) |
 | BW11, BW14; BL11, BL14; HG12, HG15 | `barrow_wights`, `basilisk_lair` 11, 14; `hill_giant_steading` 12, 15; party of the threat's level, with `--player-kit expected` | report only (300 to 475) |
+| GO14, GO17; CU14, CU18; YD15, YD18 | `golem_ruin` 14, 17; `blight_cult` 14, 18; `young_dragon` 15, 18; party of the threat's level, with `--player-kit expected` | report only (300 to 475) |
 
 ## Measure names for `yomi-measure`
 
@@ -75,7 +76,7 @@ Each runs from the seed and count the brief gives (default seed 1, 500). The ban
 | `gr3`, `bc3`, `bc4`, `bc5`, `sn5`, `sp5`, `tl5`, `sg7`, `sg10`, `f1`, `f2`, `f3` | the cell code's `--encounter`, `--threat`, `--party-level` |
 | `bc7`, `sn7`, `sn9`, `sp7`, `sp9`, `bco9`, `bco12`, `fh15`, `fh18`, `sg20-18`, `sg20` | the cell code's flags (report only) |
 | `bco9k`, `bco12k`, `fh15k`, `fh18k`, `sgk20` | `bco9`, `bco12`, `fh15`, `fh18`, `sg20` with `--player-kit expected` (report only) |
-| `wp6`, `wp9`, `wr7`, `wr9`, `oc7`, `oc10`, `wy9`, `wy12`, `bw11`, `bw14`, `bl11`, `bl14`, `hg12`, `hg15` | the cell code's `--encounter`, `--threat`, `--party-level`, with `--player-kit expected` (report only; stage 11's rings 7, 9 and 12) |
+| `wp6`, `wp9`, `wr7`, `wr9`, `oc7`, `oc10`, `wy9`, `wy12`, `bw11`, `bw14`, `bl11`, `bl14`, `hg12`, `hg15`, `go14`, `go17`, `cu14`, `cu18`, `yd15`, `yd18` | the cell code's `--encounter`, `--threat`, `--party-level`, with `--player-kit expected` (report only; stage 11's rings 7, 9, 12 and 15) |
 | `parity-L4` | `--encounter bandit_camp --threat 4 --party-level 4 --plans <role>=<plan>`, one run per plan of `AUTO_PLANS`, in its role's slot (`melee`, `archery` or `magic`) |
 | `parity-L8` | `--encounter hobgoblin_warband --threat 5 --party-level 8 --plans <role>=<plan>`, one run per plan (reported, not gated) |
 | `parity-L14` | `--encounter bandit_camp --threat 7 --party-level 14 --plans <role>=<plan>`, one run per plan (reported, not gated) |
