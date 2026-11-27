@@ -217,6 +217,8 @@ You can also click a hex to walk away.
 - **Threat 15: golems, cultists and a young dragon.** A **Stone Golem** is heavily armoured (bring a war hammer or spells) and can never be poisoned or corroded: a Venom rune's poison or an Acid Arrow's corrosion does nothing to it, and the log says "Stone Golem is unaffected." **Blight Cultists** cast Lightning Bolt, Curse and Heal. A **Young Dragon** breathes a cone of fire 3 hexes long every few turns, half its damage even on a miss and whatever the armour: Ember runes in your heroes' armour ward a good part of it off. It bites and claws three times in one action.
 - **Threat 18: the lich and the elder wyrm.** The **Blight Lich** casts Lightning Bolt, Death Cloud, Drain Life and Dark Shield, and regenerates each turn unless seared (fire) or corroded (acid). The **Elder Wyrm** breathes a longer cone of fire, 4 hexes, regenerates the same way, and wards off much of any fire you send at it.
 
+![A Young Dragon's lair at threat 15, the dragon's Fire Breath, Bite and Claws and fire ward shown on hover](images/battle-dragon.png)
+
 The Blight Cultist, the Blight Lich and the Source's Horror are blightborn, creatures of the blight: Dawn runes, Holy Light, Smite and Consecrate do more to them, and Deathblow cannot fell them.
 
 **Trophies.** Some monsters leave their hides and scales, which go into the stock when you win, as the victory screen says ("Trophies: 9 wyvern hide."): each wolf and worg rider 1 wolfhide, each wyvern 3 wyvern hide, each basilisk 3 basilisk scale, each young dragon 6 drake scale and the elder wyrm 10. Wyvern hide, basilisk scale and drake scale forge the hide tiers 3, 4 and 5 at the workshop (wyvern-hide, basilisk-scale and drake-scale leather); no partner sells them.
