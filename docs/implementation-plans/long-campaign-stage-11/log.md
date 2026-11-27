@@ -386,3 +386,36 @@ Step 12 (ring 18: the Blight Lich and the Elder Wyrm): engineer opus, reviewer o
 ## Step 13 outcome
 
 Step 13 (the Source at 20: the Blight Horror of native 20 and two cultists): engineer opus, reviewer opus, verdict clean, 1 review round, no blocking finding; one comment fixed after it (`sourceGuardians`: the shaman from threat 2). Commits `0709692` (first values), `8c30db6` (trial 1, the final code), `ca9685c` (docs, log, record), `4eeb66e` (gates; awaiting review), `a0b056e` (the comment), and this record. Gates at `ca9685c`: `npm test` #185 (3025 passed), `npm run build` #186, `npm run sprites:check` #187, browser #188 to #200 (all passed but the known A9 in `battle`, #189); the reviewer's #201 (`npm test`, 3025) and `sgk20` re-run at head (445, byte-identical); #202 after the comment (3025). Cells `sgk20` 445 (in play; first values 495, one trial), `sg20-18` 0, `sg20` 0; 50-campaign hash identical, the refactor guard unedited and green. For step 14 and stage 12: the ready-made party in its own gear now wins 0 of 500 at the Source (`sg20-18`, `sg20`; 28 and 71 before); every threat from 6 to 19 builds the Source at threat 20, so debug `fight` or simulator runs at those threats get threat-20 rewards (on the map the Source is only ever at 20).
+
+## Step 14: measure and record
+
+2026-11-27, code `2c1ec54` (clean tree; no `src`/`scripts` change in this step). Seed 1, label `s11-14`, logs `logs/s11-14-*` (gitignored), wall times in `logs/s11-14-times.txt`. Run by the engineer in the foreground, one at a time, under `caffeinate -i`; no sleep in `pmset` across any run. Beside the runs: the podman VM (about 55% CPU), WindowServer and a Codex app; load 2 to 4.6; no other simulation, build or test.
+
+**50-campaign check:** `1e85d023a1b58697ec36724720f6ad5ba8b4a5dc2362f4ff6b22605ce37ed216`, **identical** (step 01's `57fdea15…` at schema 26); 26 of 50, 325 days, 18.9 battles (14 s).
+
+### Early figures (`--near-source`, 500)
+
+| Measure | Source wins | Days | Battles | Heroes dead | Other | Step 01 | Band | Wall | Log |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| one | **287** | 331 | 18.8 (9,417 in all) | 1.2 | 33.3 spawns | 288 (9,416) | 215–250; 288 accepted | 141 s | `s11-14-one.txt`, `-one-out.txt/.jsonl` |
+| company | **288** | 334 | 18.9 | 1.2 | 0.0 guard battles, 0.0 promotions | 289 (9,460) | 220–260; 289 accepted | 152 s | `s11-14-company.txt` |
+| rl10 | **371** | 541 | 35.0 (17,494) | 1.6 | 3.2 guard battles, 64.1 spawns | 409, 533 days, 34.0, 1.3 dead (16,998) | 370–420 | 361 s | `s11-14-rl10.txt/.jsonl` |
+
+**Finding: the early figures moved, all for one cause (decision 15's named case): ring 7's and ring 9's new spawn kinds reach the early campaigns.** `spawn` picks `eligible[floor(rng() × eligible.length)]` over the `SPAWN_KINDS` whose `fromThreat` and `ENCOUNTER_BANDS` admit the threat. Step 08 (`b0fbe7d`) appended `wolf_pack` (band 6–9), `worg_riders` (7–9) and `ogre_camp` (7–10), all `fromThreat: 7`, and step 09 (`2b35cb9`) `wyvern_roost` (9–12): the list at threat 7 grew from 3 kinds to 6 and at 9 from 4 to 8, so the same draw picks another kind. The near-home Source and the fixed nests are unchanged; the 50-campaign check never spawns at threat 7, so it held.
+
+- `one`: in 500 campaigns two spawns are at threat 7 (campaigns 70 and 403, both `bandit_camp`, now `spider_nest`); campaign 70 then fights one more battle and its party falls. `one` at `b0fbe7d` (worktree) is 287 with the same battle list as at head (`diff` of every `battle_start`'s campaign, day, site, encounter, threat and levels): step 08 moved it.
+- `company`: 289 → 288; step 01's run has three threat-7 spawns (campaigns 70, 316, 403, all `bandit_camp`); not re-logged, read as the same cause.
+- `rl10`: threat-7 and threat-9 spawns are 3.6% of the battles (about 1,700 of 17,000), and half are now the new kinds. Win rates by kind (step 01 → now):
+
+| Kind | Threat 7 battles, won | Threat 9 battles, won |
+| --- | --- | --- |
+| bandit_camp | 838, 0.913 → 420, 0.902 | — |
+| spider_nest | 768, 0.995 → 437, 0.993 | 85, 0.988 → 27, 0.926 |
+| salamander_pool | 792, 0.996 → 433, 0.984 | 80, 1.000 → 28, 1.000 |
+| bandit_company | — | 69, 0.986 → 40, 0.825 |
+| ogre_camp (new) | 427, 0.960 | 34, 0.735 |
+| wolf_pack (new) | 381, 0.963 | 27, 0.370 |
+| worg_riders (new) | 427, 0.970 | 24, 0.250 |
+| wyvern_roost (new) | — | 34, 0.912 |
+
+Battles lost at threats 7 and 9: about 82 → 151; the Source wins fall by 38. The ring cells are tuned for a party in the expected kit; `rl10`'s parties wear their own (stage 12's gear lag), and `wolf_pack` and `worg_riders` at 9 beat them. `rl10` 371 is inside its band (370–420), by one. Brought to the orchestrator (task §4.1 item 1, decision 15); nothing tuned.
