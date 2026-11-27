@@ -111,6 +111,8 @@ export const ABILITY_IDS = [
   'giant_rock',
   'dragon_breath',
   'dragon_strikes',
+  'wyrm_breath',
+  'wyrm_strikes',
   'power_attack',
   'cleave',
   'taunt',
@@ -133,7 +135,7 @@ export const ABILITY_IDS = [
 export type AbilityId = (typeof ABILITY_IDS)[number]
 
 /** The abilities only monsters have, in `ABILITY_IDS` order; every other ability is a hero's technique. */
-export const MONSTER_ABILITY_IDS: readonly AbilityId[] = ['troll_claws', 'spider_bite', 'spider_web', 'fire_spit', 'worg_strikes', 'ogre_sweep', 'wyvern_strikes', 'basilisk_gaze', 'giant_rock', 'dragon_breath', 'dragon_strikes']
+export const MONSTER_ABILITY_IDS: readonly AbilityId[] = ['troll_claws', 'spider_bite', 'spider_web', 'fire_spit', 'worg_strikes', 'ogre_sweep', 'wyvern_strikes', 'basilisk_gaze', 'giant_rock', 'dragon_breath', 'dragon_strikes', 'wyrm_breath', 'wyrm_strikes']
 
 /** The Spellsword's Strikes, which Arcane Knight makes at the weapon's own AP. */
 export const SPELLSWORD_STRIKES: readonly AbilityId[] = ['flame_strike', 'frost_strike', 'thunder_strike']
@@ -284,6 +286,33 @@ export const ABILITIES: Record<AbilityId, Ability> = {
       { name: 'Bite', verb: 'bites', damage: { count: 2, sides: 8, bonus: 0 } },
       { name: 'Claw', verb: 'claws', damage: { count: 1, sides: 8, bonus: 0 } },
       { name: 'Claw', verb: 'claws', damage: { count: 1, sides: 8, bonus: 0 } },
+    ],
+  },
+  wyrm_breath: {
+    name: 'Fire Breath',
+    verb: 'breathes fire',
+    description: 'A cone of fire 4 hexes long: 8d6, half on a miss, whatever the armour, and no regeneration next turn.',
+    apCost: 4,
+    recharge: 3,
+    area: {
+      shape: 'cone',
+      range: 4,
+      damage: { count: 8, sides: 6, bonus: 0 },
+      element: 'fire',
+      status: { id: 'seared', turns: 1 },
+      halfOnMiss: true,
+    },
+  },
+  wyrm_strikes: {
+    name: 'Bite and Claws',
+    verb: 'strikes',
+    description: 'Bites one foe and rakes it with both claws; it turns to the next foe beside it if the first falls.',
+    apCost: 6,
+    recharge: 0,
+    strikes: [
+      { name: 'Bite', verb: 'bites', damage: { count: 2, sides: 10, bonus: 0 } },
+      { name: 'Claw', verb: 'claws', damage: { count: 1, sides: 10, bonus: 0 } },
+      { name: 'Claw', verb: 'claws', damage: { count: 1, sides: 10, bonus: 0 } },
     ],
   },
   // ---- The heroes' techniques (design §4.3). `apCost` is ignored where `weaponAp` is set.

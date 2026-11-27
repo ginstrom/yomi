@@ -300,7 +300,7 @@ describe('spawning', () => {
       ['Spider Brood', 'Salamander Spring', 'Bandit Troop', 'Wolf Pack', 'Worg Band', 'Ogre Camp', 'Wyvern Roost'],
       ['Bandit Troop', 'Wyvern Roost', 'Barrow', 'Basilisk Lair', 'Giant Steading'],
       ['Freebooter Band', 'Giant Steading', 'Golem Ruin', 'Blight Cult', 'Dragon Lair'],
-      ['Freebooter Band', 'Blight Cult', 'Dragon Lair'],
+      ['Freebooter Band', 'Blight Cult', 'Dragon Lair', 'Lich Court', 'Wyrm Lair'],
     ])
     // Ring 7's kinds (stage 11 step 08) come after the seven before them, each from threat 7.
     expect(SPAWN_KINDS.slice(7, 10).map((k) => [k.encounter, k.name, k.fromThreat])).toEqual([
@@ -317,10 +317,15 @@ describe('spawning', () => {
       ['hill_giant_steading', 'Giant Steading', 7],
     ])
     // Ring 15's (step 11) after them.
-    expect(SPAWN_KINDS.slice(14).map((k) => [k.encounter, k.name, k.fromThreat])).toEqual([
+    expect(SPAWN_KINDS.slice(14, 17).map((k) => [k.encounter, k.name, k.fromThreat])).toEqual([
       ['golem_ruin', 'Golem Ruin', 7],
       ['blight_cult', 'Blight Cult', 7],
       ['young_dragon', 'Dragon Lair', 7],
+    ])
+    // Ring 18's (step 12) after them.
+    expect(SPAWN_KINDS.slice(17).map((k) => [k.encounter, k.name, k.fromThreat])).toEqual([
+      ['blight_lich_court', 'Lich Court', 7],
+      ['elder_wyrm', 'Wyrm Lair', 7],
     ])
     expect(SPAWN_KINDS.slice(0, 3).map((k) => [k.encounter, k.name, k.fromThreat])).toEqual([
       ['goblin_raid', 'Goblin Brood', undefined],

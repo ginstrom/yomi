@@ -1111,7 +1111,7 @@ describe('policies', () => {
     expect(isPolicyName('toString')).toBe(false)
   })
 
-  describe('the choices of today’s encounters (a snapshot, re-recorded in skill trees step 13 when heroes and bandits learned techniques, in step 16 when a technique came to be weighed by the blows that fit this turn and the Captain took Pin before Heavy Hand, in step 28 when nodes came to cost perk points and the heroes and bandits to save for them, and in step 30 when the knight, swordmaster and evoker_healer plans moved and the bandits at threat 4 went back to plain gear; and in long-campaign stage 9 step 01, when the Bandit Company and Freebooter Host came and the Spider Nest’s, Salamander Pool’s and Source’s bands widened, and in its step 09, when the Source’s guardians were raised to level 6 at most; and in long-campaign stage 10 step 02, when bandits from threat 9 took tiers 3 to 5; and in long-campaign stage 11 step 08, when ring 7’s wolves, worg riders and ogres came: their encounters’ lines added after the rest, every earlier line unchanged; and in long-campaign stage 11 step 09, when the Wyvern Roost came: its lines added after those, every earlier line unchanged; and in long-campaign stage 11 step 10, when ring 12’s wights, basilisks and giants came: their encounters’ lines added after those, every earlier line unchanged; and in long-campaign stage 11 step 11, when ring 15’s golems, cultists and young dragons came: their encounters’ lines added after those, every earlier line unchanged)', () => {
+  describe('the choices of today’s encounters (a snapshot, re-recorded in skill trees step 13 when heroes and bandits learned techniques, in step 16 when a technique came to be weighed by the blows that fit this turn and the Captain took Pin before Heavy Hand, in step 28 when nodes came to cost perk points and the heroes and bandits to save for them, and in step 30 when the knight, swordmaster and evoker_healer plans moved and the bandits at threat 4 went back to plain gear; and in long-campaign stage 9 step 01, when the Bandit Company and Freebooter Host came and the Spider Nest’s, Salamander Pool’s and Source’s bands widened, and in its step 09, when the Source’s guardians were raised to level 6 at most; and in long-campaign stage 10 step 02, when bandits from threat 9 took tiers 3 to 5; and in long-campaign stage 11 step 08, when ring 7’s wolves, worg riders and ogres came: their encounters’ lines added after the rest, every earlier line unchanged; and in long-campaign stage 11 step 09, when the Wyvern Roost came: its lines added after those, every earlier line unchanged; and in long-campaign stage 11 step 10, when ring 12’s wights, basilisks and giants came: their encounters’ lines added after those, every earlier line unchanged; and in long-campaign stage 11 step 11, when ring 15’s golems, cultists and young dragons came: their encounters’ lines added after those, every earlier line unchanged; and in long-campaign stage 11 step 12, when the Blight Lich’s Court and the Elder Wyrm came: their lines added after those, every earlier line unchanged)', () => {
     /** Every action `aggressive` chooses, both sides, over each encounter at each threat of its band against the ready-made party of that level, a few seeds, 8 rounds at most. */
     function choices(): string[] {
       const lines: string[] = []
@@ -1159,18 +1159,23 @@ describe('policies', () => {
       expect(new Set(lines.slice(RING_9, RING_12).map((line) => line.split(' ')[0]))).toEqual(new Set(['barrow_wights', 'basilisk_lair', 'hill_giant_steading']))
       expect(sha(lines.slice(0, RING_12))).toBe('96ec580b1bd37e00f14c2c1b4df2f33f528dc178aa964bc8fe91fc85e6ca9136')
       // Ring 15's (step 11): the Golem Ruin's, the Blight Cult's and the Dragon Lair's lines only.
-      expect(new Set(lines.slice(RING_12).map((line) => line.split(' ')[0]))).toEqual(new Set(['golem_ruin', 'blight_cult', 'young_dragon']))
+      const RING_15 = 22394
+      expect(new Set(lines.slice(RING_12, RING_15).map((line) => line.split(' ')[0]))).toEqual(new Set(['golem_ruin', 'blight_cult', 'young_dragon']))
       // Re-recorded for the Blight Cult's four at 15 and 16 (step 11's trial, the user's decision): its lines only. The
       // Golem Ruin's, before it, and the Dragon Lair's, after it, are as step 11 first recorded them (22,385 lines, `2177afc9…4dc5`).
       const GOLEM_RUIN = 20573
       expect(new Set(lines.slice(RING_12, GOLEM_RUIN).map((line) => line.split(' ')[0]))).toEqual(new Set(['golem_ruin']))
       expect(sha(lines.slice(0, GOLEM_RUIN))).toBe('1ca7dcbb619fc7a6671ebb2a0075321557d9013de553f01eaf5921d63f0d9b4c')
       const LAIR = 736
-      expect(new Set(lines.slice(GOLEM_RUIN, -LAIR).map((line) => line.split(' ')[0]))).toEqual(new Set(['blight_cult']))
-      expect(new Set(lines.slice(-LAIR).map((line) => line.split(' ')[0]))).toEqual(new Set(['young_dragon']))
-      expect(sha(lines.slice(-LAIR))).toBe('059cf9209a6a8cb325dc0451244046a6a31cafa08f227a3b351be25f89ddb695')
-      expect(lines.length).toBe(22394)
-      expect(sha(lines)).toBe('aed882773bb254acfebabad45925b90963bc152ad057f04a5c02da9a469f007c')
+      expect(new Set(lines.slice(GOLEM_RUIN, RING_15 - LAIR).map((line) => line.split(' ')[0]))).toEqual(new Set(['blight_cult']))
+      expect(new Set(lines.slice(RING_15 - LAIR, RING_15).map((line) => line.split(' ')[0]))).toEqual(new Set(['young_dragon']))
+      expect(sha(lines.slice(RING_15 - LAIR, RING_15))).toBe('059cf9209a6a8cb325dc0451244046a6a31cafa08f227a3b351be25f89ddb695')
+      // With ring 15's as recorded after step 11's trial 4 (22,394 lines): ring 18's come after them.
+      expect(sha(lines.slice(0, RING_15))).toBe('aed882773bb254acfebabad45925b90963bc152ad057f04a5c02da9a469f007c')
+      // Ring 18's (step 12): the Blight Lich's Court's and the Elder Wyrm's lines only.
+      expect(new Set(lines.slice(RING_15).map((line) => line.split(' ')[0]))).toEqual(new Set(['blight_lich_court', 'elder_wyrm']))
+      expect(lines.length).toBe(24092)
+      expect(sha(lines)).toBe('e078b9757fcfd2d1545cdcc17f723555e91ac3f9bc6748dd42746fedef8dc094')
     }, 60_000)
   })
 })

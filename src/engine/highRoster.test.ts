@@ -11,6 +11,8 @@ import {
   STONE_GOLEM_STATS,
   WYVERN_STATS,
   YOUNG_DRAGON_STATS,
+  BLIGHT_LICH_STATS,
+  ELDER_WYRM_STATS,
   baneApplies,
   damageThrough,
   effectiveResistance,
@@ -18,7 +20,7 @@ import {
 } from '../combat/combat.ts'
 import { SPELLS } from '../combat/spells.ts'
 import { hex, hexKey } from '../grid/hex.ts'
-import { BattleEngine, formatEvent, type AbilityEvent, type Action, type AttackEvent, type CastEvent, type UnitSetup } from './battleEngine.ts'
+import { BattleEngine, formatEvent, type AbilityEvent, type Action, type AttackEvent, type BattleEvent, type CastEvent, type UnitSetup } from './battleEngine.ts'
 import { POLICIES } from './policies.ts'
 
 /**
@@ -664,6 +666,151 @@ describe('ring 15 (stage 11 step 11)', () => {
       const apart = firstCast([heroAt('high', 3, 0), heroAt('low', 2, 2), foeAt('cultist', BLIGHT_CULTIST_STATS, 7, 1)])
       expect(apart).toMatchObject({ type: 'cast', caster: 'cultist' })
       expect(['curse', 'lightning_bolt']).toContain(apart!.spell)
+    })
+  })
+})
+
+describe('ring 18 (stage 11 step 12)', () => {
+  /** The regeneration events of `unit` among `events`. */
+  const regenerated = (events: BattleEvent[], unit: string) => events.filter((e) => e.type === 'regenerate' && e.unit === unit)
+
+  describe('the Blight Lich', () => {
+    const MAGE = { actionPoints: 12, magic: { maxMana: 60, skill: 100, spells: ['flame_arrow', 'acid_arrow'] as const } }
+    /** The player's turn: a caster 3 hexes from a wounded lich. */
+    const field = (rng: () => number) =>
+      new BattleEngine(
+        {
+          board: BOARD,
+          units: [heroAt('hero', 1, 1, { ...MAGE, magic: { ...MAGE.magic, spells: [...MAGE.magic.spells] } }), { ...foeAt('lich', BLIGHT_LICH_STATS, 4, 1), hp: 50 }],
+        },
+        { rng },
+      )
+
+    it('is a caster boss of the blight: Death Cloud, Lightning Bolt, Drain Life and Dark Shield, mana for each once, regeneration 3, and a Dawn rune’s bane applies', () => {
+      expect(BLIGHT_LICH_STATS.magic!.spells).toEqual(['death_cloud', 'lightning_bolt', 'drain_life', 'dark_shield'])
+      const costs = BLIGHT_LICH_STATS.magic!.spells.map((spell) => SPELLS[spell].manaCost)
+      expect(BLIGHT_LICH_STATS.magic!.maxMana).toBeGreaterThanOrEqual(costs.reduce((a, b) => a + b, 0))
+      expect(BLIGHT_LICH_STATS).toMatchObject({ resistance: 3, regeneration: 3, blightborn: true })
+      expect(baneApplies(BLIGHT_LICH_STATS)).toBe(true)
+      expect(baneApplies(ELDER_WYRM_STATS)).toBe(true) // it regenerates
+    })
+
+    it('regenerates 3 as its side’s turn begins', () => {
+      const engine = field(() => HIT)
+      const events = engine.step(END_TURN)
+      expect(regenerated(events, 'lich')).toMatchObject([{ healed: 3, hpBefore: 50, hpAfter: 53 }])
+      expect(unitOf(engine, 'lich').hp).toBe(53)
+    })
+
+    it.each([['Seared', 'flame_arrow', 'seared'], ['Corroded', 'acid_arrow', 'corroded']] as const)('does not regenerate while %s', (_name, spell, status) => {
+      const engine = field(() => HIT)
+      engine.step({ type: 'cast', unit: 'hero', spell, target: 'lich' })
+      expect(unitOf(engine, 'lich').statuses.map((s) => s.id)).toContain(status)
+      expect(regenerated(engine.step(END_TURN), 'lich')).toEqual([])
+    })
+
+    it('has each of its four spells to cast on its turn, with a hero 3 hexes off', () => {
+      const engine = enemyTurn([heroAt('hero', 1, 1), heroAt('other', 2, 1), foeAt('lich', BLIGHT_LICH_STATS, 4, 1)], () => HIT)
+      const spells = new Set(engine.legalActions('lich').flatMap((a) => (a.type === 'cast' ? [a.spell] : [])))
+      expect(spells).toEqual(new Set(['death_cloud', 'lightning_bolt', 'drain_life', 'dark_shield']))
+    })
+
+    it('drains a hero’s life to heal itself by half, and lays Shielded on itself with Dark Shield', () => {
+      const engine = enemyTurn([heroAt('hero', 1, 1), { ...foeAt('lich', BLIGHT_LICH_STATS, 4, 1), hp: 50 }], counted([HIT, 0.999]).rng)
+      const before = unitOf(engine, 'lich').hp
+      const [drain] = engine.step({ type: 'cast', unit: 'lich', spell: 'drain_life', target: 'hero' }) as CastEvent[]
+      const dice = SPELLS.drain_life.damage!
+      const rolled = dice.count * dice.sides + dice.bonus
+      // No armour turns it: the hero's resistance of 6 takes nothing.
+      expect(drain.outcomes[0]).toMatchObject({ unit: 'hero', hit: true, damage: rolled })
+      expect(drain.drained).toBe(Math.floor(rolled / 2))
+      expect(unitOf(engine, 'lich').hp).toBe(before + Math.floor(rolled / 2))
+      engine.step({ type: 'cast', unit: 'lich', spell: 'dark_shield', target: 'lich' })
+      expect(unitOf(engine, 'lich').statuses.map((s) => s.id)).toContain('shielded')
+    })
+  })
+
+  describe('the Elder Wyrm’s Fire Breath', () => {
+    const { apCost, recharge } = ABILITIES.wyrm_breath
+    const area = ABILITIES.wyrm_breath.area!
+    const dice = area.damage!
+    const breathe: Action = { type: 'ability', unit: 'wyrm', ability: 'wyrm_breath', at: hex(5, 1) }
+    const sixes = Array<number>(dice.count).fill(0.999)
+    /** The Wyrm at (6,1) breathing west down the row: heroes 1 to 4 hexes off in the cone and a fifth 5 off. */
+    const field = (rng: () => number) =>
+      enemyTurn([heroAt('h1', 5, 1), heroAt('h2', 4, 1), heroAt('h3', 3, 1), heroAt('h4', 2, 1), heroAt('h5', 1, 1), foeAt('wyrm', ELDER_WYRM_STATS, 6, 1)], rng)
+
+    it('is a cone of fire 4 hexes long, 8d6, half on a miss, laying Seared, with a recharge of 3 and no word on resistance', () => {
+      expect(ABILITIES.wyrm_breath.name).toBe('Fire Breath')
+      expect(area).toEqual({ shape: 'cone', range: 4, damage: { count: 8, sides: 6, bonus: 0 }, element: 'fire', status: { id: 'seared', turns: 1 }, halfOnMiss: true })
+      expect(area.throughResistance).toBeUndefined()
+      expect(recharge).toBe(3)
+      expect(ELDER_WYRM_STATS).toMatchObject({ resistance: 5, regeneration: 2, wards: { fire: 15 }, abilities: ['wyrm_breath', 'wyrm_strikes'] })
+    })
+
+    it('touches the heroes 1 to 4 hexes off toward the aim: a hit whole and Seared, a miss half and nothing; the fifth is untouched', () => {
+      const stream = counted([HIT, ...sixes, MISS, ...sixes, HIT, ...sixes, HIT, ...sixes])
+      const engine = field(stream.rng)
+      const [event] = engine.step(breathe) as AbilityEvent[]
+      expect(event).toMatchObject({ type: 'ability', unit: 'wyrm', ability: 'wyrm_breath', shape: 'cone', apCost })
+      const most = dice.count * dice.sides + dice.bonus
+      expect(event.outcomes.map((o) => [o.unit, o.hit, o.damage, o.status?.id])).toEqual([
+        ['h1', true, most, 'seared'],
+        ['h2', false, Math.floor(most / 2), undefined],
+        ['h3', true, most, 'seared'],
+        ['h4', true, most, 'seared'],
+      ])
+      expect(unitOf(engine, 'h5').hp).toBe(HERO_STATS.maxHp)
+      expect(stream.draws()).toBe(4 * (1 + dice.count))
+      expect(unitOf(engine, 'wyrm')).toMatchObject({ ap: ELDER_WYRM_STATS.actionPoints - apCost, recharging: { wyrm_breath: recharge } })
+    })
+
+    it('recharges for 3 of its side’s turns', () => {
+      const engine = field(() => HIT)
+      const ready = () => engine.legalActions('wyrm').some((a) => a.type === 'ability' && a.ability === 'wyrm_breath')
+      engine.step(breathe)
+      for (let turn = 0; turn < recharge - 1; turn++) {
+        engine.step(END_TURN)
+        engine.step(END_TURN)
+        expect(ready(), `turn ${turn + 1}`).toBe(false)
+      }
+      engine.step(END_TURN)
+      engine.step(END_TURN)
+      expect(ready()).toBe(true)
+    })
+  })
+
+  describe('the Elder Wyrm', () => {
+    it('regenerates 2 as its side’s turn begins', () => {
+      const engine = new BattleEngine({ board: BOARD, units: [heroAt('hero', 1, 1), { ...foeAt('wyrm', ELDER_WYRM_STATS, 7, 1), hp: 100 }] }, { rng: () => HIT })
+      expect(regenerated(engine.step(END_TURN), 'wyrm')).toMatchObject([{ healed: 2, hpBefore: 100, hpAfter: 102 }])
+    })
+
+    it('takes 15 off each fire instance: Flame Arrow’s hit less its ward, and nothing of a low roll', () => {
+      const flame = SPELLS.flame_arrow.damage!
+      const cast = (draw: number) => {
+        const engine = new BattleEngine(
+          { board: BOARD, units: [heroAt('hero', 1, 1, { magic: { maxMana: 60, skill: 100, spells: ['flame_arrow'] } }), foeAt('wyrm', ELDER_WYRM_STATS, 4, 1)] },
+          { rng: counted([HIT, ...Array<number>(flame.count).fill(draw)]).rng },
+        )
+        return (engine.step({ type: 'cast', unit: 'hero', spell: 'flame_arrow', target: 'wyrm' }) as CastEvent[])[0].outcomes[0]
+      }
+      const rolled = flame.count * flame.sides + flame.bonus
+      expect(cast(0.999)).toMatchObject({ unit: 'wyrm', hit: true, damage: Math.max(0, rolled - 15), warded: Math.min(15, rolled) })
+      const least = flame.count + flame.bonus
+      expect(cast(0)).toMatchObject({ unit: 'wyrm', hit: true, damage: Math.max(0, least - 15), warded: Math.min(15, least) })
+    })
+
+    it('bites and claws: a routine of a Bite of 2d10 and two Claws of 1d10, one attack event a strike, through armour less its piercing', () => {
+      const { apCost, strikes } = ABILITIES.wyrm_strikes
+      expect(ABILITIES.wyrm_strikes.name).toBe('Bite and Claws')
+      expect(strikes!.map((s) => [s.name, s.damage!.count, s.damage!.sides])).toEqual([['Bite', 2, 10], ['Claw', 1, 10], ['Claw', 1, 10]])
+      const engine = enemyTurn([heroAt('hero', 1, 1), foeAt('wyrm', ELDER_WYRM_STATS, 2, 1)], counted([HIT, 0.999]).rng)
+      const attacks = engine.step({ type: 'ability', unit: 'wyrm', ability: 'wyrm_strikes', target: 'hero' }).filter((e): e is AttackEvent => e.type === 'attack')
+      expect(attacks.map((e) => [e.attacker, e.ability, e.strike])).toEqual([['wyrm', 'wyrm_strikes', 'Bite'], ['wyrm', 'wyrm_strikes', 'Claw'], ['wyrm', 'wyrm_strikes', 'Claw']])
+      expect(attacks.map((e) => e.apCost)).toEqual([apCost, 0, 0])
+      const rolled = strikes![0].damage!.count * strikes![0].damage!.sides
+      expect(attacks[0].damage).toBe(damageThrough(rolled, effectiveResistance(ELDER_WYRM_STATS, HERO_STATS.resistance!)))
     })
   })
 })

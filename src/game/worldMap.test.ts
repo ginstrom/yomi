@@ -173,9 +173,9 @@ describe('newWorld', () => {
       'Saltwind Drake': ['Hawkeye Bow'],
       'Black Banner Host': ['Cloak of Shadows'],
       'The Iron Freebooters': ['Emberblade'],
-      'The Ashen Host': ['Wand of Storms'],
-      'The Last Host': ['Ring of Fortune'],
-      'Blightmarch Freebooters': ['Amulet of Focus'],
+      'The Ashen Court': ['Wand of Storms'],
+      'The Last Wyrm': ['Ring of Fortune'],
+      'Blightmarch Drake': ['Amulet of Focus'],
       'The Blight Source': ['Wand of Storms'],
     })
     expect(monsters(newWorld(1))[0].loot).not.toBe(lairs[0].loot)
@@ -693,7 +693,7 @@ describe('the outer rings (stage 9 step 05: their nests, sites and far partners)
     9: ['bandit_company', 'wyvern_roost', 'ogre_camp'],
     12: ['bandit_company', 'barrow_wights', 'basilisk_lair', 'hill_giant_steading'],
     15: ['freebooter_host', 'golem_ruin', 'blight_cult', 'young_dragon'],
-    18: ['freebooter_host'],
+    18: ['freebooter_host', 'blight_lich_court', 'elder_wyrm', 'young_dragon'],
   }
   const SITES: Record<string, [string, Material, number]> = {
     ironwood_grove: ['Ironwood Grove', 'ironwood', 7],
@@ -769,6 +769,18 @@ describe('the outer rings (stage 9 step 05: their nests, sites and far partners)
     ])
     for (const l of nests.filter((l) => l.threat === 15)) expect(threatAt(l.position), l.id).toBe(15)
     for (const gone of ['grey_freebooters', 'wolfhead_host', 'saltwind_host']) expect(world.locations.map((l) => l.id)).not.toContain(gone)
+  })
+
+  it('fill ring 18 with the Ashen Court, the Last Wyrm and the Blightmarch Drake, where three of its Freebooter Hosts were, and keep the fourth (stage 11 step 12)', () => {
+    const ring = nests.filter((l) => l.threat === 18).map((l) => [l.id, l.name, l.kind === 'monsters' && l.encounter, l.position, l.kind === 'monsters' && l.loot.map((item) => item.name)])
+    expect(ring).toEqual([
+      ['iron_freebooters', 'The Iron Freebooters', 'freebooter_host', offsetToHex(110, 8), ['Emberblade']],
+      ['ashen_court', 'The Ashen Court', 'blight_lich_court', offsetToHex(117, 22), ['Wand of Storms']],
+      ['last_wyrm', 'The Last Wyrm', 'elder_wyrm', offsetToHex(117, 50), ['Ring of Fortune']],
+      ['blightmarch_drake', 'Blightmarch Drake', 'young_dragon', offsetToHex(110, 64), ['Amulet of Focus']],
+    ])
+    for (const l of nests.filter((l) => l.threat === 18)) expect(threatAt(l.position), l.id).toBe(18)
+    for (const gone of ['ashen_host', 'last_host', 'blightmarch_freebooters']) expect(world.locations.map((l) => l.id)).not.toContain(gone)
   })
 
   it('put 4 to 6 fixed nests in each outer ring, fighting the ring\'s encounters', () => {
@@ -874,7 +886,10 @@ const SESSION_TURN = 146
 // Re-recorded in stage 11 step 11: ring 15's three nests renamed (id, name, encounter) and its three spawn kinds joined
 // the eligible ones at threats 15 and 18, so three far spawns are of another kind (name, encounter, and the spawned
 // event's name); nothing else differs (18 values in the digested JSON, diffed before and after); SESSION_TURN unchanged.
-const SESSION_SHA256 = '6d089a8e6916d8e135fe69a0ea5c50610c5ca4ad82bb306c8c9c311ebb22a665'
+// Re-recorded in stage 11 step 12: ring 18's three nests renamed (id, name, encounter) and its two spawn kinds joined
+// the eligible ones at threat 18, so three far spawns are of another kind (name, encounter, and the spawned event's
+// name); nothing else differs (18 values in the digested JSON, diffed before and after); SESSION_TURN unchanged.
+const SESSION_SHA256 = '11812dc71e7d36679c14a968f62174a8845ced362bf8dc4d02fd9d205778ced9'
 
 describe('the trade partners on a new world', () => {
   const kinds = (world: WorldState) => world.locations.map((l) => l.kind)

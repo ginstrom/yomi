@@ -763,6 +763,59 @@ export const YOUNG_DRAGON_STATS: CombatantStats = {
   abilities: ['dragon_breath', 'dragon_strikes'],
 }
 
+/**
+ * A blight lich, native to level 17: the caster boss of ring 18 and the
+ * blight's own (Dawn's bane applies). It poisons a knot of heroes with Death
+ * Cloud, throws a Lightning Bolt down a line, drains the life of one 5 hexes
+ * off (no armour turns it) to heal itself by half, and wraps itself in Dark
+ * Shield; mana for several castings. It knits back 3 a turn unless Seared or
+ * Corroded. Between spells its touch withers through most of a hero's armour.
+ */
+export const BLIGHT_LICH_STATS: CombatantStats = {
+  name: 'Blight Lich',
+  maxHp: 110,
+  ac: 62,
+  resistance: 3,
+  toHit: 100,
+  critChance: 5,
+  armorPierce: 14,
+  damage: { count: 1, sides: 8, bonus: 4 },
+  weapon: 'Withering Touch',
+  attackApCost: 4,
+  attackRange: 1,
+  actionPoints: 8,
+  regeneration: 3,
+  magic: { maxMana: 30, skill: 100, spells: ['death_cloud', 'lightning_bolt', 'drain_life', 'dark_shield'] },
+  blightborn: true,
+}
+
+/**
+ * An elder wyrm, native to level 18: the top threat of the far land. Its
+ * Fire Breath (`wyrm_breath`) burns a cone 4 hexes long whatever the armour
+ * (only a fire ward cuts it), then recharges for 3 turns, in which it bites
+ * and claws (`wyrm_strikes`) through most of a hero's armour; with 10 action
+ * points it breathes and strikes in one turn. Warded against fire by 15, so
+ * Ember runes and Flame Arrow scarcely touch it; it knits back 2 a turn
+ * unless Seared or Corroded.
+ */
+export const ELDER_WYRM_STATS: CombatantStats = {
+  name: 'Elder Wyrm',
+  maxHp: 150,
+  ac: 66,
+  resistance: 5,
+  toHit: 100,
+  critChance: 5,
+  armorPierce: 16,
+  damage: { count: 1, sides: 10, bonus: 4 },
+  weapon: 'Claws',
+  attackApCost: 4,
+  attackRange: 1,
+  actionPoints: 10,
+  regeneration: 2,
+  wards: { fire: 15 },
+  abilities: ['wyrm_breath', 'wyrm_strikes'],
+}
+
 /** What each level above the first adds to a monster: this share of its level 1 hit points... */
 export const FOE_HP_PER_LEVEL = 1.15
 /** ...this many points to its chance to hit and to its armour class... */

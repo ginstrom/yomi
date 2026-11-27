@@ -322,11 +322,12 @@ export function newWorld(
       farMonsters('wolfhead_cult', 'Wolfhead Cult', 110, 36, 'blight_cult', [SAGE_CIRCLET]),
       farMonsters('saltwind_drake', 'Saltwind Drake', 102, 52, 'young_dragon', [HAWK_BOW]),
       farMonsters('black_banner_host', 'Black Banner Host', 95, 66, 'freebooter_host', [SHADOW_CLOAK]),
-      // Threat 18 (109 to 122), about the Source.
+      // Threat 18 (109 to 122), about the Source: a blight lich's court, an elder wyrm's lair and a young dragon's
+      // (long-campaign stage 11), and a freebooter host.
       farMonsters('iron_freebooters', 'The Iron Freebooters', 110, 8, 'freebooter_host', [EMBERBLADE]),
-      farMonsters('ashen_host', 'The Ashen Host', 117, 22, 'freebooter_host', [STORM_WAND]),
-      farMonsters('last_host', 'The Last Host', 117, 50, 'freebooter_host', [RING_FORTUNE]),
-      farMonsters('blightmarch_freebooters', 'Blightmarch Freebooters', 110, 64, 'freebooter_host', [AMULET_FOCUS]),
+      farMonsters('ashen_court', 'The Ashen Court', 117, 22, 'blight_lich_court', [STORM_WAND]),
+      farMonsters('last_wyrm', 'The Last Wyrm', 117, 50, 'elder_wyrm', [RING_FORTUNE]),
+      farMonsters('blightmarch_drake', 'Blightmarch Drake', 110, 64, 'young_dragon', [AMULET_FOCUS]),
       {
         ...(monstersAt(SOURCE_ID, 'The Blight Source', { ...source.position }, 'source_guardians', [STORM_WAND]) as MonsterLocation),
         threat: source.threat,

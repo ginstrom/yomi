@@ -12,6 +12,8 @@ import {
   BLIGHT_CULTIST_STATS,
   STONE_GOLEM_STATS,
   YOUNG_DRAGON_STATS,
+  BLIGHT_LICH_STATS,
+  ELDER_WYRM_STATS,
   BASILISK_STATS,
   BLIGHT_HORROR_STATS,
   GIANT_SPIDER_STATS,
@@ -48,6 +50,8 @@ import {
   blightCult,
   golemRuin,
   youngDragon,
+  blightLichCourt,
+  elderWyrm,
   freebooterHost,
   type BanditKind,
   type EncounterId,
@@ -88,6 +92,9 @@ const HILL_GIANT_STEADING_COUNTS = [3, 3, 3, 3]
 const GOLEM_RUIN_COUNTS = [4, 4, 4, 5]
 const BLIGHT_CULT_COUNTS = [5, 4, 4, 5, 5]
 const YOUNG_DRAGON_COUNTS = [2, 2, 3, 3]
+/** Ring 18's counts (stage 11 step 12; the cells' tuning is in the plan's log). */
+const BLIGHT_LICH_COURT_COUNTS = [3, 4, 4, 5]
+const ELDER_WYRM_COUNTS = [2, 2, 3]
 
 describe.each(Object.entries(ENCOUNTERS))('the %s encounter', (_id, build) => {
   const wounded = party().map((fighter, i) => ({ ...fighter, hp: 5 + i }))
@@ -753,6 +760,52 @@ describe('ring 15\'s encounters (long-campaign stage 11 step 11)', () => {
   })
 })
 
+describe('ring 18\'s encounters (long-campaign stage 11 step 12)', () => {
+  const fielded = (build: typeof blightLichCourt, threat: number) => {
+    const { setup, kinds, threat: fought } = build(party(), threat)
+    expect(fought).toBe(threat)
+    const foes = setup.units.filter((u) => u.side === 'enemy')
+    for (const u of foes) expect(u.stats).toEqual({ ...foeStats(kinds[u.id] as MonsterKind, threat), name: u.stats.name })
+    return foes.map((u) => [kinds[u.id], u.stats.name])
+  }
+  const COURT = [['blight_lich', 'Blight Lich'], ['barrow_wight', 'Barrow Guard'], ['blight_cultist', 'Lich\'s Acolyte'], ['barrow_wight', 'Crypt Warden'], ['blight_cultist', 'Lich\'s Herald']]
+  const WYRM = [['elder_wyrm', 'Elder Wyrm'], ['young_dragon', 'Wyrmling'], ['young_dragon', 'Brood Drake']]
+
+  it('are registered after the Dragon Lair, in order, with their bands and counts', () => {
+    const ids = Object.keys(ENCOUNTERS)
+    expect(ids.slice(ids.indexOf('young_dragon') + 1).slice(0, 2)).toEqual(['blight_lich_court', 'elder_wyrm'])
+    expect([ENCOUNTER_BANDS.blight_lich_court, ENCOUNTER_BANDS.elder_wyrm]).toEqual([{ min: 17, max: 20 }, { min: 18, max: 20 }])
+    expect(ENCOUNTER_COUNTS.blight_lich_court).toEqual(BLIGHT_LICH_COURT_COUNTS)
+    expect(ENCOUNTER_COUNTS.elder_wyrm).toEqual(ELDER_WYRM_COUNTS)
+  })
+
+  it.each([
+    ['blight_lich_court', blightLichCourt, COURT, BLIGHT_LICH_COURT_COUNTS, 17, 20],
+    ['elder_wyrm', elderWyrm, WYRM, ELDER_WYRM_COUNTS, 18, 20],
+  ] as const)('fields %s at its band\'s two ends: its counts\' number of foes, the lead first, each at the threat\'s level', (_id, build, slots, counts, min, max) => {
+    expect(fielded(build, min)).toEqual(slots.slice(0, counts[0]))
+    expect(fielded(build, max)).toEqual(slots.slice(0, counts[max - min]))
+    expect(build(party(), min - 1)).toEqual(build(party(), min))
+    expect(build(party())).toEqual(build(party(), min))
+    expect(build(party(), max + 1)).toEqual(build(party(), max))
+  })
+
+  it('writes the kinds as campaign §5.5 has them: resistance, regeneration, wards, special, XP and native level', () => {
+    expect(foeStats('blight_lich', 17)).toEqual(BLIGHT_LICH_STATS)
+    expect(foeStats('elder_wyrm', 18)).toEqual({ ...ELDER_WYRM_STATS, abilityDamageBonus: 0 })
+    expect(BLIGHT_LICH_STATS).toMatchObject({ name: 'Blight Lich', resistance: 3, regeneration: 3, blightborn: true, magic: { spells: ['death_cloud', 'lightning_bolt', 'drain_life', 'dark_shield'] } })
+    expect(ELDER_WYRM_STATS).toMatchObject({ name: 'Elder Wyrm', resistance: 5, regeneration: 2, wards: { fire: 15 }, abilities: ['wyrm_breath', 'wyrm_strikes'] })
+    expect([FOE_XP.blight_lich, FOE_XP.elder_wyrm]).toEqual([300, 450])
+    expect([FOE_NATIVE_LEVEL.blight_lich, FOE_NATIVE_LEVEL.elder_wyrm]).toEqual([17, 18])
+  })
+
+  it('pierces enough of the expected kit\'s resistance (21 on the fighter and archer from 17) for each kind\'s blow to tell', () => {
+    // The line under the plan's C3: wolf 4, worg rider 6, ogre 5, wyvern 11, wight 8, basilisk 9, giant 9, golem 9,
+    // cultist 10, young dragon 10; the lich 14, the elder wyrm 16.
+    expect([BLIGHT_LICH_STATS.armorPierce, ELDER_WYRM_STATS.armorPierce]).toEqual([14, 16])
+  })
+})
+
 describe('the encounters\' bands and counts', () => {
   const ids = Object.keys(ENCOUNTERS) as EncounterId[]
   /** The five encounters the map had before bandits, which keep the counts 2, 3, 3, 3, 4 at threats 1 to 5. */
@@ -805,9 +858,10 @@ describe('the encounters\' bands and counts', () => {
     expect(encountersFor(13)).toEqual(['source_guardians', 'bandit_company', 'barrow_wights', 'basilisk_lair', 'hill_giant_steading'])
     expect(encountersFor(14)).toEqual(['source_guardians', 'freebooter_host', 'barrow_wights', 'basilisk_lair', 'hill_giant_steading', 'golem_ruin', 'blight_cult'])
     expect(encountersFor(15)).toEqual(['source_guardians', 'freebooter_host', 'hill_giant_steading', 'golem_ruin', 'blight_cult', 'young_dragon'])
-    for (const threat of [16, 17]) expect(encountersFor(threat)).toEqual(['source_guardians', 'freebooter_host', 'golem_ruin', 'blight_cult', 'young_dragon'])
-    expect(encountersFor(18)).toEqual(['source_guardians', 'freebooter_host', 'blight_cult', 'young_dragon'])
-    for (const threat of [19, 20]) expect(encountersFor(threat)).toEqual(['source_guardians', 'freebooter_host'])
+    expect(encountersFor(16)).toEqual(['source_guardians', 'freebooter_host', 'golem_ruin', 'blight_cult', 'young_dragon'])
+    expect(encountersFor(17)).toEqual(['source_guardians', 'freebooter_host', 'golem_ruin', 'blight_cult', 'young_dragon', 'blight_lich_court'])
+    expect(encountersFor(18)).toEqual(['source_guardians', 'freebooter_host', 'blight_cult', 'young_dragon', 'blight_lich_court', 'elder_wyrm'])
+    for (const threat of [19, 20]) expect(encountersFor(threat)).toEqual(['source_guardians', 'freebooter_host', 'blight_lich_court', 'elder_wyrm'])
     expect(encountersFor(21)).toEqual([])
     expect(encountersFor(0)).toEqual([])
   })
@@ -834,13 +888,15 @@ const BLOCKS: Record<MonsterKind, CombatantStats> = {
   stone_golem: STONE_GOLEM_STATS,
   blight_cultist: BLIGHT_CULTIST_STATS,
   young_dragon: YOUNG_DRAGON_STATS,
+  blight_lich: BLIGHT_LICH_STATS,
+  elder_wyrm: ELDER_WYRM_STATS,
 }
 
 describe('foeStats', () => {
   const kinds = Object.keys(BLOCKS) as MonsterKind[]
 
-  it('gives every monster kind a native level, 1 but for the Giant Spider\'s 4, the Salamander\'s 5 and stage 11\'s kinds (ring 7: the Wolf 6, the Worg Rider and the Ogre 7; ring 9: the Wyvern 9; ring 12: the Barrow Wight and the Basilisk 11, the Hill Giant 12; ring 15: the Stone Golem and the Blight Cultist 14, the Young Dragon 15)', () => {
-    const above: Partial<Record<MonsterKind, number>> = { giant_spider: 4, salamander: 5, wolf: 6, worg_rider: 7, ogre: 7, wyvern: 9, barrow_wight: 11, basilisk: 11, hill_giant: 12, stone_golem: 14, blight_cultist: 14, young_dragon: 15 }
+  it('gives every monster kind a native level, 1 but for the Giant Spider\'s 4, the Salamander\'s 5 and stage 11\'s kinds (ring 7: the Wolf 6, the Worg Rider and the Ogre 7; ring 9: the Wyvern 9; ring 12: the Barrow Wight and the Basilisk 11, the Hill Giant 12; ring 15: the Stone Golem and the Blight Cultist 14, the Young Dragon 15; ring 18: the Blight Lich 17, the Elder Wyrm 18)', () => {
+    const above: Partial<Record<MonsterKind, number>> = { giant_spider: 4, salamander: 5, wolf: 6, worg_rider: 7, ogre: 7, wyvern: 9, barrow_wight: 11, basilisk: 11, hill_giant: 12, stone_golem: 14, blight_cultist: 14, young_dragon: 15, blight_lich: 17, elder_wyrm: 18 }
     for (const kind of kinds) expect(FOE_NATIVE_LEVEL[kind]).toBe(above[kind] ?? 1)
   })
 
@@ -883,7 +939,7 @@ describe('the foe yardstick', () => {
    * The kinds added in long-campaign stage 11, held to the kitted yardstick (`foeYardstick(level, 'expected')`) until
    * stage 12 measures again; every other kind stays on the bare one. Each ring step adds its kinds here.
    */
-  const STAGE_11_KINDS: readonly MonsterKind[] = ['wolf', 'worg_rider', 'ogre', 'wyvern', 'barrow_wight', 'basilisk', 'hill_giant', 'stone_golem', 'blight_cultist', 'young_dragon']
+  const STAGE_11_KINDS: readonly MonsterKind[] = ['wolf', 'worg_rider', 'ogre', 'wyvern', 'barrow_wight', 'basilisk', 'hill_giant', 'stone_golem', 'blight_cultist', 'young_dragon', 'blight_lich', 'elder_wyrm']
   /** The fields a stage 11 kind is meant to sit outside the kitted yardstick on, and why. */
   const STAGE_11_EXCEPTIONS: typeof EXCEPTIONS = []
 

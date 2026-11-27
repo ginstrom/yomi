@@ -40,11 +40,13 @@ import { CUTSCENE_IDS } from '../story/cutscenes.ts'
  * wights, a Basilisk Lair and a Hill Giant Steading; no migration.
  * Version 35 (stage 11, ring 15) does the same for ring 15: a Golem Ruin, a
  * Blight Cult and a Dragon Lair; no migration.
+ * Version 36 (stage 11, ring 18) does the same for ring 18: the Ashen Court
+ * of a Blight Lich, the Last Wyrm and the Blightmarch Drake; no migration.
  * Rules and item numbers may change
  * freely, as a character stores no derived number and an item is saved by
  * its id.
  */
-export const SAVE_VERSION = 35
+export const SAVE_VERSION = 36
 
 /** One slot's contents. */
 export interface SaveFile {

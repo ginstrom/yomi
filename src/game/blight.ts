@@ -351,6 +351,8 @@ export const SPAWN_KINDS: ReadonlyArray<{ encounter: EncounterId; name: string; 
   { encounter: 'golem_ruin', name: 'Golem Ruin', fromThreat: 7 },
   { encounter: 'blight_cult', name: 'Blight Cult', fromThreat: 7 },
   { encounter: 'young_dragon', name: 'Dragon Lair', fromThreat: 7 },
+  { encounter: 'blight_lich_court', name: 'Lich Court', fromThreat: 7 },
+  { encounter: 'elder_wyrm', name: 'Wyrm Lair', fromThreat: 7 },
 ]
 
 function spawn(
