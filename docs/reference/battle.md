@@ -33,7 +33,20 @@ A stat block's optional `magic` (mana, spell skill, spells known) is what makes 
 
 `ABILITIES`, by id as spells are, which a stat block's `abilities` names: a routine of weapon strikes at one foe, each with its own dice, verb and maybe a status, or an area. Each costs action points, and one with a `recharge` of N is used at most every N turns of its side.
 
-The monsters' abilities (`MONSTER_ABILITY_IDS`: Troll Claws, Spider Bite, Spider Web, Fire Spit, then the high roster's of long-campaign stage 11, so far the Worg Rider's Spear and Bite, the Ogre's Sweep, the Wyvern's Bite and Sting, the Basilisk's Gaze (a cone that only lays Chilled) the Hill Giant's Rock (a burst of radius 0, one foe, through resistance less the giant's piercing), and the Young Dragon's Fire Breath (a cone 3 hexes long, 6d6 fire, half on a miss, Seared; no `throughResistance`, so armour does not cut it and only a fire ward does) and Bite and Claws (a routine of three strikes)) come first in `ABILITY_IDS` and set none of the heroes' cost fields; the high roster's areas may use `centredOnSelf`, `foesOnly` and `throughResistance`. The heroes' techniques (17) come after them, taught by a node's `ability` (`knownAbilities`). A technique:
+The monsters' abilities (`MONSTER_ABILITY_IDS`: Troll Claws, Spider Bite, Spider Web, Fire Spit, then the high roster's of long-campaign stage 11) come first in `ABILITY_IDS` and set none of the heroes' cost fields. The high roster's, ring by ring:
+
+- `worg_strikes`, the Worg Rider's Spear and Bite: a routine of two strikes (1d8+2, 1d6+1), 6 AP;
+- `ogre_sweep`, the Ogre's Sweep: a burst of radius 1 centred on the ogre (`centredOnSelf`, `foesOnly`), 2d8+2 through resistance (`throughResistance`), 6 AP, recharge 1;
+- `wyvern_strikes`, the Wyvern's Bite and Tail Sting: 2d6+2, then 1d4 laying Poisoned for 3 turns, 6 AP;
+- `basilisk_gaze`, the Basilisk's Gaze: a cone 3 hexes long, no damage, Chilled for 1 turn, 3 AP, recharge 2;
+- `giant_rock`, the Hill Giant's Rock: a burst of radius 0 at range 4 (one foe), 2d8+2 through resistance, 6 AP, recharge 1;
+- `dragon_breath`, the Young Dragon's Fire Breath: a cone 3 hexes long, 6d6 fire, half on a miss, Seared for 1 turn, 4 AP, recharge 3; no `throughResistance`, so armour does not cut it and only a fire ward does;
+- `dragon_strikes`, its Bite and Claws: a routine of three strikes (2d8, 1d8, 1d8), 6 AP;
+- `wyrm_breath` and `wyrm_strikes`, the Elder Wyrm's: the same with a cone 4 hexes long and 8d6, and 2d10, 1d10, 1d10;
+- `blight_breath`, the Source's Blight Horror's Blight Breath: a burst of radius 2 centred on itself, foes only, 8d6 blight, half on a miss, Corroded for 3 turns, 4 AP, recharge 3;
+- `horror_claws`, its Claws: two strikes of 2d8, 6 AP.
+
+Sweep and Rock are built from the existing area fields. An area's `throughResistance` cuts its damage by the target's resistance as a blow is cut, less the user's `armorPierce` (`effectiveResistance`); an area without it ignores resistance, and only the element's ward cuts it (the breaths). The Barrow Wight, the Blight Cultist and the Blight Lich cast monster spells instead (`magic`). The heroes' techniques (17) come after them, taught by a node's `ability` (`knownAbilities`). A technique:
 
 - may cost mana (`manaCost`);
 - costs the weapon's attack AP plus `weaponAp` (`abilityApCost`, which every reader of an ability's AP goes through), plus nothing for the Spellsword Strikes (`SPELLSWORD_STRIKES`) of a unit with the trait `arcane_knight`;
@@ -62,7 +75,7 @@ An `ability` action uses one of the unit's abilities once `canUse` allows it: th
 - The first `AttackEvent` of a technique that costs mana carries `manaCost` and `manaAfter`, as a cast does.
 - **A status ability** (`selfStatus`, aimed at the user's own id, or `foeStatus`, at a standing foe within its range) draws nothing and logs one `AbilityEvent` on the target's hex, with one outcome shaped as a friendly spell's (and `manaCost`, `manaAfter` for one that costs mana).
 - **An area** is aimed `at` a hex: legal on the board, the user's own for `centredOnSelf`, else a burst within range (the weapon's `attackRange` for `weaponRange`), or a cone or line 1 to range away, touching a standing foe. It is one `AbilityEvent` resolved over everyone it touches (`abilityTouches`, which the policy reads too: both sides, or only foes for `foesOnly`) as a hostile area spell is, with the unit's own chance to hit (a critical doubling the dice):
-  - resistance ignored, or gone through as a shot's with `throughResistance` (`CastOutcome.resisted`);
+  - resistance ignored, or, with `throughResistance`, cut as a blow is by the target's resistance less the user's `armorPierce` (`effectiveResistance`; `CastOutcome.resisted`);
   - its element cut by wards;
   - half the dice (rounded down, no status) on a miss where it has `halfOnMiss` (`CastOutcome.half`);
   - the weapon's dice for `weaponDamage` (no `abilityDamageBonus`, no runes);

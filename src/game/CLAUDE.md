@@ -18,7 +18,7 @@ Loaded when working in `src/game/`: encounters and bandits, the company and its 
 
 ## The modules
 
-- `encounters.ts`: battle setups by id (`ENCOUNTERS`), built for a party and a threat; foe kinds, bands and counts, `xpReward`; a hero's unit is `heroId(i)`.
+- `encounters.ts`: battle setups by id (`ENCOUNTERS`), built for a party and a threat; foe kinds, bands and counts, `xpReward`, `TROPHIES`; the Source's two forms (`sourceGuardians`: threats 1 to 5 near home, `SOURCE_AT_20` above); a hero's unit is `heroId(i)`.
 - `bandits.ts`: bandits, foes built by hero rules from a fixed draft per role, dressed by `banditGear(threat)` and levelled by `autoAdvance`.
 - `party.ts`: the `Party`, the pre-rolls and the ready-made party, `rewardVictory` (experience, the fallen buried) and `autoHeal`.
 - `expedition.ts`: the `Expedition` (a party of the company: members, baggage, position, confronting, order), party ids and names, and `PartyPresence`.

@@ -6,7 +6,7 @@ The measure is the share of 500 campaigns from seed 1 that beat the Source witho
 
 The bands, set by the user (the targets; keep them):
 
-| Measure | Band | Now (seed 1: stage 10, 8 or 7 where marked, else the skill trees' step 30) |
+| Measure | Band | Now (seed 1: stage 11, 10, 8 or 7 where marked, else the skill trees' step 30) |
 | --- | --- | --- |
 | One party (`--parties 1`) | 215 to 250 | 287 (331 days, 18.8 battles, 1.2 dead; stage 11), accepted until stage 12 |
 | Default company | 220 to 260 | 288 (stage 11), accepted until stage 12 |
@@ -21,7 +21,7 @@ The bands, set by the user (the targets; keep them):
 | SG7 | 0 within 40 | 0 |
 | SG10 | above 2 | 1, accepted |
 
-Accepted out of band (the user, stage 9 step 09): `one` 288, `company` 289 and `one`'s 331 days, with `SPAWN_DIVISOR` kept at 840; stage 12's retune takes them up. Evidence (500 `one` campaigns): divisor 400 gave 244 wins and 303 days, 300 gave 248 and 298 (stage 9's `log.md`, "Step 09").
+Accepted out of band (the user, stage 9 step 09): `one` 288, `company` 289 (now 287, 288) and `one`'s 331 days, with `SPAWN_DIVISOR` kept at 840; stage 12's retune takes them up. Evidence (500 `one` campaigns): divisor 400 gave 244 wins and 303 days, 300 gave 248 and 298 (stage 9's `log.md`, "Step 09").
 
 The waiting check (`--waiting`, stage 7's design): income a day campaigning must stay above the waiting twin's, or idling at home pays; stage 7 measured 1.3 against 1.0 a day (one party and the company alike), the twin never ahead in any campaign. The careful simulated party rarely builds past an outpost or raises the post past 2, so works, forts and market gold barely show in these figures.
 
