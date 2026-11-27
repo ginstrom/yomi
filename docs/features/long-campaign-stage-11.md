@@ -4,7 +4,7 @@
 
 - Request (user's words):
   > Merge PR #12 (stage 10), then start stage 11, the high roster. [...] Its design, docs/designs/long-campaign/stage-11-high-roster.md, is marked "ready for planning". It covers ogres, wyverns, wights, basilisks, giants, golems, cultists, dragons, the lich, the elder wyrm, and the Source rebuilt at 20, each with a sprite. Stage 11 picks up two things stage 10 left for it. The trophies table is empty until then, and the Source Guardians stay capped at level 6 until then.
-- Slug `long-campaign-stage-11` · Phase 4, implementation · Next action: step 14, measure and record (engineer running), then 15, then verification.
+- Slug `long-campaign-stage-11` · Phase 4, implementation · Next action: step 14 closing (record the user's acceptance, review), then 15, then verification.
 - Branch: `long-campaign-stage-11`, off main at c138d83 (stage 10 merged as PR #12, e801f5c).
 - Path: the stage design is the approved design; straight to planning, as stages 2–10.
 - Links:
@@ -32,7 +32,7 @@
 | 2026-11-26 | Plan Q4: "wins most but not all" is 300–475 of 500 at both band ends, report only, not a band; three tuning trials an encounter, then to the user | user | make it a band; record only | Planner default |
 | 2026-11-26 | Plan Q3: the Source at 20 is a new `source_horror` with two Blight Cultists; the near-home Source keeps today's Horror | user | one Horror rebuilt everywhere | Early figures, guard and 50-check stay identical |
 | 2026-11-26 | Plan Q5: new kinds judged against a kitted fighter table from `expectedKit`; today's kinds unchanged | user | today's bare table | Stage 12's measurement not ready |
-| 2026-11-26 | Plan Q1, 2, 6–10: planner defaults (line-ups and counts per C5; nests keep position and loot, about a third bandits; favoured runes; Blight Breath blight, Corroded, foes only; Worg Riders 7–9; 13 sprites; expected kit at the low end) | user | walk through each | Each follows a reference or the code |
+| 2026-11-26 | Plan Q1, 2, 6–10: planner defaults stand (index decisions) | user | walk through each | Each follows a reference or the code |
 | 2026-11-26 | Accept the planner's other decisions (index 11–20) and tiers | orchestrator | — | Routine engineering choices |
 | 2026-11-26 | Kitted fighter's resistance (11 at level 10, 21 at 20, against gear §5.8's about 5 and 8): go on as is; new kinds get damage that tells through resistance and the cells decide | user | hide in the kit's small slots; pause the ring steps | Keeps the kit as stage 10's policy picks it |
 | 2026-11-26 | Expected kit's rune order stays socket by socket: first weapon socket Ember, later Stone | user | every weapon socket Ember | Closest to §5.8's level-20 damage |
@@ -43,5 +43,7 @@
 | 2026-11-27 | Blight Cult at threat 15 (99 of 500, its nest's threat): wait for the reviewer's cause, then one targeted trial re-measuring 14, 15, 18; keep only if 15 lands inside without pushing 14 or 18 out, else revert and record 99 for stage 12 | user | four at 15–16 now; record 99 | Cliff unexplained: same foes and kit as at 14 (345) |
 | 2026-11-27 | From here the threats that occur on the map (7, 9, 12, 15, 18) are tuned inside 300–475 first, band ends second; an in-play miss after three trials comes to the user, band-end misses are recorded | user | band ends only | Ring 15's nests sit mid-band (366, 99, 491 at 15) |
 | 2026-11-27 | Young Dragon lair at threat 15 (491, in-play, above the reading): record for stage 12, no more tries | user | weaker second minion; block between trials | One wyvern 491, two 64; a block change moves 18 out |
-| 2026-11-27 | Model limit reached for Fable (resets 11-28 22:00); the session now runs on Opus 5.5 and "opus" tier spawns inherit it. Step 11's engineer replaced by a fresh one from 37639ee | orchestrator | wait a day | The user switched the model |
+| 2026-11-27 | Session on Opus 5.5 after the Fable limit; "opus" tier spawns inherit it | user | wait a day | Model switched |
 | 2026-11-27 | Elder Wyrm lair at threat 18 (in play) 482 after three trials: accept, record for stage 12 | user | a weaker third foe at 18–19 | 7 over; a stronger block pulls 20 down |
+| 2026-11-28 | Early figures: accept rl10 371 (409 at step 01; band 370–420), one 287, company 288; cause the new ring-7/9 spawn kinds at threats 7 and 9. Update bands.md and src/game/CLAUDE.md | user | keep old spawn kinds under --near-source; change the kinds' fromThreat | It is what the game now does; stage 12 owns the gear lag |
+| 2026-11-28 | Long run (Source 0 of 100, 739 days, campaigns end at rings 7–9): record for stage 12, carry on | user | stop before step 15 | Expected; stage 12's retune |
