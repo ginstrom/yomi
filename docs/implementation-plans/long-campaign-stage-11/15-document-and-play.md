@@ -158,3 +158,5 @@ No rule, constant, count or band change; no simulation; no new feature. Fix only
 
 **Gates** at `4792ecd` (clean tree): `npm test` runlog #208, exit 0, 109 files, 3025 passed (the refactor guard among them, unedited); `npm run build` #209, exit 0; the manual's shot rerun #210, passed (it rewrote `battle-dragon.png` with a few pixels changed, as each take does; the committed take was kept). No `npm run test:browser`: no scene changed, and `manual.shots.ts` is outside its run.
 
+
+**Review round 1** (sonnet reviewer): one blocking point, the manual's "A Wolf Pack is five wolves" (the counts are 4, 4, 4, 5 over threats 6 to 9). Fixed in `2da2467`: "four wolves (five at threat 9)"; the manual's other count claims checked against `encounters.ts` (Wyvern Roost 4, 4, 3, 3; `SOURCE_AT_20` 3) and true. **Round 2:** clean. Step done.

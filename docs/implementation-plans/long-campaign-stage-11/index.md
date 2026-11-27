@@ -174,7 +174,7 @@ All 13 kinds' sprites are in the atlas (`art/units/<kind>.sprite.toml`); text in
 | 12 | [Ring 18: the lich and the elder wyrm](12-ring-18.md) | Two kinds and encounters, nests, drake scale; save 36; cells | 11, 07 | opus / opus | done (`adb0921`, `921b3f7`, `14fc294`, `2ef2fb6`, `ad45e84`, `8916789`, `6061296`) |
 | 13 | [The Source at 20](13-source.md) | `source_horror`, `SOURCE_AT_20`, `SOURCE_FOE_LEVEL` removed (C7); snapshot; `sgk20` | 12, 07 | opus / opus | done (`0709692`, `8c30db6`, `ca9685c`, `4eeb66e`, `a0b056e`) |
 | 14 | [Measure and record](14-measure.md) | Early figures vs step 01; `long` (100) vs stage 10: Source share, battles to level for stage 12; every cell | 13 | opus / opus | done (`05cf092`, `cad31fe`, `fb3fef3`, `5f1e040`, `6b4fce3`, `a6d4c34`, `504fec3`) |
-| 15 | [Document and play](15-document-and-play.md) | CLAUDE.md files, `docs/reference/`, skills, manual and screenshots, implementation notes, stages index; play script walked | 14 | sonnet / opus | awaiting review (`e783824`, `c5db8ac`, `af01b3f`, and the close-up) |
+| 15 | [Document and play](15-document-and-play.md) | CLAUDE.md files, `docs/reference/`, skills, manual and screenshots, implementation notes, stages index; play script walked | 14 | sonnet / opus | done (`e783824`, `c5db8ac`, `af01b3f`, `4792ecd`, `630d256`, `2da2467`) |
 
 **Tiers.** "opus" means leave the model unset; "sonnet" means `model: "sonnet"`. Each task file's Difficulty line gives the reasons.
 

@@ -532,3 +532,7 @@ Checks, ring by ring:
 - **Played turn by turn** (the harness's naive player, each hero at the nearest foe): the Worg Band at 7 was lost in 26 rounds; ability lines played back as in the auto-resolved log.
 
 Findings (recorded, not tuned or fixed; for the orchestrator): the Ember ward against Fire Breath is a sixth to a third, not about a third; a Young Dragon's 6 drake scale is half a leather; the victory screen's "The Greyfang Pack are beaten." (also the Cinder Roost, Saltwind Drake, Last Wyrm) is plural for singular names (scene text, not this stage's code); the hover panel lists a caster foe's abilities and wards but not its spells, so wights, cultists and the lich show none; the lich never cast Death Cloud in two fights; the Basilisk Lair was lost at both ends (cells 425 and 304) and the Elder Wyrm at 20 (cell 408), one seeded battle each.
+
+## Step 15 outcome
+
+Step 15 (document and play): engineer Opus 5.5 (model unset by the brief; the plan said sonnet), reviewer sonnet, verdict clean after 1 fix, 2 review rounds. The fix: the manual said a Wolf Pack is five wolves; `WOLF_PACK` counts are 4, 4, 4, 5 over threats 6 to 9 (four, five at 9); the manual's other counts (the Wyvern Roost's four, three further out; the Source's two cultists) checked against `encounters.ts` and true. Commits `e783824`, `c5db8ac`, `af01b3f`, `4792ecd`, `630d256`, `2da2467`. Gates: `npm test` #208, `npm run build` #209, the manual's shot #210.
