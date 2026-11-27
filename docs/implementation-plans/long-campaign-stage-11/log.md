@@ -354,3 +354,29 @@ The final logs are byte-identical to their trials' (`cmp`): `lc18` trial 1's, `l
 ## Step 12 outcome
 
 Step 12 (ring 18: the Blight Lich and the Elder Wyrm): engineer opus, reviewer opus, verdict clean, 1 review round, no finding. Commits `adb0921` (first values), `921b3f7` (tuned), `14fc294` (docs), `2ef2fb6` (gates record), `ad45e84` (`bands.md` under its limit), `8916789` (the user's decision), `6061296` (gates; awaiting review). Gates at `8916789`: `npm test` #165 (3006 passed), `npm run build` #179, `npm run sprites:check` #180, browser #166 to #178 (all passed but the known A9 in `battle`, #167); the reviewer's #181 (`npm test`, 3006) and `lc18` re-run at head (464, byte-identical). Cells lc17 497 (band end), lc18 464 (in play), lc20 332, ew18 482 (in play, accepted by the user for stage 12), ew20 408; 50-campaign hash identical, the refactor guard unedited and green. Not fixed, for stage 12: the Brood Drake slot defined but never fielded (a held lever); the lich's Death Cloud never cast and Drain Life almost never.
+
+## Step 13: the Source at 20
+
+2026-11-27. Code `0709692` (first values), `8c30db6` (trial 1: the final code). Cells: 500 battles from seed 1, `node scripts/simulate.ts --battles 500 --seed 1 --encounter source_guardians --threat 20 --party-level L [--player-kit expected] --out logs/s11-13-<label>.jsonl`, run by the engineer in the foreground one at a time (about 27 s each). Logs (gitignored): `logs/s11-13-sgk20` the first values, `-t1-` trial 1 on its dirty tree, `-final-` on `8c30db6`.
+
+**50-campaign check:** `1e85d023a1b58697ec36724720f6ad5ba8b4a5dc2362f4ff6b22605ce37ed216`, **identical**, at the first values (`logs/s11-13-guard-50.jsonl`) and at `8c30db6` (`logs/s11-13-final-guard-50.jsonl`). The refactor guard is unedited and green. The near-home Source's setups (threats 0 to 5 and 3.7, parties of three and four) hash as at `2ca3559` (`baf63044…008a`, a new test in `encounters.test.ts`).
+
+**Yardstick** (`foeYardstick(20, 'expected')`): armour class 60–80, to hit 80–100, hit points 85.5–171, damage a turn 14.9–24.8. The Horror at the final code: armour class 80, hit points 171, damage a turn 19 (Claws 1d10+4 at 4 AP; the routine 2 × 2d8 = 18), **to hit 125 (a named exception)**.
+
+**Cells** (wins of 500; player / enemy hit rate; rounds; damage dealt / taken a battle). The Source is in play at 20 (`SOURCE_THREAT`).
+
+| Trial | Change | sgk20 | sg20-18 (own kit) | sg20 (own kit) |
+| --- | --- | --- | --- | --- |
+| Step 02 (the old Source at 20: five foes held at level 6) | — | **500** | 28 (stage 10) | 71 (stage 10) |
+| First values (`0709692`) | the Horror 171 hit points, armour class 80, 100 to hit, piercing 21, 10 AP; breath 8d6 radius 2, Corroded 3 turns; claws 2 × 2d8; two cultists at 20 | **495** (0.51 / 0.52; 14.4; 491 / 317) | — | — |
+| 1 (`8c30db6`, final) | the Horror's to hit 125 (as the Elder Wyrm and Young Dragon raised to 20) | 445 (0.51 / 0.63; 14.9; 474 / 382) | 0 (0.47 / 0.93; 6.8; 56 / 431) | 0 (0.48 / 0.94; 7.3; 62 / 469) |
+
+`sgk20` at `8c30db6` is byte-identical to trial 1's log (`cmp`). Trials used: 1 of 3. **Inside 300–475.**
+
+**What the Horror needed against the kit** (fighter and archer resistance 21, armour class about 73): its claws pierce all 21; the breath ignores resistance (only a blight ward cuts it). What told was the chance to hit: at 100 it struck armour class 73 about one time in four, breath and claws alike (enemy hit rate 0.52 with the cultists' 130); at 125, 0.63 and 50 more losses. In 500 battles it breathed 1,505 times (3 a battle) and clawed 8,015.
+
+**`sg20-18` and `sg20`** (report only, the ready-made party's own gear at 18 and 20) now fight `SOURCE_AT_20` and win none (stage 10: 28 and 71 against five foes held at level 6): the cultists at 20 hit them 93% of the time. For stage 12 and step 14's long campaign: a party reaching the Source without the expected kit loses there.
+
+**The policy snapshot:** re-recorded with the `source_guardians` lines above threat 5 only. Step 12's 24,048 lines (`b41a6374…ee3c`) less their 4,301 far-Source lines are 19,747 lines (`a30c30ea…abed`), and the lines now less theirs are the same 19,747 in the same order (asserted). The first 4,218 lines (to `source_guardians 5`) hash `f1de7975…e871` as before; the Source at 20's 2,216 lines follow (`b66cf7d2…0f95`; 2,317 and `98b4cab4…c29a` at the first values); the 15,529 after them hash `8ad17fbb…3d1f` as before. 21,963 lines, `631a06bf…f88c`. The earlier rings' boundaries are kept as kind checks, 2,085 lines earlier.
+
+**The estimate fixture** (`forecast.test.ts`): its three `source_guardians` entries (threats 10 and 20) re-recorded, nothing else: their `logs` digests, and the level-18 tier-5 tally 4 wins of 4 before, 0 now.

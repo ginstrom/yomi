@@ -150,11 +150,35 @@ No change to the near-home Source, the Source's location, its rune loot row, the
 
 ## 6. Completion criteria
 
-- [ ] `source_horror` with `blight_breath` and `horror_claws`; `SOURCE_AT_20` above threat 5; the near-home Source byte-identical; `SOURCE_FOE_LEVEL` and `maxFoeLevel` gone.
-- [ ] Yardstick, composition and engine tests (§4.3) pass; the snapshot re-recorded narrowly with its title extended.
-- [ ] Guard and 50-campaign check identical.
-- [ ] `sgk20` within 300–475, or three trials logged and the result brought to the orchestrator and answered; `sg20-18` and `sg20` recorded.
-- [ ] Docs and `bands.md` updated as §4.7.
-- [ ] One commit, "Stage 11 step 13: the Source at 20", files staged by path, no attribution lines; the index's row 13 updated with status and commit.
+- [x] `source_horror` with `blight_breath` and `horror_claws`; `SOURCE_AT_20` above threat 5; the near-home Source byte-identical; `SOURCE_FOE_LEVEL` and `maxFoeLevel` gone.
+- [x] Yardstick, composition and engine tests (§4.3) pass; the snapshot re-recorded narrowly with its title extended.
+- [x] Guard and 50-campaign check identical.
+- [x] `sgk20` within 300–475, or three trials logged and the result brought to the orchestrator and answered; `sg20-18` and `sg20` recorded.
+- [x] Docs and `bands.md` updated as §4.7.
+- [x] One commit, "Stage 11 step 13: the Source at 20", files staged by path, no attribution lines; the index's row 13 updated with status and commit.
 
 ## 7. Execution record
+
+2026-11-27, engineer (model unset). Commits: `0709692` (first values), `8c30db6` (trial 1: the final code), then the docs and this record. Figures and proofs: [`log.md`](log.md), "Step 13".
+
+**Built**
+
+- `blight_breath` "Blight Breath" (4 AP, recharge 3; a burst centred on self, radius 2, `foesOnly`, 8d6 blight, Corroded 3 turns, `halfOnMiss`, no `throughResistance`) and `horror_claws` "Claws" (6 AP, recharge 0: two Claws of 2d8), after `wyrm_strikes` in `ABILITY_IDS` and `MONSTER_ABILITY_IDS`; `ABILITY_SOUNDS` (the spit, Consecrate's blight impact) and `ABILITY_LOOKS` (Death Cloud's green, a burst); the claws sound as attacks. No `Ability` field, no engine change.
+- `SOURCE_HORROR_STATS` (`src/combat/combat.ts`): "Blight Horror", native 20, 171 hit points, armour class 80, **to hit 125** (named exception), resistance 3, piercing 21, Claws 1d10+4, 10 AP, regeneration 2, blightborn; `source_horror` in `MonsterKind`, `FOE_STATS`, `FOE_XP` 500, `FOE_NATIVE_LEVEL` 20, `FOE_SOUNDS`, `DEATH`, `STEP`, `STAGE_11_KINDS`.
+- `encounters.ts`: `SOURCE_GUARDIANS` is the near-home def (today's slots less the never-fielded Goblin Cutter, `TODAY`'s band and counts); `SOURCE_AT_20` (band 20–20, count 3: the Horror, the Blight Acolyte, the Blight Zealot). `sourceGuardians` picks `SOURCE_AT_20` when `floor(threat) > 5`. `ENCOUNTER_BANDS.source_guardians` `{ min: 1, max: 20 }`; `ENCOUNTER_COUNTS.source_guardians` `[2, 3, 3, 3, 4, ...15 × 3]`. `SOURCE_FOE_LEVEL` and `EncounterDef.maxFoeLevel` removed.
+- Tests: `encounters.test.ts` (the near-home hash recorded before the change, passing before and after; the band-wide tests with the Source's fall to three at 6 and threats 7–20 held as 6; composition at 5, 6, 12, 20 and 25; the block, XP, native, piercing; the yardstick with the exception), `highRoster.test.ts` (the breath: aimed at its own hex, every hero within 2 and none of its guardians or a hero 3 off, a hit whole and Corroded, a miss half and nothing, 3 × 9 draws, recharge; a blight ward of 10 takes 10; regeneration 2 and not while Seared or Corroded; `baneApplies`; the claws' two attack events through resistance), `abilities.test.ts`, `sounds.test.ts`, the snapshot and the estimate fixture (below).
+- Docs: `docs/reference/game.md` (the Source line, bands and counts), `.claude/skills/yomi-balance/levers.md` (the far Source's levers), `bands.md` (`sgk20`, `sg20-18`, `sg20` in "Now"). `src/game/CLAUDE.md` named neither constant. `grep -rn SOURCE_FOE_LEVEL src scripts docs/reference .claude` finds nothing (nor `maxFoeLevel`).
+
+**Cells** (final code `8c30db6`): `sgk20` **445** (first values 495; one trial of three), `sg20-18` 0, `sg20` 0 (own kit, report only; stage 10 28 and 71).
+
+**Departures from the task**
+
+1. The estimate fixture in `src/game/forecast.test.ts` (not named by the task) fights `source_guardians` at threats 10 and 20: its three entries re-recorded (digests; the level-18 tally 4 → 0 wins), every other entry unchanged.
+2. The never-fielded Goblin Cutter slot dropped from the near-home slots (threats 1–5 field at most four; the hash proves the setups unchanged).
+3. Cells run by the engineer in the foreground, not through `yomi-measure` (the brief).
+4. More than one commit (first values, trial, docs and records).
+
+**For later steps**
+
+- The snapshot is 21,963 lines (`631a06bf…f88c`); its checks now run on the lines less the far Source's, then three segments (near, the Source at 20, the rest).
+- Step 14's long campaign meets a much harder Source: a ready-made party in its own gear wins none at 18 or 20 (`sg20-18`, `sg20`).

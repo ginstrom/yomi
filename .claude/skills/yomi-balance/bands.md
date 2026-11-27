@@ -25,7 +25,7 @@ Accepted out of band (the user, stage 9 step 09): `one` 288, `company` 289 and `
 
 The waiting check (`--waiting`, stage 7's design): income a day campaigning must stay above the waiting twin's, or idling at home pays; stage 7 measured 1.3 against 1.0 a day (one party and the company alike), the twin never ahead in any campaign. The careful simulated party rarely builds past an outpost or raises the post past 2, so works, forts and market gold barely show in these figures.
 
-Also: TL5 0 (report-only), F1 to F3 500, 500, 463. Far cells, report only (stage 10, bandits in tiers 3 to 5): BCO9 2, BCO12 0, FH15 0, FH18 0, SG20-18 28, SG20 71. The long campaign (100, `--log none`; stage 10): Source 1, fell 97, 1414 days, 42.3 battles (stage 9's step 01 baseline 15, 1272, 46.4); its kit lags `expectedKit` (accepted until stage 12). Stage 11's ring cells (report only, the expected kit, the plan's reading 300 to 475, not a band; step 08): WP6 418, WP9 358, WR7 463, WR9 326, OC7 405, OC10 308; step 09: WY9 312, WY12 399; step 10: BW11 485, BW14 327, BL11 425, BL14 304, HG12 495, HG15 400; step 11: GO14 468, GO17 438, CU14 345, CU18 471, YD15 491, YD18 396; step 12: LC17 497, LC20 332, EW18 482, EW20 408. In play: BW12 477, BL12 445, GO15 366, CU15 429, YD15 491, LC18 464, EW18 482; the misses and why: the stage 11 plan's `log.md`. Capstones barely show at level 7 or 10; `--ready-level 12` is where they do.
+Also: TL5 0 (report-only), F1 to F3 500, 500, 463. Far cells, report only (stage 10, bandits in tiers 3 to 5): BCO9 2, BCO12 0, FH15 0, FH18 0. The long campaign (100, `--log none`; stage 10): Source 1, fell 97, 1414 days, 42.3 battles (stage 9's step 01 baseline 15, 1272, 46.4); its kit lags `expectedKit` (accepted until stage 12). Stage 11's ring cells (report only, the expected kit, the plan's reading 300 to 475, not a band; step 08): WP6 418, WP9 358, WR7 463, WR9 326, OC7 405, OC10 308; step 09: WY9 312, WY12 399; step 10: BW11 485, BW14 327, BL11 425, BL14 304, HG12 495, HG15 400; step 11: GO14 468, GO17 438, CU14 345, CU18 471, YD15 491, YD18 396; step 12: LC17 497, LC20 332, EW18 482, EW20 408; step 13: SGK20 445, SG20-18 0, SG20 0. In play: BW12 477, BL12 445, GO15 366, CU15 429, YD15 491, LC18 464, EW18 482; the misses and why: the stage 11 plan's `log.md`. Capstones barely show at level 7 or 10; `--ready-level 12` is where they do.
 
 Path parity: every plan of `AUTO_PLANS` within 50 of its role's best at Bandit Camp threat 4, level 4. All hold but the evoker, 54 behind the healer (accepted). At levels 8 (Hobgoblin Warband) and 14 (Bandit Camp threat 7) gaps are reported, not gated; at 14 `rogue_archer` 75, cryomancer 59, saint 84 and arcanist 444 behind were accepted by the user.
 
@@ -50,8 +50,8 @@ A cell is `--encounter E --threat T --party-level L`, 500 battles from seed 1 (`
 | SP7, SP9 | `salamander_pool` 7, 9, L7, L9 | report only |
 | BCO9, BCO12 | `bandit_company` 9, 12, L9, L12 | report only |
 | FH15, FH18 | `freebooter_host` 15, 18, L15, L18 | report only |
-| SG20-18, SG20 | `source_guardians` 20, L18 and L20 | report only |
-| BCO9K, BCO12K, FH15K, FH18K, SGK20 | BCO9, BCO12, FH15, FH18 and SG20 with `--player-kit expected` | report only |
+| SG20-18, SG20 | `source_guardians` 20, L18, L20 | report only |
+| BCO9K, BCO12K, FH15K, FH18K, SGK20 | BCO9, BCO12, FH15, FH18, SG20 with `--player-kit expected` | report only |
 | WP6, WP9 | `wolf_pack` 6, 9, L6, L9, with `--player-kit expected` | report only (working reading 300 to 475) |
 | WR7, WR9 | `worg_riders` 7, 9, L7, L9, with `--player-kit expected` | report only (300 to 475) |
 | OC7, OC10 | `ogre_camp` 7, 10, L7, L10, with `--player-kit expected` | report only (300 to 475) |
