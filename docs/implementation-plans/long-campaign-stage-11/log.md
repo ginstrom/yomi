@@ -419,3 +419,45 @@ Step 13 (the Source at 20: the Blight Horror of native 20 and two cultists): eng
 | wyvern_roost (new) | — | 34, 0.912 |
 
 Battles lost at threats 7 and 9: about 82 → 151; the Source wins fall by 38. The ring cells are tuned for a party in the expected kit; `rl10`'s parties wear their own (stage 12's gear lag), and `wolf_pack` and `worg_riders` at 9 beat them. `rl10` 371 is inside its band (370–420), by one. Brought to the orchestrator (task §4.1 item 1, decision 15); nothing tuned.
+
+### The long campaign (100, `--campaign --log none`, ready level 18)
+
+76 s alone (step 01 166 s, stage 10 4:07), load about 3; `logs/s11-14-long.txt`. Recorded for stage 12, not judged (decision 19).
+
+| Figure | Now | Step 01 (= stage 10) |
+| --- | --- | --- |
+| Source; fell; encampment lost; out of days | **0**; 100; 0; 0 | 1; 97; 0; 2 |
+| Days; battles | **739; 26.8** | 1414; 42.3 |
+| Walking (home) | 676.7 (144.3) | 1255.2 (170.6) |
+| Spawns; sites captured, lost; blighted | 42.6; 5.5, 0.7; 66% | 53.6; 7.4, 1.6; 64% |
+| Parties wiped; heroes dead (battles won); recruits | 3.7; 3.2; 17.3 | 8.3; 3.7; — |
+| Final levels (lowest, highest) | 4.9, 6.4 | 5.1, 6.2 |
+| Battles to level 5 / 10 / 15 / 20 | 6.8 / 26.8 / 47.3 / — | 6.8 / 28.4 / 55.9 / — |
+| Campaigns reaching 5 / 10 / 15 / 20 | 84 / **38** / **3** / 0 | 84 / 53 / 16 / 0 |
+| Gold by source (sites, market, routes, sales) | 589, 128, 68, 634 | 1130, 721, 689, 2300 |
+| Gold on gear; on forging and tempering | 304; **82** | 451; 2271 |
+| Trading post, workshop, infirmary | 2.1, 1.5, 1.5 | 3.3, 2.3, 1.8 |
+| Trade (partners; routes opened, raided, abandoned) | 0.89; 0.26, 0.09, 0.08 | 1.34; 1.30, 0.82, 0.80 |
+| Tier-2 bought; runes found, bought, fused | 0.7; 20.1, 0.5, 1.5 | 2.0; 34.6, 9.6, 6.3 |
+| Capstones | 2 of 100 (deadeye 2) | 6 of 100 |
+| Trophies a campaign | not printed (no trophy line in the summary; no measure added) | not printed (`TROPHIES` empty then) |
+
+Heroes died at level 2 (12), 3 (50), 4 (28), 5 (46), 6 (37), 7 (38), 8 (36), 9 (16), 10 (21), 11 (14), 12 (9), 13 (6), 14 (6), 15 (2) (step 01: … 12 (16), 13 (14), 14 (15), 15 (15), 16 (6), 17 (5), 19 (1)).
+
+| Threat | Battles | Won | Win rate | Step 01 |
+| --- | --- | --- | --- | --- |
+| 1 | 200 | 200 | 1.000 | 200, 1.000 |
+| 2 | 361 | 358 | 0.992 | 369, 0.992 |
+| 3 | 248 | 235 | 0.948 | 287, 0.955 |
+| 4 | 354 | 352 | 0.994 | 441, 0.998 |
+| 5 | 442 | 441 | 0.998 | 489, 1.000 |
+| 7 | 625 | 515 | **0.824** | 754, 0.939 |
+| 9 | 406 | 185 | **0.456** | 767, 0.785 |
+| 12 | 40 | 24 | 0.600 | 768, 0.367 |
+| 15 | 3 | 0 | 0 | 156, 0.295 |
+| 18 | — | — | — | 1, 0 |
+| 20 | — | — | — | 1, 1.000 |
+
+Kit lines (all / forge-ready), against `expectedKit`: at 5 (84): every role tier 1.0, 0.0 runes (expected tier 2, 1–2 runes) / none (0 of 84); at 10 (38): tier 1.0, 0.0 runes (expected 3, 2–3) / none (0 of 38); at 15 (3): tier 1.0, 0.0 runes (expected 4, 3–4) / none (0 of 3). Step 01 at 15 (16): fighter 1.5 / 0.3 runes, 8 of 16 forge-ready.
+
+**Reading (no action):** the monsters of rings 7 and 9, tuned for the expected kit, meet parties in tier-1 gear with no runes: the win rate at 9 falls from 0.785 to 0.456 and at 7 from 0.939 to 0.824, and the campaigns end there, at half the days and battles. Ring 12 is fought in 40 battles (768 before), ring 15 in 3; rings 18 and the Source at 20 are not reached, so the rebuilt Source is untested by the long run. Forging gold falls from 2271 to 82: no campaign's workshop reaches level 4 at a level mark, so hide tiers 4 and 5 are not forged in play. Stage 12 owns this (the gear lag, decision 19).
