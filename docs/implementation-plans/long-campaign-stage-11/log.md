@@ -318,3 +318,31 @@ The final logs are byte-identical to their trials' (`cmp`): `go14` trial 1's, `g
 ## Step 11 outcome
 
 Step 11 (ring 15: golems, cultists, young dragons): engineer opus, reviewer opus, verdict clean, 1 review round, no finding. Commits `5c83ec8` (first values), `1b78a7e` (tuned), `eab9959` (docs), `37639ee` (record), `3f4f90c` (trial 4: the cult four at 15 and 16, kept), `4ccac5e` (its docs and the new standing rule). Gates at `4ccac5e`: `npm test` #152 (2963 passed), `npm run build` #153, browser `debug` #154 (5 passed), `world` #155 (66 passed); earlier at `eab9959` #132 to #148 (the execution record); the reviewer's #149 (battle, 31 passed and only the known A9) and #150 (`npm test`, 2963). Cells go14 468, go17 438, cu14 345, cu18 471, yd15 491, yd18 396; in play go15 366, cu15 429, yd15 491 (for stage 12), cu18 471, yd18 396; 50-campaign hash identical, the refactor guard unedited and green.
+
+## Step 12: ring 18
+
+2026-11-27. Code `adb0921` (first values), `921b3f7` (tuned: the final code). Cells: 500 battles from seed 1, `node scripts/simulate.ts --battles 500 --seed 1 --encounter E --threat T --party-level T --player-kit expected --out logs/s11-12-<label>.jsonl`, run by the engineer in the foreground one at a time (40 to 130 seconds each; up to 325 s while the machine slept), read against 300–475 (report only). Logs (gitignored): `logs/s11-12-<cell>` the first values at `adb0921`, `-t1-`, `-t2-`, `-t3-` the trials on the dirty tree of each, `-final-` on `921b3f7`.
+
+**50-campaign check:** `1e85d023a1b58697ec36724720f6ad5ba8b4a5dc2362f4ff6b22605ce37ed216`, **identical**, at the first values (`logs/s11-12-guard-50.jsonl`) and at the tuned tree (`logs/s11-12-t3-guard-50.jsonl`). The refactor guard is unedited and green.
+
+**Yardstick** (`foeYardstick(n, 'expected')`): at 17 armour class 54–74, to hit 80–100, hit points 72.9–145.8, damage a turn 13.1–21.8; at 18, 56–76, 80–100, 77.1–154.2, 13.7–22.8. The lich sits inside. The wyrm has two named exceptions at the final code: to hit 115, hit points 185.
+
+**Cells and trials** (wins of 500; player / enemy hit rate; rounds; damage dealt / taken a battle). Bold is outside the reading. `lc18` is the in-play cell (the Ashen Court is at 18); `ew18` too (the Last Wyrm).
+
+| Trial | Change | lc17 | lc18 (in play) | lc20 | ew18 (in play) | ew20 |
+| --- | --- | --- | --- | --- | --- | --- |
+| First values (`adb0921`) | court 3, 4, 4, 5; lair 2, 2, 3; the wyrm 150 hit points, armour class 66, 100 to hit, piercing 16 | **500** (0.54 / 0.43; 8.4; 376 / 74) | **499** (0.50 / 0.60; 14.3; 525 / 157) | **287** (0.41 / 0.73; 25.2; 637 / 421) | **499** (0.62 / 0.34; 10.0; 326 / 131) | **6** (0.58 / 0.66; 9.0; 271 / 406) |
+| 1 | court: counts 4, 5, 5, 5. Lair: the wyrm's block (154 hit points, armour class 76, 115 to hit) and counts 2, 2, 2 (two levers: three at 20 were 6 wins with the weaker wyrm) | **499** (0.55 / 0.54; 11.9; 489 / 118) | 464 (0.48 / 0.62; 20.3; 660 / 277) | 287 (unchanged, not run) | **494** (0.59 / 0.41; 11.3; 336 / 189) | **477** (0.52 / 0.52; 14.8; 371 / 324) |
+| 2 | court: counts 5, 5, 5, 4 (the Lich's Herald out at 20). Lair: the wyrm's piercing 21 | **497** (0.53 / 0.58; 16.9; 625 / 230) | 464 (unchanged) | 332 (0.41 / 0.75; 20.0; 533 / 307) | **485** (0.58 / 0.42; 11.4; 336 / 250) | 430 (0.52 / 0.54; 14.6; 362 / 425) |
+| 3 | lair: the wyrm's 185 hit points | — | — | — | **482** (0.57 / 0.42; 12.3; 365 / 270) | 408 (0.52 / 0.54; 15.7; 390 / 469) |
+| **Final (`921b3f7`)** | the court's trial 2, the lair's trial 3 | **497** | 464 | 332 | **482** | 408 |
+
+The final logs are byte-identical to their trials' (`cmp`): `lc18` trial 1's, `lc17`, `lc20` trial 2's, `ew18`, `ew20` trial 3's.
+
+**Read against the standing rule.** The court is inside at 18, where the map has it, and at 20; `lc17` 497 is a band-end miss (the bottom runs easy: the five slots are all fielded, so only the lich's block could move it, and that would move 18 and 20 too). **`ew18` 482 is an in-play miss after three trials: brought to the orchestrator.** The lair at two foes slopes gently (482 at 18, 408 at 20); a third foe is a cliff (6 wins at 20 with the first wyrm).
+
+**What each kind needed against the kit** (fighter and archer resistance 21 from 17): the lich pierces 14 (its touch is a sideline: the policy has it cast Lightning Bolt about 3 times a battle and Dark Shield 2, Drain Life almost never and Death Cloud never at the first values); the wyrm pierces all 21 (at 16 its three strikes lost 5 each on the fighters). The breath carries no flag (only the heroes' fire wards cut it). The wyrm at 100 to hit and armour class 66 was weaker than the young dragon raised to 18 beside it (115, 73, 150 hit points).
+
+**The policy snapshot:** re-recorded with ring 18's lines only. The test keeps step 11's prefix checks and adds a fifth: the first 22,394 lines against `aed88277…f007c` (step 11's whole snapshot after trial 4), every line after them beginning `blight_lich_court` or `elder_wyrm`; 24,048 lines, `b41a6374…ee3c` (24,092 and `e078b975…c094` at the first values).
+
+**Far-world pins.** `blight.test.ts`'s two runs did not move. `worldMap.test.ts`'s session re-pinned (`11812dc7…ced9`), proven confined (the digested JSON dumped at `6ee7d63` and at the first values, diffed): 18 values, the three renamed nests' id, name and encounter (9), three far spawns' name and encounter (6: two Dragon Lairs now Lich Courts, a Freebooter Band now a Blight Cult) and their spawned events' names (3); `SESSION_TURN` unchanged.

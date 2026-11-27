@@ -121,8 +121,8 @@ Ids in `ENCOUNTERS` (after `freebooter_host`, in this order), `ENCOUNTER_BANDS`,
 | `golem_ruin` | 14–17 | stone_golem, barrow_wight, stone_golem, barrow_wight, stone_golem | 4, 4, 4, 5 | Golem Ruin | — | 11 |
 | `blight_cult` | 14–18 | blight_cultist, barrow_wight, blight_cultist, barrow_wight, blight_cultist | 5, 4, 4, 5, 5 | Blight Cult | storm | 11 |
 | `young_dragon` | 15–18 | young_dragon, wyvern, wyvern | 2, 2, 3, 3 | Dragon Lair | ember | 11 |
-| `blight_lich_court` | 17–20 | blight_lich, barrow_wight, blight_cultist, barrow_wight, blight_cultist | 3, 4, 4, 5 | Lich Court | storm | 12 |
-| `elder_wyrm` | 18–20 | elder_wyrm, young_dragon, young_dragon | 2, 2, 3 | Wyrm Lair | ember | 12 |
+| `blight_lich_court` | 17–20 | blight_lich, barrow_wight, blight_cultist, barrow_wight, blight_cultist | 5, 5, 5, 4 (step 12; first 3, 4, 4, 5) | Lich Court | storm | 12 |
+| `elder_wyrm` | 18–20 | elder_wyrm, young_dragon, young_dragon | 2, 2, 2 (step 12; first 2, 2, 3) | Wyrm Lair | ember | 12 |
 
 `TROPHIES` (decision 14) grows with the kinds. Counts and slot order are the ring step's tuning levers (decision 4).
 
