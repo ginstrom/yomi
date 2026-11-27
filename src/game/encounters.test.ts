@@ -86,7 +86,7 @@ const BASILISK_LAIR_COUNTS = [3, 3, 3, 3]
 const HILL_GIANT_STEADING_COUNTS = [3, 3, 3, 3]
 /** Ring 15's counts (stage 11 step 11; the cells' tuning is in the plan's log). */
 const GOLEM_RUIN_COUNTS = [4, 4, 4, 5]
-const BLIGHT_CULT_COUNTS = [5, 5, 5, 5, 5]
+const BLIGHT_CULT_COUNTS = [5, 4, 4, 5, 5]
 const YOUNG_DRAGON_COUNTS = [2, 2, 3, 3]
 
 describe.each(Object.entries(ENCOUNTERS))('the %s encounter', (_id, build) => {
@@ -126,8 +126,13 @@ describe.each(Object.entries(ENCOUNTERS))('the %s encounter, as the threat rises
    * The one encounter whose numbers fall as the threat rises, by the user's decision (stage 11 step 09): the Wyvern
    * Roost fields four at 9 and 10 and three at 11 and 12, as the expected kit is the same across its band while the
    * wyverns grow. So threat 11 fields fewer than 10 and is worth less (three wyverns of 11 against four of 10).
+   * And the Blight Cult, by the user's decision (stage 11 step 11): five at 14, four at 15 and 16 (without the Cult
+   * Elder), five at 17 and 18, as every foe gains 5 to hit and armour class from 14 to 15 and the kit not until 17.
    */
-  const falls = id === 'wyvern_roost'
+  const falls = id === 'wyvern_roost' || id === 'blight_cult'
+  /** Where a falling encounter's count changes, by how many foes: the threats not named keep their count. */
+  const FALLS: Partial<Record<EncounterId, Record<number, number>>> = { wyvern_roost: { 11: -1 }, blight_cult: { 15: -1, 17: 1 } }
+  const fallsAt = (threat: number) => FALLS[id as EncounterId]?.[threat] ?? 0
 
   it('fields foes of that level, never fewer than before, each with a name and a hex of its own', { timeout: 20_000 }, () => {
     // Each threat's encounter is built once, its foes kept for the next threat's comparison.
@@ -140,7 +145,7 @@ describe.each(Object.entries(ENCOUNTERS))('the %s encounter, as the threat rises
       expect(new Set(state.units.map((u) => `${u.position.q},${u.position.r}`)).size).toBe(state.units.length)
       expect(new Set(now.map((u) => u.stats.name)).size).toBe(now.length)
       if (before !== null) {
-        if (falls) expect([threat, now.length - before.length]).toEqual([threat, threat === 11 ? -1 : 0])
+        if (falls) expect([threat, now.length - before.length]).toEqual([threat, fallsAt(threat)])
         else expect(now.length).toBeGreaterThanOrEqual(before.length)
         // The Source's guardians stop growing at SOURCE_FOE_LEVEL (stage 9 step 09), and hold there.
         const held = id === 'source_guardians' && threat > SOURCE_FOE_LEVEL
@@ -156,7 +161,7 @@ describe.each(Object.entries(ENCOUNTERS))('the %s encounter, as the threat rises
 
   it('is worth more the higher the threat', () => {
     for (let threat = min + 1; threat <= max; threat++) {
-      if (falls && threat === 11) expect(xpReward(build(party(), threat))).toBeLessThan(xpReward(build(party(), threat - 1)))
+      if (fallsAt(threat) < 0) expect(xpReward(build(party(), threat))).toBeLessThan(xpReward(build(party(), threat - 1)))
       else expect(xpReward(build(party(), threat))).toBeGreaterThan(xpReward(build(party(), threat - 1)))
     }
   })

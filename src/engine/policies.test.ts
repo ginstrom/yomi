@@ -1160,8 +1160,17 @@ describe('policies', () => {
       expect(sha(lines.slice(0, RING_12))).toBe('96ec580b1bd37e00f14c2c1b4df2f33f528dc178aa964bc8fe91fc85e6ca9136')
       // Ring 15's (step 11): the Golem Ruin's, the Blight Cult's and the Dragon Lair's lines only.
       expect(new Set(lines.slice(RING_12).map((line) => line.split(' ')[0]))).toEqual(new Set(['golem_ruin', 'blight_cult', 'young_dragon']))
-      expect(lines.length).toBe(22385)
-      expect(sha(lines)).toBe('2177afc9c2884539f2ae1732f1aa2ffbfe70548a968b387c417fae4b526e4dc5')
+      // Re-recorded for the Blight Cult's four at 15 and 16 (step 11's trial, the user's decision): its lines only. The
+      // Golem Ruin's, before it, and the Dragon Lair's, after it, are as step 11 first recorded them (22,385 lines, `2177afc9…4dc5`).
+      const GOLEM_RUIN = 20573
+      expect(new Set(lines.slice(RING_12, GOLEM_RUIN).map((line) => line.split(' ')[0]))).toEqual(new Set(['golem_ruin']))
+      expect(sha(lines.slice(0, GOLEM_RUIN))).toBe('1ca7dcbb619fc7a6671ebb2a0075321557d9013de553f01eaf5921d63f0d9b4c')
+      const LAIR = 736
+      expect(new Set(lines.slice(GOLEM_RUIN, -LAIR).map((line) => line.split(' ')[0]))).toEqual(new Set(['blight_cult']))
+      expect(new Set(lines.slice(-LAIR).map((line) => line.split(' ')[0]))).toEqual(new Set(['young_dragon']))
+      expect(sha(lines.slice(-LAIR))).toBe('059cf9209a6a8cb325dc0451244046a6a31cafa08f227a3b351be25f89ddb695')
+      expect(lines.length).toBe(22394)
+      expect(sha(lines)).toBe('aed882773bb254acfebabad45925b90963bc152ad057f04a5c02da9a469f007c')
     }, 60_000)
   })
 })

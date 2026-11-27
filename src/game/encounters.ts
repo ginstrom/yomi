@@ -543,8 +543,13 @@ const HILL_GIANT_STEADING: EncounterDef = { slots: HILL_GIANT_STEADING_SLOTS, ba
  * 500 times in 500, and four at 17).
  */
 const GOLEM_RUIN: EncounterDef = { slots: GOLEM_RUIN_SLOTS, band: { min: 14, max: 17 }, counts: [4, 4, 4, 5] }
-/** The Blight Cult, threats 14 to 18: three cultists and the two wights they have raised, at every threat. */
-const BLIGHT_CULT: EncounterDef = { slots: BLIGHT_CULT_SLOTS, band: { min: 14, max: 18 }, counts: [5, 5, 5, 5, 5] }
+/**
+ * The Blight Cult, threats 14 to 18: three cultists and the two wights they have raised, but at 15 and 16 without
+ * the Cult Elder (the user's decision, stage 11 step 11). From 14 to 15 every foe gains 5 armour class, to hit and
+ * spell skill while the expected kit does not move until 17: five were won 345 times in 500 at 14 and 99 at 15.
+ * So, with the Wyvern Roost, one of the two encounters whose numbers fall as the threat rises.
+ */
+const BLIGHT_CULT: EncounterDef = { slots: BLIGHT_CULT_SLOTS, band: { min: 14, max: 18 }, counts: [5, 4, 4, 5, 5] }
 /**
  * The Dragon Lair, threats 15 to 18: the Young Dragon and a wyvern, the Wyvern Mate from 17 (a wyvern raised to 15
  * is the harder of the two kinds to hit: with two of them at 15 the lair was won 64 times in 500).
