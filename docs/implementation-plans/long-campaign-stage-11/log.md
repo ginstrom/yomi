@@ -485,3 +485,50 @@ No cell differs from its step's figure; no new cell outside the reading.
 ## Step 14 outcome
 
 Step 14 (measure and record): engineer opus, reviewer opus, verdict clean, 1 review round, no blocking finding; three wording points fixed in step 15's first docs commit (the spawn list at 9 grew 3 to 7, not 4 to 8; `bands.md`'s "Now" header and stage 9's acceptance line). Commits `05cf092`, `cad31fe`, `fb3fef3`, `5f1e040`, `6b4fce3`, `a6d4c34`, `504fec3`. Gate: `npm test` runlog #205 at `504fec3` (#204 void, run under load).
+
+## Step 15: the play script
+
+2026-11-28, at `af01b3f` (no `src`/`scripts` change in this step; no simulation run). Walked in the dev build: the in-browser harness's Vite dev server and headless Chromium (Playwright), driven by a throwaway script outside the repository, `?seed=42`, ten times life speed; `pmset` showed no sleep across any run, each run under `caffeinate -i`. For each fight: a new game; the debug console's `level <T> all auto`; the party's equipment planted in the save as `expectedGear(member, T, lead resistance)` gives it (the kit `--player-kit expected` uses; `give` and dressing three heroes by hand for 25 fights was the alternative); reload, Continue, `heal all`, `fight <encounter> <T>`, the lead foe hovered (its panel read), a screenshot, then Auto on the battle screen; the log read through `formatEvent`. No page logged an error, threw or failed a request (the harness fails a run on any).
+
+| Fight | Result | Rounds | Heroes standing | Foe abilities and spells that fired | Statuses laid |
+| --- | --- | --- | --- | --- | --- |
+| `wolf_pack` 6 | won | 8 | 3 of 3 | plain bites | taunted 8, seared 5 |
+| `wolf_pack` 9 | won | 20 | 1 of 3 | plain bites | taunted 14, seared 9 |
+| `worg_riders` 7 | won | 10 | 3 of 3 | `worg_strikes` | taunted 5, seared 6 |
+| `worg_riders` 9 | won | 14 | 2 of 3 | `worg_strikes` | taunted 9, seared 8, pinned 2 |
+| `ogre_camp` 7 | won | 13 | 3 of 3 | `worg_strikes` | taunted 9, seared 6 |
+| `ogre_camp` 10 | won | 12 | 3 of 3 | `ogre_sweep`, `worg_strikes` | taunted 12, seared 9 |
+| `wyvern_roost` 9 | won | 6 | 2 of 3 | `wyvern_strikes` | taunted 8, seared 7, poisoned 10 |
+| `wyvern_roost` 12 | won | 8 | 2 of 3 | `wyvern_strikes` | taunted 3, seared 5, poisoned 8 |
+| `barrow_wights` 11 | won | 7 | 3 of 3 | `drain_life` | taunted 8, seared 7 |
+| `barrow_wights` 14 | won | 10 | 2 of 3 | `drain_life` | taunted 8, marked 4, seared 6 |
+| `basilisk_lair` 11 | lost | 13 | 0 of 3 | `basilisk_gaze` | taunted 6, seared 8, chilled 7 |
+| `basilisk_lair` 14 | lost | 18 | 0 of 3 | `basilisk_gaze`, `ogre_sweep` | taunted 9, marked 6, seared 7, chilled 6 |
+| `hill_giant_steading` 12 | won | 14 | 2 of 3 | `giant_rock` | taunted 6, seared 7, pinned 2 |
+| `hill_giant_steading` 15 | won | 10 | 3 of 3 | `giant_rock` | taunted 6, marked 4, seared 10 |
+| `golem_ruin` 14 | won | 14 | 3 of 3 | `drain_life` | taunted 8, marked 5, seared 6, pinned 1 |
+| `golem_ruin` 17 | won | 20 | 1 of 3 | `drain_life` | taunted 11, marked 7, seared 23, pinned 1 |
+| `blight_cult` 14 | won | 15 | 3 of 3 | `curse`, `drain_life`, `heal`, `lightning_bolt` | taunted 23, marked 5, seared 6, cursed 2 |
+| `blight_cult` 18 | won | 19 | 2 of 3 | `curse`, `drain_life`, `heal`, `lightning_bolt` | taunted 33, marked 6, seared 16, cursed 6, pinned 1 |
+| `young_dragon` 15 | won | 14 | 3 of 3 | `dragon_breath`, `dragon_strikes`, `wyvern_strikes` | taunted 4, marked 5, seared 4, poisoned 10, pinned 1 |
+| `young_dragon` 18 | won | 16 | 2 of 3 | `dragon_breath`, `dragon_strikes`, `wyvern_strikes` | taunted 9, marked 6, seared 16, poisoned 20 |
+| `blight_lich_court` 17 | won | 15 | 3 of 3 | `curse`, `dark_shield`, `drain_life`, `heal`, `lightning_bolt` | taunted 29, marked 5, seared 16, shielded 1, cursed 3 |
+| `blight_lich_court` 20 | won | 23 | 1 of 3 | `curse`, `dark_shield`, `drain_life`, `heal`, `lightning_bolt` | taunted 8, marked 8, pinned 3, seared 18, shielded 2, cursed 3 |
+| `elder_wyrm` 18 | won | 14 | 3 of 3 | `dragon_breath`, `dragon_strikes`, `wyrm_breath`, `wyrm_strikes` | taunted 8, marked 5, seared 13 |
+| `elder_wyrm` 20 | lost | 20 | 0 of 3 | `dragon_breath`, `dragon_strikes`, `wyrm_breath`, `wyrm_strikes` | taunted 4, marked 7, pinned 3, seared 22 |
+| `source_guardians` 20 | won | 19 | 2 of 3 | `blight_breath`, `curse`, `heal`, `horror_claws`, `lightning_bolt` | marked 7, pinned 3, seared 16, corroded 2, cursed 2, taunted 1 |
+
+Checks, ring by ring:
+- **Ring 7.** Wolves: at 6 the fighter's Taunt held all 15 wolf attacks on him; at 9 wolves reached the archer (8 attacks) and the mage (4). Spear and Bite is one action of two lines ("Worg Rider Chief spears Aldric … HITS Aldric for 5 dmg (armour stops 1)." then "Worg Rider Chief bites Aldric … MISSES Aldric."). Sweep: "Ogre Brute sweeps its club: MISSES Aldric; HITS Delwyn for 9 dmg." (at 10; three more in the Basilisk Lair at 14); at 7 both ogres stood beside the fighter alone and only clubbed him (the policy sweeps for two heroes or more). Hover: "Sweep: ready / burst 1, around itself, foes only: 2d8+2, through armour".
+- **Ring 9.** "Wyvern Mate stings Aldric … HITS Aldric for 4 dmg, poisoned." (10 poisonings at 9, 8 at 12).
+- **Ring 12.** "Barrow King casts Drain Life on Aldric … HITS Aldric for 11 dmg and drains 5."; "Basilisk fixes its gaze: MISSES Aldric." (chilled 7 times at 11); "Giant Chief hurls a rock: HITS Aldric for 8 dmg (armour stops 4)." (once a fight at each end).
+- **Ring 15.** The golem's panel: "Stone Golem / Wards: poison 99 / Immune to acid and poison". With Venom runes in every weapon (a variant at 14): "Aldric pins Stone Warden … HITS Stone Warden for 26 dmg (armour stops 4), pinned, unaffected by the rest. CRITICAL HIT!" (one refusal; Acid Arrow was never cast by the auto-resolved mage). Cultists cast Lightning Bolt, Curse and Heal. Fire Breath on the front rank: "Young Dragon breathes fire: HITS Aldric for 24 dmg, seared." / "MISSES Aldric, 12 dmg (half)."; the same seed with a rank-2 Ember rune in each body armour: "HITS Aldric for 20 dmg (warded 4), seared." / "MISSES Aldric, 8 dmg (warded 4) (half)." — a sixth off a hit, a third off a miss (design §4: "a third").
+- **Ring 18.** The lich cast Lightning Bolt, Dark Shield and (at 20) Drain Life, and regenerated ("Blight Lich regenerates 3.") only after "Blight Lich is no longer seared."; it never cast Death Cloud in either fight (its area needs two heroes and no ally in it). The Elder Wyrm breathed its cone of 4 (5 and 7 times) with Bite and Claws; regenerated 7 and 12 times.
+- **The Source at 20.** "Blight Horror breathes the blight: HITS Aldric for 30 dmg, corroded." (3 breaths, 2 corrosions, no cultist in any breath's outcomes), "Blight Horror regenerates 2.", Claws 16 strikes. With Dawn runes (rank 3, three sockets) in every weapon: "HITS Blight Horror for 17 dmg +5 blight +5 blight +5 blight", won in 13 rounds against 19.
+- **Sprites.** Every unit drawn, none a placeholder, each distinct beside the heroes (screenshots of each fight's first turn; the manual's new `battle-dragon.png`).
+- **Trophies** (`goto <nest>`, Attack, Auto; party at the ring's level in the kit): Greyfang Pack "Trophies: 4 wolfhide."; Cinder Roost "Trophies: 12 wyvern hide."; Thornwall Lair "Trophies: 6 basilisk scale."; Saltwind Drake "Trophies: 6 drake scale, 3 wyvern hide."; Last Wyrm "Trophies: 16 drake scale." All five won.
+- **Forging.** After the Last Wyrm (16 drake scale), `facility workshop 6`, `stock gold 500`, `goto encampment`, the workshop's Forge tab, Armour: "leather:drake 80 gold, 12 drake scale" open, forged: "The Drake-scale Leather is in the baggage." The Saltwind Drake's 6 is half of one.
+- **The Market Hall's goods** (`facility trading_post 5`, `contact all`): Timber from Millbrook, Salt from Saltmere, Mithril from Stonehollow, Elderwood from Elder Glade, Adamant from Emberwatch: no wyvern hide.
+- **Played turn by turn** (the harness's naive player, each hero at the nearest foe): the Worg Band at 7 was lost in 26 rounds; ability lines played back as in the auto-resolved log.
+
+Findings (recorded, not tuned or fixed; for the orchestrator): the Ember ward against Fire Breath is a sixth to a third, not about a third; a Young Dragon's 6 drake scale is half a leather; the victory screen's "The Greyfang Pack are beaten." (also the Cinder Roost, Saltwind Drake, Last Wyrm) is plural for singular names (scene text, not this stage's code); the hover panel lists a caster foe's abilities and wards but not its spells, so wights, cultists and the lich show none; the lich never cast Death Cloud in two fights; the Basilisk Lair was lost at both ends (cells 425 and 304) and the Elder Wyrm at 20 (cell 408), one seeded battle each.

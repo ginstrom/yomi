@@ -136,10 +136,25 @@ No rule, constant, count or band change; no simulation; no new feature. Fix only
 
 ## 6. Completion criteria
 
-- [ ] CLAUDE.md files, `docs/reference/`, the balance and add-content skills (and any agent with its `.codex` copy) current with steps 01–14.
-- [ ] The manual updated and its screenshots retaken.
-- [ ] The stage design's Implementation notes written and its status done; the stages index's row 11 and guard convention updated.
-- [ ] The play script walked, each fight and check recorded; anything unfair or broken brought to the orchestrator.
-- [ ] One commit, "Stage 11 step 15: document and play", files staged by path, no attribution lines; the index's row 15 updated with status and commit.
+- [x] CLAUDE.md files, `docs/reference/`, the balance and add-content skills (and any agent with its `.codex` copy) current with steps 01–14.
+- [x] The manual updated and its screenshots retaken.
+- [x] The stage design's Implementation notes written and its status done; the stages index's row 11 and guard convention updated.
+- [x] The play script walked, each fight and check recorded; anything unfair or broken brought to the orchestrator.
+- [x] One commit, "Stage 11 step 15: document and play", files staged by path, no attribution lines; the index's row 15 updated with status and commit.
 
 ## 7. Execution record
+
+2026-11-28, engineer (Opus 5.5, model unset by the brief). No `src`/`scripts` change; no simulation (none asked; the 50-campaign check not needed).
+
+**Docs.** Steps 02–13 had kept most of the docs current (`docs/reference/game.md`, `simulator.md`, `running.md`, `bands.md`, `foe.md`, `status.md`, `encounter.md`, the CLAUDE.md files' yardstick and scaling lines); read against the code, they were true. Changed here: `docs/reference/battle.md` (the monster abilities paragraph, which stopped at the Young Dragon, now lists all eleven with dice, shapes, AP and recharge; `throughResistance` on an area described as the code does it, resistance less the user's `armorPierce`, both places); `src/combat/CLAUDE.md` (`immune` beside the stat block); `src/engine/CLAUDE.md` (an immune foe's status worth 0 to the policy); `src/game/CLAUDE.md` (`encounters.ts`: `TROPHIES`, the Source's two forms; 7,821 bytes); `.claude/skills/yomi-balance/levers.md` (the high roster's counts as levers, the near-home Source as the early figures' device). No agent text changed (no `.codex` copy needed); `scripts/CLAUDE.md` names no flags; the root `CLAUDE.md` unchanged. The grep of §5 finds the removed names and old nest ids only in history (`game.md`'s version history, `worldMap.test.ts`'s "gone" checks).
+
+**Step 14's close-out** (the orchestrator's request, in the first commit): its outcome line in `log.md`, its review round in `14-measure.md`, row 14 done; the reviewer's three wording points fixed (`log.md`: the spawn list at 9 grew 3 to 7; `bands.md`: the "Now" header names stage 11, stage 9's acceptance line gives today's 287 and 288; 7,976 bytes).
+
+**Manual.** `docs/manual/README.md`: the far rings' monsters ring by ring (what each does, the golem's immunity, the blightborn), trophies and the hide tiers they forge, where the hides come from (trophies only; wyverns 3 wyvern hide each: step 09's lost clause), area attacks that armour cuts (Sweep, Rock) against those it does not, the favoured runes of the new nests, and the Source's guardian (the old "strength of a level-6 foe" line was stale since step 13). Screenshot: one new shot, `battle-dragon.png` (a Young Dragon's lair with its hover panel; `e2e/manual.shots.ts` gained its `it`), taken with `npm run manual:screenshots -- -t "Young Dragon"` (runlog #207) and looked at. No other shot shows a screen this stage changed: the victory shot is the Goblin Raiders' (no trophies), the Goods shot lists only Stonehollow's mithril, and the battle shots show early foes; none was retaken.
+
+**Implementation notes** written in the stage design (status done); the stages index's row 11 and the early-game guard convention updated.
+
+**Play script:** walked in the dev build; every fight, check and finding in `log.md`, "Step 15: the play script". Departure: the kit was planted in the save as `expectedGear` gives it rather than `give` and dressing by hand (25 fights × 3 heroes × 6 slots); the levels went through the console's `level <T> all auto`. Findings brought to the orchestrator (none fixed; none in this stage's code but the numbers): the Ember ward against Fire Breath is a sixth (hit) to a third (miss); a Young Dragon's drake scale is half a leather; "The Greyfang Pack are beaten." plural for singular nest names (scene text); the hover panel lists no spells for caster foes; the lich never cast Death Cloud in two fights; the Basilisk Lair lost at 11 and 14 and the Elder Wyrm at 20, one seeded battle each against cells 425, 304, 408.
+
+**Gates:** see the review round's record below (filled at the close-up).
+
