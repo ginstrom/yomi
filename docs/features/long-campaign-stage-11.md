@@ -4,7 +4,7 @@
 
 - Request (user's words):
   > Merge PR #12 (stage 10), then start stage 11, the high roster. [...] Its design, docs/designs/long-campaign/stage-11-high-roster.md, is marked "ready for planning". It covers ogres, wyverns, wights, basilisks, giants, golems, cultists, dragons, the lich, the elder wyrm, and the Source rebuilt at 20, each with a sprite. Stage 11 picks up two things stage 10 left for it. The trophies table is empty until then, and the Source Guardians stay capped at level 6 until then.
-- Slug `long-campaign-stage-11` · Phase 4, implementation · Next action: step 12, ring 18 (engineer running), then 13, 14, 15.
+- Slug `long-campaign-stage-11` · Phase 4, implementation · Next action: step 12, ring 18: gates (npm test, 13 browser files), then review; then 13, 14, 15.
 - Branch: `long-campaign-stage-11`, off main at c138d83 (stage 10 merged as PR #12, e801f5c).
 - Path: the stage design is the approved design; straight to planning, as stages 2–10.
 - Links:
@@ -44,3 +44,4 @@
 | 2026-11-27 | From here the threats that occur on the map (7, 9, 12, 15, 18) are tuned inside 300–475 first, band ends second; an in-play miss after three trials comes to the user, band-end misses are recorded | user | band ends only | Ring 15's nests sit mid-band (366, 99, 491 at 15) |
 | 2026-11-27 | Young Dragon lair at threat 15 (491, in-play, above the reading): record for stage 12, no more tries | user | weaker second minion; block between trials | One wyvern 491, two 64; a block change moves 18 out |
 | 2026-11-27 | Model limit reached for Fable (resets 11-28 22:00); the session now runs on Opus 5.5 and "opus" tier spawns inherit it. Step 11's engineer replaced by a fresh one from 37639ee | orchestrator | wait a day | The user switched the model |
+| 2026-11-27 | Elder Wyrm lair at threat 18 (in play) 482 after three trials: accept, record for stage 12 | user | a weaker third foe at 18–19 | 7 over; a stronger block pulls 20 down |
