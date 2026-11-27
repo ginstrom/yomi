@@ -583,11 +583,16 @@ const BLIGHT_CULT: EncounterDef = { slots: BLIGHT_CULT_SLOTS, band: { min: 14, m
 const YOUNG_DRAGON: EncounterDef = { slots: YOUNG_DRAGON_SLOTS, band: { min: 15, max: 18 }, counts: [2, 2, 3, 3] }
 /**
  * Ring 18's encounters (stage 11 step 12); the cells' tuning is in the plan's log. The Blight Lich's Court, threats 17
- * to 20: the Blight Lich, two wights and two cultists.
+ * to 20: the Blight Lich, two wights and two cultists; four at 20, the Lich's Herald sitting out (five at 20 were won
+ * 287 times in 500, and five at 17 to 19 as few as 464). So, with the Wyvern Roost and the Blight Cult, one of the
+ * encounters whose numbers fall as the threat rises.
  */
-const BLIGHT_LICH_COURT: EncounterDef = { slots: BLIGHT_LICH_COURT_SLOTS, band: { min: 17, max: 20 }, counts: [3, 4, 4, 5] }
-/** The Elder Wyrm's lair, threats 18 to 20: the Elder Wyrm and a young dragon, a second from 20. */
-const ELDER_WYRM: EncounterDef = { slots: ELDER_WYRM_SLOTS, band: { min: 18, max: 20 }, counts: [2, 2, 3] }
+const BLIGHT_LICH_COURT: EncounterDef = { slots: BLIGHT_LICH_COURT_SLOTS, band: { min: 17, max: 20 }, counts: [5, 5, 5, 4] }
+/**
+ * The Elder Wyrm's lair, threats 18 to 20: the Elder Wyrm and a young dragon at every threat. The Brood Drake, a second
+ * young dragon, is not fielded at these counts: with it at 20 the lair was won 6 times in 500.
+ */
+const ELDER_WYRM: EncounterDef = { slots: ELDER_WYRM_SLOTS, band: { min: 18, max: 20 }, counts: [2, 2, 2] }
 
 /**
  * A Goblin and a Kobold across the board from the party; where the threat is

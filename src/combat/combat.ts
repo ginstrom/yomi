@@ -796,16 +796,18 @@ export const BLIGHT_LICH_STATS: CombatantStats = {
  * and claws (`wyrm_strikes`) through most of a hero's armour; with 10 action
  * points it breathes and strikes in one turn. Warded against fire by 15, so
  * Ember runes and Flame Arrow scarcely touch it; it knits back 2 a turn
- * unless Seared or Corroded.
+ * unless Seared or Corroded. It hits as a Young Dragon raised to 18 does,
+ * pierces all of the expected kit's resistance from 17 (21), and has a
+ * boss's hit points: the plan's log has the trials.
  */
 export const ELDER_WYRM_STATS: CombatantStats = {
   name: 'Elder Wyrm',
-  maxHp: 150,
-  ac: 66,
+  maxHp: 185,
+  ac: 76,
   resistance: 5,
-  toHit: 100,
+  toHit: 115,
   critChance: 5,
-  armorPierce: 16,
+  armorPierce: 21,
   damage: { count: 1, sides: 10, bonus: 4 },
   weapon: 'Claws',
   attackApCost: 4,

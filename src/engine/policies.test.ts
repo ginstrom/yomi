@@ -1174,8 +1174,8 @@ describe('policies', () => {
       expect(sha(lines.slice(0, RING_15))).toBe('aed882773bb254acfebabad45925b90963bc152ad057f04a5c02da9a469f007c')
       // Ring 18's (step 12): the Blight Lich's Court's and the Elder Wyrm's lines only.
       expect(new Set(lines.slice(RING_15).map((line) => line.split(' ')[0]))).toEqual(new Set(['blight_lich_court', 'elder_wyrm']))
-      expect(lines.length).toBe(24092)
-      expect(sha(lines)).toBe('e078b9757fcfd2d1545cdcc17f723555e91ac3f9bc6748dd42746fedef8dc094')
+      expect(lines.length).toBe(24048)
+      expect(sha(lines)).toBe('b41a63743165e578017b1da7c56d8d95d9e098337ee0d6b55d0e9b247aa1ee3c')
     }, 60_000)
   })
 })

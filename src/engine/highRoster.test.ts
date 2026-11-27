@@ -749,7 +749,8 @@ describe('ring 18 (stage 11 step 12)', () => {
     })
 
     it('touches the heroes 1 to 4 hexes off toward the aim: a hit whole and Seared, a miss half and nothing; the fifth is untouched', () => {
-      const stream = counted([HIT, ...sixes, MISS, ...sixes, HIT, ...sixes, HIT, ...sixes])
+      // The Wyrm hits a hero in mail at 95 (its 115 less armour 25, held to 95): a roll of 99 misses.
+      const stream = counted([HIT, ...sixes, 0.01, ...sixes, HIT, ...sixes, HIT, ...sixes])
       const engine = field(stream.rng)
       const [event] = engine.step(breathe) as AbilityEvent[]
       expect(event).toMatchObject({ type: 'ability', unit: 'wyrm', ability: 'wyrm_breath', shape: 'cone', apCost })

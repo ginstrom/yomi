@@ -93,8 +93,8 @@ const GOLEM_RUIN_COUNTS = [4, 4, 4, 5]
 const BLIGHT_CULT_COUNTS = [5, 4, 4, 5, 5]
 const YOUNG_DRAGON_COUNTS = [2, 2, 3, 3]
 /** Ring 18's counts (stage 11 step 12; the cells' tuning is in the plan's log). */
-const BLIGHT_LICH_COURT_COUNTS = [3, 4, 4, 5]
-const ELDER_WYRM_COUNTS = [2, 2, 3]
+const BLIGHT_LICH_COURT_COUNTS = [5, 5, 5, 4]
+const ELDER_WYRM_COUNTS = [2, 2, 2]
 
 describe.each(Object.entries(ENCOUNTERS))('the %s encounter', (_id, build) => {
   const wounded = party().map((fighter, i) => ({ ...fighter, hp: 5 + i }))
@@ -135,10 +135,12 @@ describe.each(Object.entries(ENCOUNTERS))('the %s encounter, as the threat rises
    * wyverns grow. So threat 11 fields fewer than 10 and is worth less (three wyverns of 11 against four of 10).
    * And the Blight Cult, by the user's decision (stage 11 step 11): five at 14, four at 15 and 16 (without the Cult
    * Elder), five at 17 and 18, as every foe gains 5 to hit and armour class from 14 to 15 and the kit not until 17.
+   * And the Blight Lich's Court (stage 11 step 12): five at 17 to 19 and four at 20 (without the Lich's Herald), as
+   * the kit is the same from 17 to 20 while the court grows (five at 20 were won 287 times in 500).
    */
-  const falls = id === 'wyvern_roost' || id === 'blight_cult'
+  const falls = id === 'wyvern_roost' || id === 'blight_cult' || id === 'blight_lich_court'
   /** Where a falling encounter's count changes, by how many foes: the threats not named keep their count. */
-  const FALLS: Partial<Record<EncounterId, Record<number, number>>> = { wyvern_roost: { 11: -1 }, blight_cult: { 15: -1, 17: 1 } }
+  const FALLS: Partial<Record<EncounterId, Record<number, number>>> = { wyvern_roost: { 11: -1 }, blight_cult: { 15: -1, 17: 1 }, blight_lich_court: { 20: -1 } }
   const fallsAt = (threat: number) => FALLS[id as EncounterId]?.[threat] ?? 0
 
   it('fields foes of that level, never fewer than before, each with a name and a hex of its own', { timeout: 20_000 }, () => {
@@ -801,8 +803,8 @@ describe('ring 18\'s encounters (long-campaign stage 11 step 12)', () => {
 
   it('pierces enough of the expected kit\'s resistance (21 on the fighter and archer from 17) for each kind\'s blow to tell', () => {
     // The line under the plan's C3: wolf 4, worg rider 6, ogre 5, wyvern 11, wight 8, basilisk 9, giant 9, golem 9,
-    // cultist 10, young dragon 10; the lich 14, the elder wyrm 16.
-    expect([BLIGHT_LICH_STATS.armorPierce, ELDER_WYRM_STATS.armorPierce]).toEqual([14, 16])
+    // cultist 10, young dragon 10; the lich 14, the elder wyrm 21 (all of it).
+    expect([BLIGHT_LICH_STATS.armorPierce, ELDER_WYRM_STATS.armorPierce]).toEqual([14, 21])
   })
 })
 
@@ -941,7 +943,10 @@ describe('the foe yardstick', () => {
    */
   const STAGE_11_KINDS: readonly MonsterKind[] = ['wolf', 'worg_rider', 'ogre', 'wyvern', 'barrow_wight', 'basilisk', 'hill_giant', 'stone_golem', 'blight_cultist', 'young_dragon', 'blight_lich', 'elder_wyrm']
   /** The fields a stage 11 kind is meant to sit outside the kitted yardstick on, and why. */
-  const STAGE_11_EXCEPTIONS: typeof EXCEPTIONS = []
+  const STAGE_11_EXCEPTIONS: typeof EXCEPTIONS = [
+    { kind: 'elder_wyrm', field: 'toHit', reason: 'the top threat hits as a Young Dragon raised to 18 does (115): at 100 it was the weaker of the two in its own lair' },
+    { kind: 'elder_wyrm', field: 'maxHp', reason: 'the top threat, a boss: 185 hit points, and two foes in its lair at every threat (a third, a young dragon raised to 20, made the lair a rout)' },
+  ]
 
   const mean = (roll: DamageRoll, bonus = 0) => (roll.count * (roll.sides + 1)) / 2 + roll.bonus + bonus
   /** A routine's turn: its strikes' means, times the uses a turn its AP allow, once at most if it recharges. */
