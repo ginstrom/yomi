@@ -4,7 +4,7 @@
 
 - Request (user's words):
   > Merge PR #12 (stage 10), then start stage 11, the high roster. [...] Its design, docs/designs/long-campaign/stage-11-high-roster.md, is marked "ready for planning". It covers ogres, wyverns, wights, basilisks, giants, golems, cultists, dragons, the lich, the elder wyrm, and the Source rebuilt at 20, each with a sprite. Stage 11 picks up two things stage 10 left for it. The trophies table is empty until then, and the Source Guardians stay capped at level 6 until then.
-- Slug `long-campaign-stage-11` · Phase 4, implementation · Next action: step 10, ring 12 (engineer running; it measures cells itself, no measuring subagent), then 11 → … → 15, one at a time.
+- Slug `long-campaign-stage-11` · Phase 4, implementation · Next action: step 11, ring 15 (engineer running), then 12 → … → 15, one at a time.
 - Branch: `long-campaign-stage-11`, off main at c138d83 (stage 10 merged as PR #12, e801f5c).
 - Path: Large, but the stage design is the approved design. Straight to planning, as stages 2–10 did.
 - Links:
@@ -16,8 +16,8 @@
   - Status thread: C0CMCLX2G8G, ts "1795693090.979109", https://recursiveai.slack.com/archives/C0CMCLX2G8G/p1795693090979109
 - Open questions: none. Plan Q1–Q10 answered 2026-11-26 (decision log): all planner defaults; step 01's engineer records them in the index.
 - Tiers (engineer / reviewer): planner opus. 01 sonnet / sonnet; 04–07, 15 sonnet / opus; 02, 03, 08–14 opus / opus. No escalations.
-- Done, each clean in 1 round: 01 (runlog #15), 02 (#22), 03 (#58), 08 (#69; wp 418/358, wr 463/326, oc 405/308), 09 (#84; wy 312/399, four wyverns at 9–10, three at 11–12); sprites 04–07 merged. 50-check reference 1e85d023… (schema 27), unmoved. SAVE_VERSION 33.
-- `throughResistance` on an area means cut by resistance less `armorPierce`; without it resistance is ignored (plan corrected d06bdb9). Follow-up outside the stage: `stopVoice` fade race in `src/scenes/soundPlayer.ts`.
+- Done, each clean in 1 round: 01 (runlog #15), 02 (#22), 03 (#58), 08 (#69), 09 (#84), 10 (#94; browser by file #104–#126); cells in the plan log; sprites 04–07 merged. 50-check 1e85d023… (schema 27), unmoved. SAVE_VERSION 34.
+- `throughResistance` on an area means cut by resistance less `armorPierce`; without it resistance is ignored (plan corrected d06bdb9). Follow-ups outside the stage: `stopVoice` fade race in `src/scenes/soundPlayer.ts`; battle e2e A9 fails in the full file (order-dependent, pre-existing). A closed lid hangs browser runs.
 - Run npm with `PATH=/opt/homebrew/opt/node@26/bin:$PATH` (default node is 22). Sprite tool is `/Users/ryan/.local/bin/sprite`, never `npx sprite`.
 - Checkpoints to the user: a band's TOP cell outside 300–475 after three trials (a bottom-end miss is recorded for stage 12, no stop); an ability that needs a new engine field; the guard or 50-check moving; an early figure further out than accepted.
 - Carried from stage 10: trophies from kills (done through ring 9); Source Guardians at SOURCE_FOE_LEVEL 6 until step 13.
