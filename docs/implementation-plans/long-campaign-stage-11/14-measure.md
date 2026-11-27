@@ -123,3 +123,28 @@ No rule or constant change, no tuning, no new simulator flag or measure, no band
 - [ ] One commit, "Stage 11 step 14: measure and record", files staged by path, no attribution lines.
 
 ## 7. Execution record
+
+2026-11-28, engineer (model unset). Code `2c1ec54` throughout (no `src`/`scripts` change in this step). Every figure, table and wall time is in `log.md`, "Step 14: measure and record"; logs `logs/s11-14-*`, times `logs/s11-14-times.txt`.
+
+**How it ran.** The engineer ran the simulator itself, in the foreground, one run at a time under `caffeinate -i`, using step 01's flags (seed 1; `--log none` for everything except the runs that needed a `.jsonl` to diff: `guard-50`, `one-out`, `rl10`). No `yomi-measure` spawn (the brief preferred this). `pmset` shows no sleep across any run; load 2 to 4.6 (the podman VM, WindowServer, a Codex app); no other simulation, build or test ran beside them. The 50-campaign check ran even though nothing changed (the brief asked): identical, `1e85d023…`.
+
+**Summary.**
+- Early figures **moved**: `one` 288 → 287, `company` 289 → 288, `rl10` 409 → **371** (533 → 541 days, 1.3 → 1.6 dead). Cause found: the ring 7 and 9 kinds appended to `SPAWN_KINDS` (step 08 `b0fbe7d`, step 09 `2b35cb9`) widen the list `spawn` draws from at threats 7 and 9, so early campaigns that spawn there get other kinds; `wolf_pack` and `worg_riders` at 9 beat `rl10`'s own-kit parties (0.37, 0.25). `one` at `b0fbe7d` reproduces head's battle list exactly. This is decision 15's named stop case, and `rl10` moves by more than 5 points: **brought to the orchestrator** (below). Nothing tuned. `one` and `company` move toward their bands, and `rl10` is still in its band (370–420), by one.
+- Standard cells: all equal "Now".
+- `long` (100): Source 0 of 100 (fell 100), 739 days, 26.8 battles, 76 s. Recorded, not judged (decision 19).
+- Every C9 cell, the in-play cells and step 02's kitted cells equal the figure their step recorded; no new cell outside 300–475.
+
+**Stop-and-report (open): `rl10` 371, the new spawn kinds in the early campaign.** Options: (a) accept and record it (it is in band; it is what the game now does; stage 12, which owns the gear lag, retunes); update `bands.md`'s `one`/`company`/`rl10` "Now" and `src/game/CLAUDE.md`'s scaling line on that answer; (b) make `--near-source` also keep the pre-stage-11 `SPAWN_KINDS`, which brings the early measures back to 288/289/409 but makes them measure a world the game no longer has (a simulator change and a new guard reading, so the user's approval); (c) raise the new kinds' `fromThreat` (ring 7's to 8 or 10) or retune `wolf_pack`/`worg_riders` at 9: a rule change, out of this step. Recommendation: (a).
+
+**Figures for stage 12** (now / step 01 = stage 10):
+- Source share: 0 of 100 / 1 of 100 (stage 9's step 01: 15).
+- Battles to level 5 / 10 / 15 / 20: 6.8 / 26.8 / 47.3 / — in 84 / 38 / 3 / 0 campaigns; before 6.8 / 28.4 / 55.9 / — in 84 / 53 / 16 / 0.
+- Ring win rates (long run): 7 0.824 (0.939), 9 0.456 (0.785), 12 0.600 in 40 battles (0.367 in 768), 15 0 in 3 (0.295 in 156); 18 and 20 not reached (1 battle each before). The rebuilt Source is never fought in the long run.
+- Kit: tier 1.0 and no runes at every mark, no forge-ready campaign; forging gold 82 (2271). Hide tiers 4 and 5 are not forged in play. Trophies are not printed by the summary (no measure added).
+- `rl10` 371 (409), from the new kinds at 7 and 9 (above); the ready-made party in its own gear wins 0 of 500 at the Source (`sg20-18`, `sg20`).
+
+**Figures for the implementation notes** (step 15):
+- Early figures against step 01: `one` 287 (288), 331 days, 1.2 dead; `company` 288 (289); `rl10` 371 (409), 541 days; 50-campaign hash identical; the refactor guard green (below).
+- Long run against step 01 and stage 10 (the same figures): Source 0 (1), 739 days (1414), 26.8 battles (42.3).
+- Cells per ring against the reading: as `log.md`'s cells table; out of reading and accepted earlier: `bw11` 485, `hg12` 495 (step 10), `yd15` 491 (step 11, the user), `lc17` 497, `ew18` 482 (step 12, the user); `bco12k` 254 (step 02, a yardstick cell).
+- Runtime: `long` 76 s alone (stage 10 4:07, step 01 166 s); `one` 141 s, `company` 152 s, `rl10` 361 s.
