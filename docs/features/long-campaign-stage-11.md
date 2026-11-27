@@ -4,7 +4,7 @@
 
 - Request (user's words):
   > Merge PR #12 (stage 10), then start stage 11, the high roster. [...] Its design, docs/designs/long-campaign/stage-11-high-roster.md, is marked "ready for planning". It covers ogres, wyverns, wights, basilisks, giants, golems, cultists, dragons, the lich, the elder wyrm, and the Source rebuilt at 20, each with a sprite. Stage 11 picks up two things stage 10 left for it. The trophies table is empty until then, and the Source Guardians stay capped at level 6 until then.
-- Slug `long-campaign-stage-11` · Phase 4, implementation · Next action: step 11, ring 15, in review (cause of blight_cult 345 at threat 14, 99 at 15); then the engineer's one targeted cult trial, then 12 → … → 15.
+- Slug `long-campaign-stage-11` · Phase 4, implementation · Next action: step 11, ring 15: one cult trial (four at 15–16), by a fresh engineer; then 12 → … → 15.
 - Branch: `long-campaign-stage-11`, off main at c138d83 (stage 10 merged as PR #12, e801f5c).
 - Path: the stage design is the approved design; straight to planning, as stages 2–10.
 - Links:
@@ -42,3 +42,5 @@
 | 2026-11-27 | Rings 12–18: when a band's two ends can't both land in 300–475 in three trials, tune the top end inside, let the bottom run easy, record both for stage 12, don't stop; a top-end miss still comes to the user | user | stop each time; read the top with a better kit | Same squeeze expected in every band |
 | 2026-11-27 | Blight Cult at threat 15 (99 of 500, its nest's threat): wait for the reviewer's cause, then one targeted trial re-measuring 14, 15, 18; keep only if 15 lands inside without pushing 14 or 18 out, else revert and record 99 for stage 12 | user | four at 15–16 now; record 99 | Cliff unexplained: same foes and kit as at 14 (345) |
 | 2026-11-27 | From here the threats that occur on the map (7, 9, 12, 15, 18) are tuned inside 300–475 first, band ends second; an in-play miss after three trials comes to the user, band-end misses are recorded | user | band ends only | Ring 15's nests sit mid-band (366, 99, 491 at 15) |
+| 2026-11-27 | Young Dragon lair at threat 15 (491, in-play, above the reading): record for stage 12, no more tries | user | weaker second minion; block between trials | One wyvern 491, two 64; a block change moves 18 out |
+| 2026-11-27 | Model limit reached for Fable (resets 11-28 22:00); the session now runs on Opus 5.5 and "opus" tier spawns inherit it. Step 11's engineer replaced by a fresh one from 37639ee | orchestrator | wait a day | The user switched the model |
