@@ -856,7 +856,7 @@ describe('the Source at 20 (stage 11 step 13)', () => {
     })
 
     it('touches every hero within 2 hexes and none of its guardians beside it: a hit whole and Corroded, a miss half and nothing', () => {
-      // The Horror hits a hero in mail at 75 (its 100 less armour 25): a roll of 99 misses.
+      // The Horror hits a hero in mail at 75 (its 125 less armour 25, held to 95): a roll of 99 misses.
       const stream = counted([HIT, ...sixes, 0.01, ...sixes, HIT, ...sixes])
       const engine = field(stream.rng)
       const [event] = engine.step(breathe) as AbilityEvent[]

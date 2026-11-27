@@ -826,14 +826,15 @@ export const ELDER_WYRM_STATS: CombatantStats = {
  * then recharges for 3 turns, in which it claws (`horror_claws`) through all
  * of the expected kit's resistance (21); with 10 action points it breathes
  * and claws in one turn. It knits back 2 a turn unless Seared or Corroded.
- * Blightborn, so Dawn's bane takes it.
+ * Blightborn, so Dawn's bane takes it. It hits as the Elder Wyrm and the
+ * Young Dragon raised to 20 do (125): the plan's log has the trial.
  */
 export const SOURCE_HORROR_STATS: CombatantStats = {
   name: 'Blight Horror',
   maxHp: 171,
   ac: 80,
   resistance: 3,
-  toHit: 100,
+  toHit: 125,
   critChance: 5,
   armorPierce: 21,
   damage: { count: 1, sides: 10, bonus: 4 },

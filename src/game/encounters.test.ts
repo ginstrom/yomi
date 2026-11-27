@@ -978,6 +978,7 @@ describe('the foe yardstick', () => {
   const STAGE_11_EXCEPTIONS: typeof EXCEPTIONS = [
     { kind: 'elder_wyrm', field: 'toHit', reason: 'the top threat hits as a Young Dragon raised to 18 does (115): at 100 it was the weaker of the two in its own lair' },
     { kind: 'elder_wyrm', field: 'maxHp', reason: 'the top threat, a boss: 185 hit points, and two foes in its lair at every threat (a third, a young dragon raised to 20, made the lair a rout)' },
+    { kind: 'source_horror', field: 'toHit', reason: 'the final boss hits as the Elder Wyrm and the Young Dragon raised to 20 do (125): at 100 it hit the expected kit\'s armour class 73 about one time in four, and a party of 20 won 495 of 500' },
   ]
 
   const mean = (roll: DamageRoll, bonus = 0) => (roll.count * (roll.sides + 1)) / 2 + roll.bonus + bonus

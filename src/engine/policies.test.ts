@@ -1154,14 +1154,14 @@ describe('policies', () => {
       expect(lines[NEAR - 1].startsWith('source_guardians 5 ')).toBe(true)
       expect(sha(lines.slice(0, NEAR))).toBe('f1de79756b1a8917ae1d835923e9308d35b05a7f2e1f37929587aa782736e871')
       // The Source at 20's lines (threats 6 to 20, each fought at 20), together.
-      const AT_20 = NEAR + 2317
+      const AT_20 = NEAR + 2216
       expect(lines.slice(NEAR, AT_20).every(far)).toBe(true)
-      expect(sha(lines.slice(NEAR, AT_20))).toBe('98b4cab476bf3d511790dea31b80cd02ecaf39fa4a0f3615cbce353d8accc29a')
+      expect(sha(lines.slice(NEAR, AT_20))).toBe('b66cf7d2fe9ca69bf37fb175b78ba261f6fb13ec22a676a31d8333c040850f95')
       // After them, every other encounter as step 12 had them (15,529 lines), the rings in `ENCOUNTERS` order: the
-      // boundaries of steps 08 to 12 (14,242, 16,403, 17,051, 19,649, 20,573, 22,394), each 1,984 lines earlier now.
+      // boundaries of steps 08 to 12 (14,242, 16,403, 17,051, 19,649, 20,573, 22,394), each 2,085 lines earlier now.
       expect(lines.slice(AT_20).some(far)).toBe(false)
       expect(sha(lines.slice(AT_20))).toBe('8ad17fbb6d659a41ef4a3fe4366449bf8ac925f5be1b6b3655be13f7f8cc3d1f')
-      const SHIFT = 4301 - 2317
+      const SHIFT = 4301 - 2216
       const [EARLIER, RING_7, RING_9, RING_12, GOLEM_RUIN, RING_15] = [14242, 16403, 17051, 19649, 20573, 22394].map((n) => n - SHIFT)
       const kinds = (from: number, to: number) => new Set(lines.slice(from, to).map((line) => line.split(' ')[0]))
       expect(kinds(EARLIER, RING_7)).toEqual(new Set(['wolf_pack', 'worg_riders', 'ogre_camp']))
@@ -1173,8 +1173,8 @@ describe('policies', () => {
       expect(kinds(RING_15 - LAIR, RING_15)).toEqual(new Set(['young_dragon']))
       expect(sha(lines.slice(RING_15 - LAIR, RING_15))).toBe('059cf9209a6a8cb325dc0451244046a6a31cafa08f227a3b351be25f89ddb695')
       expect(kinds(RING_15, lines.length)).toEqual(new Set(['blight_lich_court', 'elder_wyrm']))
-      expect(lines.length).toBe(22064)
-      expect(sha(lines)).toBe('cea7a1debfa69766464ee883169727499405282dde706fd5acbf2759ee97db87')
+      expect(lines.length).toBe(21963)
+      expect(sha(lines)).toBe('631a06bfb2f6deea5a3df8f087bd557ac5b24d423e9737a8ca5b67323f4af88c')
     }, 60_000)
   })
 })
