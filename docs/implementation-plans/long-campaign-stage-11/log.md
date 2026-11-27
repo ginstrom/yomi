@@ -461,3 +461,21 @@ Heroes died at level 2 (12), 3 (50), 4 (28), 5 (46), 6 (37), 7 (38), 8 (36), 9 (
 Kit lines (all / forge-ready), against `expectedKit`: at 5 (84): every role tier 1.0, 0.0 runes (expected tier 2, 1–2 runes) / none (0 of 84); at 10 (38): tier 1.0, 0.0 runes (expected 3, 2–3) / none (0 of 38); at 15 (3): tier 1.0, 0.0 runes (expected 4, 3–4) / none (0 of 3). Step 01 at 15 (16): fighter 1.5 / 0.3 runes, 8 of 16 forge-ready.
 
 **Reading (no action):** the monsters of rings 7 and 9, tuned for the expected kit, meet parties in tier-1 gear with no runes: the win rate at 9 falls from 0.785 to 0.456 and at 7 from 0.939 to 0.824, and the campaigns end there, at half the days and battles. Ring 12 is fought in 40 battles (768 before), ring 15 in 3; rings 18 and the Source at 20 are not reached, so the rebuilt Source is untested by the long run. Forging gold falls from 2271 to 82: no campaign's workshop reaches level 4 at a level mark, so hide tiers 4 and 5 are not forged in play. Stage 12 owns this (the gear lag, decision 19).
+
+### The cells (500 each, seed 1; `logs/s11-14-<code>.txt`, 3 to 30 s each)
+
+**Standard cells, all equal to "Now":** GR3 500, BC3 455, BC4 454, BC5 494, SN5 451, SP5 475, SG7 0, SG10 1; report only TL5 0, F1 500, F2 500, F3 463; own-kit far cells BCO9 2, BCO12 0, FH15 0, FH18 0, SG20-18 0, SG20 0 (step 13's).
+
+**C9 cells** (`--player-kit expected`, a party of the threat's level), against the figure their step recorded; reading 300–475:
+
+| Ring step | Cells now (= the step's figure) | Inside 300–475 |
+| --- | --- | --- |
+| 02 (kitted bandits) | bco9k 499, bco12k 254, fh15k 477, fh18k 500 | none was required (yardstick cells) |
+| 08 | wp6 418, wp9 358, wr7 463, wr9 326, oc7 405, oc10 308 | all |
+| 09 | wy9 312, wy12 399 | both |
+| 10 | bw11 485, bw14 327, bl11 425, bl14 304, hg12 495, hg15 400; in play bw12 477, bl12 445 | bw11 and hg12 above, recorded for stage 12 in step 10 under the standing rule |
+| 11 | go14 468, go17 438, cu14 345, cu18 471, yd15 491, yd18 396; in play go15 366, cu15 429 | yd15 above (in play), recorded for stage 12 by the user's decision (step 11) |
+| 12 | lc17 497, lc20 332, ew18 482, ew20 408; in play lc18 464 | lc17 above (band end, standing rule), ew18 (in play) accepted by the user (step 12) |
+| 13 | sgk20 445 | yes |
+
+No cell differs from its step's figure; no new cell outside the reading.
