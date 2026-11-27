@@ -277,3 +277,36 @@ The final logs are byte-identical to their trials' for the wights and the lair; 
 ## Step 10 outcome
 
 Step 10 (ring 12: barrow wights, basilisks, hill giants): engineer opus, reviewer opus, verdict clean, 1 review round, no blocking finding. Commits `5257f59` (first values), `65ac1c0` (final code), `9f692dc` (reference docs), `7640200` and `6ca94b5` (records); clean-tree gates at `9f692dc`: `npm test` runlog #94, `npm run build` #95, `npm run sprites:check` #96; the reviewer's `npm test` #128 at `6ca94b5`, 2908 passed; browser, by file at `6ca94b5` (the reviewer's): #104, #106, #107, #110, #116 to #122 and #126 pass, `battle` #105 and #125 31 passed and 1 failed (A9, pre-existing and order-dependent: it fails the same at `397f8f8`, #127); the engineer's browser runs were void or partial (the machine slept). Cells bw11 485, bw14 327, bl11 425, bl14 304, hg12 495, hg15 400 (the reviewer's re-run of hg15 byte-identical): the three top ends inside 300–475, bw11 and hg12 above it under the user's standing rule, recorded for stage 12; 50-campaign hash identical; the line-ups (four wights; a lair and a steading of three) and the other departures of the execution record accepted.
+
+## Step 11: ring 15
+
+2026-11-27. Code `5c83ec8` (first values), `1b78a7e` (tuned: the final code), `eab9959` (docs). Cells: 500 battles from seed 1, `node scripts/simulate.ts --battles 500 --seed 1 --encounter E --threat T --party-level T --player-kit expected --out logs/s11-11-<label>.jsonl`, run by the engineer in the foreground one at a time, read against 300–475 (report only). Logs (gitignored): `logs/s11-11-<cell>` the first values at `5c83ec8`, `-t1-`, `-t2-`, `-t3-` the trials on the dirty tree of each, `-final-` on `1b78a7e`.
+
+**50-campaign check:** `1e85d023a1b58697ec36724720f6ad5ba8b4a5dc2362f4ff6b22605ce37ed216`, **identical**, at the first values and at the tuned tree (`logs/s11-11-guard-50.jsonl`). The refactor guard is unedited and green.
+
+**Yardstick** (`foeYardstick(n, 'expected')`): at 14 armour class 48.6–68.6, to hit 80–100, hit points 62.7–125.4, damage a turn 11.3–18.8; at 15, 50–70, 80–100, 64.5–129, 11.9–19.8. Every block tried sits inside, no exception (the blocks: the execution record).
+
+**Cells and trials** (wins of 500; player / enemy hit rate; rounds; damage dealt / taken a battle). Bold is outside the reading. The kit is tier 4 Fine with 3 runes of rank 2 at 14 to 16, tier 5 Masterwork with 4 of rank 3 at 17 and 18.
+
+| Trial | Change | go14 | go17 | cu14 | cu18 | yd15 | yd18 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| First values (`5c83ec8`) | ruin 3, 3, 3, 3 (golem, wight, golem); cult 4 at every threat (the cultist 66 hit points, 85 to hit, a Ritual Knife 1d6+3 piercing 4); lair 3 at every threat (the dragon 95 to hit, 8 AP) | **500** (0.68 / 0.45; 9.3; 353 / 77) | **500** (0.63 / 0.46; 10.2; 433 / 47) | **499** (0.60 / 0.54; 9.2; 366 / 91) | **499** (0.48 / 0.62; 13.1; 486 / 125) | **64** (0.62 / 0.75; 9.5; 234 / 303) | 427 (0.49 / 0.74; 14.4; 405 / 208) |
+| 1 | counts: ruin 4, 4, 4, 4; cult 5 at every threat; lair 2, 2, 3, 3 | 468 (0.65 / 0.55; 13.6; 445 / 176) | **500** (0.62 / 0.56; 13.3; 555 / 118) | **499** (0.61 / 0.58; 12.3; 456 / 130) | **500** (0.50 / 0.67; 15.5; 611 / 154) | **498** (0.57 / 0.55; 10.0; 238 / 138) | 427 (unchanged, not run) |
+| 2 | ruin: a fifth slot, the Stone Sentinel, at 17 (4, 4, 4, 5). Cult: the cultist's block (95 to hit, a Blight Dart 1d8+4 thrown 4 hexes, piercing 10). Lair: the dragon's block (100 to hit, 10 AP) | 468 (unchanged) | 438 (0.62 / 0.66; 15.4; 691 / 177) | 415 (0.56 / 0.53; 14.6; 438 / 238) | **483** (0.47 / 0.61; 18.7; 610 / 252) | **491** (0.57 / 0.54; 10.1; 238 / 153) | 396 (0.49 / 0.72; 14.7; 401 / 233) |
+| 3 | cult: the cultist's block (76 hit points, 100 to hit). Lair: the dragon's block (129 hit points, armour class 66), **not kept** | — | — | 345 (0.58 / 0.56; 15.1; 449 / 265) | 471 (0.47 / 0.63; 20.2; 650 / 270) | **477** (0.56 / 0.53; 10.9; 241 / 194) | **290** (0.47 / 0.73; 14.8; 378 / 291) |
+| **Final (`1b78a7e`)** | the ruin's and the lair's trial 2, the cult's trial 3 | 468 | 438 | 345 | 471 | **491** | 396 |
+
+The final logs are byte-identical to their trials' (`cmp`): `go14` trial 1's, `go17`, `yd15`, `yd18` trial 2's, `cu14`, `cu18` trial 3's.
+
+**Read against the standing rule.** Five of six are inside. **`yd15` 491** is above (trials 3 of 3): a dragon and one wyvern are an easy battle at 15 and a dragon and two are 64 wins, a cliff; a dragon strong enough to bring 15 inside (trial 3, 477) takes 18 under (290). The top end is inside, so trial 2's block is kept and the bottom runs easy. For stage 12: a block between trials 2 and 3, or a weaker third foe at 15 and 16 than a wyvern.
+
+**What the party meets on the map** (`THREAT_RINGS`: 15 and 18 of these bands), measured beside the cells on the final code: `go15` 366 (0.60 / 0.63; 15.0; 452 / 264), **`cu15` 99** (0.53 / 0.63; 14.1; 367 / 337), `yd15` **491**, `cu18` 471, `yd18` 396. **The cult at 15 is far below the reading though both its cells are inside**: one level turns 345 into 99 with the kit unchanged (the wights' third casting of Drain Life comes at 15, and each foe gains 5 to hit). Its fixed nest, the Wolfhead Cult, is at 15. Not tuned here (the cult's three trials were used and the rule's top end is inside); for the orchestrator and stage 12: four of the cult at 15 and 16.
+
+**Why the bands slope the other way here.** The kit's row changes at 17, and by more than the foes grow over three levels: the same line-up is easier at 17 and 18 than at 14 and 15 (the ruin of four 468 at 14 and 500 at 17; the lair of three 64 at 15 and 427 at 18), where ring 12's bands, crossing the smaller step at 13, were harder at their tops.
+
+**What each kind needed against the kit:** piercing for the golem (9) and the dragon (10); nothing for the breath, which has no `throughResistance` and so ignores resistance (a fire ward alone cuts it); and for the cultist a weapon, since `aggressive` throws the Bolt only down a line of two heroes (about one a battle) and otherwise heals and curses: a dart thrown 4 hexes, piercing 10.
+
+**The policy snapshot:** re-recorded with ring 15's lines only, at the first values and at the final code. The test asserts the first 14,242 lines against `b9cef6e1…28ac`, the first 16,403 against `08248429…ebc1`, the first 17,051 against `8e432c09…4c60`, the first 19,649 against step 10's `96ec580b…9136`, every line after them beginning `golem_ruin`, `blight_cult` or `young_dragon`; 22,385 lines, `2177afc9…4dc5` (22,633 and `7aaae1d4…5acc` at the first values).
+
+**Far-world pins.** `blight.test.ts`'s two 30-day runs did not move (no re-pin: the draws at 15 and 18 pick the same kinds among five and three as among two and one). `worldMap.test.ts`'s session re-pinned (`6d089a8e…a665`), the change proven confined (the digested JSON dumped before and after, diffed): 18 values, the three renamed nests' id, name and encounter (9), three far spawns' name and encounter (6: Freebooter Bands now two Dragon Lairs and a Golem Ruin) and their spawned events' names (3); `SESSION_TURN` unchanged.
+
