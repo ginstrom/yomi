@@ -4,7 +4,7 @@
 
 - Request (user's words):
   > Merge PR #12 (stage 10), then start stage 11, the high roster. [...] Its design, docs/designs/long-campaign/stage-11-high-roster.md, is marked "ready for planning". It covers ogres, wyverns, wights, basilisks, giants, golems, cultists, dragons, the lich, the elder wyrm, and the Source rebuilt at 20, each with a sprite. Stage 11 picks up two things stage 10 left for it. The trophies table is empty until then, and the Source Guardians stay capped at level 6 until then.
-- Slug `long-campaign-stage-11` · Phase 4, implementation · Next action: step 11, ring 15: one cult trial (four at 15–16), by a fresh engineer; then 12 → … → 15.
+- Slug `long-campaign-stage-11` · Phase 4, implementation · Next action: step 12, ring 18 (engineer running), then 13, 14, 15.
 - Branch: `long-campaign-stage-11`, off main at c138d83 (stage 10 merged as PR #12, e801f5c).
 - Path: the stage design is the approved design; straight to planning, as stages 2–10.
 - Links:
@@ -15,7 +15,7 @@
   - Status thread: C0CMCLX2G8G, ts "1795693090.979109", https://recursiveai.slack.com/archives/C0CMCLX2G8G/p1795693090979109
 - Open questions: none. Plan Q1–Q10 answered 2026-11-26 (decision log): all planner defaults; step 01's engineer records them in the index.
 - Tiers (engineer / reviewer): planner opus. 01 sonnet / sonnet; 04–07, 15 sonnet / opus; 02, 03, 08–14 opus / opus. No escalations.
-- Done, each clean in 1 round: 01 (runlog #15), 02 (#22), 03 (#58), 08 (#69), 09 (#84), 10 (#94; browser by file #104–#126); cells in the plan log; sprites 04–07 merged. 50-check 1e85d023… (schema 27), unmoved. SAVE_VERSION 34.
+- Done, each clean in 1 round: 01 (runlog #15), 02 (#22), 03 (#58), 08 (#69), 09 (#84), 10 (#94), 11 (#134; cult trial 3f4f90c, cu15 429, checked by the orchestrator: #152, guard and hash unmoved); cells in the plan log; sprites 04–07 merged. 50-check 1e85d023… (schema 27), unmoved. SAVE_VERSION 35.
 - `throughResistance` on an area means cut by resistance less `armorPierce`; without it resistance is ignored (plan corrected d06bdb9). Follow-ups outside the stage: `stopVoice` fade race in `src/scenes/soundPlayer.ts`; battle e2e A9 fails in the full file (order-dependent, pre-existing). A closed lid hangs browser runs.
 - Run npm with `PATH=/opt/homebrew/opt/node@26/bin:$PATH`. Sprite tool: `/Users/ryan/.local/bin/sprite`, never `npx sprite`.
 - Checkpoints to the user: a threat that occurs on the map (7, 9, 12, 15, 18) outside 300–475 after three trials (band-end misses are recorded for stage 12, no stop); an ability that needs a new engine field; the guard or 50-check moving; an early figure further out than accepted.
