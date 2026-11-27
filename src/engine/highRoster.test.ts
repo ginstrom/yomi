@@ -13,6 +13,7 @@ import {
   YOUNG_DRAGON_STATS,
   BLIGHT_LICH_STATS,
   ELDER_WYRM_STATS,
+  SOURCE_HORROR_STATS,
   baneApplies,
   damageThrough,
   effectiveResistance,
@@ -812,6 +813,108 @@ describe('ring 18 (stage 11 step 12)', () => {
       expect(attacks.map((e) => e.apCost)).toEqual([apCost, 0, 0])
       const rolled = strikes![0].damage!.count * strikes![0].damage!.sides
       expect(attacks[0].damage).toBe(damageThrough(rolled, effectiveResistance(ELDER_WYRM_STATS, HERO_STATS.resistance!)))
+    })
+  })
+})
+
+describe('the Source at 20 (stage 11 step 13)', () => {
+  const regenerated = (events: BattleEvent[], unit: string) => events.filter((e) => e.type === 'regenerate' && e.unit === unit)
+
+  describe('the Blight Horror’s Blight Breath', () => {
+    const { apCost, recharge } = ABILITIES.blight_breath
+    const area = ABILITIES.blight_breath.area!
+    const dice = area.damage!
+    const breathe: Action = { type: 'ability', unit: 'horror', ability: 'blight_breath', at: hex(4, 1) }
+    const sixes = Array<number>(dice.count).fill(0.999)
+    const most = dice.count * dice.sides + dice.bonus
+    /** The Horror at (4,1): heroes 1 and 2 hexes off either side, one 3 off, and two Blight Cultists of its own beside it. */
+    const field = (rng: () => number, ward = 0) =>
+      enemyTurn(
+        [
+          heroAt('h1', 3, 1),
+          heroAt('h2', 2, 1, ward ? { wards: { blight: ward } } : {}),
+          heroAt('h3', 5, 1),
+          heroAt('far', 7, 1),
+          foeAt('horror', SOURCE_HORROR_STATS, 4, 1),
+          foeAt('acolyte', BLIGHT_CULTIST_STATS, 4, 0),
+          foeAt('zealot', BLIGHT_CULTIST_STATS, 5, 0),
+        ],
+        rng,
+      )
+
+    it('is a burst of radius 2 around the Horror, foes only, 8d6 blight, half on a miss, laying Corroded, with a recharge of 3 and no word on resistance', () => {
+      expect(ABILITIES.blight_breath.name).toBe('Blight Breath')
+      expect(area).toMatchObject({ shape: 'burst', centredOnSelf: true, range: 0, radius: 2, foesOnly: true, element: 'blight', status: { id: 'corroded' }, halfOnMiss: true })
+      expect(area.throughResistance).toBeUndefined()
+      expect(recharge).toBe(3)
+    })
+
+    it('is aimed only at the Horror’s own hex', () => {
+      const engine = field(() => HIT)
+      const centres = engine.legalActions('horror').flatMap((a) => (a.type === 'ability' && a.ability === 'blight_breath' && 'at' in a ? [hexKey(a.at)] : []))
+      expect(centres).toEqual([hexKey(hex(4, 1))])
+    })
+
+    it('touches every hero within 2 hexes and none of its guardians beside it: a hit whole and Corroded, a miss half and nothing', () => {
+      // The Horror hits a hero in mail at 75 (its 100 less armour 25): a roll of 99 misses.
+      const stream = counted([HIT, ...sixes, 0.01, ...sixes, HIT, ...sixes])
+      const engine = field(stream.rng)
+      const [event] = engine.step(breathe) as AbilityEvent[]
+      expect(event).toMatchObject({ type: 'ability', unit: 'horror', ability: 'blight_breath', shape: 'burst', apCost })
+      expect(event.outcomes.map((o) => [o.unit, o.hit, o.damage, o.status?.id])).toEqual([
+        ['h1', true, most, 'corroded'],
+        ['h2', false, Math.floor(most / 2), undefined],
+        ['h3', true, most, 'corroded'],
+      ])
+      expect(unitOf(engine, 'h1').statuses.map((s) => s.id)).toContain('corroded')
+      expect(unitOf(engine, 'h2').statuses).toEqual([])
+      for (const id of ['far', 'horror', 'acolyte', 'zealot']) {
+        expect(unitOf(engine, id).hp, id).toBe(unitOf(engine, id).maxHp)
+        expect(unitOf(engine, id).statuses, id).toEqual([])
+      }
+      expect(stream.draws()).toBe(3 * (1 + dice.count))
+      expect(unitOf(engine, 'horror')).toMatchObject({ ap: SOURCE_HORROR_STATS.actionPoints - apCost, recharging: { blight_breath: recharge } })
+    })
+
+    it('is blight: a hero’s blight ward takes that much off its outcome', () => {
+      const warded = field(counted([HIT, ...sixes, HIT, ...sixes, HIT, ...sixes]).rng, 10)
+      const [wardedEvent] = warded.step(breathe) as AbilityEvent[]
+      expect(wardedEvent.outcomes.find((o) => o.unit === 'h2')).toMatchObject({ hit: true, damage: most - 10, warded: 10 })
+      expect(wardedEvent.outcomes.find((o) => o.unit === 'h1')).toMatchObject({ hit: true, damage: most })
+    })
+  })
+
+  describe('the Blight Horror', () => {
+    const MAGE = { actionPoints: 12, magic: { maxMana: 60, skill: 100, spells: ['flame_arrow', 'acid_arrow'] as ('flame_arrow' | 'acid_arrow')[] } }
+    const field = () =>
+      new BattleEngine({ board: BOARD, units: [heroAt('hero', 1, 1, MAGE), { ...foeAt('horror', SOURCE_HORROR_STATS, 4, 1), hp: 100 }] }, { rng: () => HIT })
+
+    it('regenerates 2 as its side’s turn begins', () => {
+      expect(regenerated(field().step(END_TURN), 'horror')).toMatchObject([{ healed: 2, hpBefore: 100, hpAfter: 102 }])
+    })
+
+    it.each([['Seared', 'flame_arrow', 'seared'], ['Corroded', 'acid_arrow', 'corroded']] as const)('does not regenerate while %s', (_name, spell, status) => {
+      const engine = field()
+      engine.step({ type: 'cast', unit: 'hero', spell, target: 'horror' })
+      expect(unitOf(engine, 'horror').statuses.map((s) => s.id)).toContain(status)
+      expect(regenerated(engine.step(END_TURN), 'horror')).toEqual([])
+    })
+
+    it('is blightborn: a Dawn rune’s bane applies', () => {
+      expect(SOURCE_HORROR_STATS.blightborn).toBe(true)
+      expect(baneApplies(SOURCE_HORROR_STATS)).toBe(true)
+    })
+
+    it('claws twice: a routine of two Claws of 2d8, one attack event a strike, through armour less its piercing', () => {
+      const { apCost, strikes } = ABILITIES.horror_claws
+      expect(ABILITIES.horror_claws.name).toBe('Claws')
+      expect(strikes!.map((s) => [s.name, s.damage!.count, s.damage!.sides])).toEqual([['Claw', 2, 8], ['Claw', 2, 8]])
+      const engine = enemyTurn([heroAt('hero', 1, 1), foeAt('horror', SOURCE_HORROR_STATS, 2, 1)], counted([HIT, 0.999]).rng)
+      const attacks = engine.step({ type: 'ability', unit: 'horror', ability: 'horror_claws', target: 'hero' }).filter((e): e is AttackEvent => e.type === 'attack')
+      expect(attacks.map((e) => [e.attacker, e.ability, e.strike])).toEqual([['horror', 'horror_claws', 'Claw'], ['horror', 'horror_claws', 'Claw']])
+      expect(attacks.map((e) => e.apCost)).toEqual([apCost, 0])
+      // A hero in mail (resistance 6) takes the whole roll: the Horror pierces 21.
+      expect(attacks[0].damage).toBe(strikes![0].damage!.count * strikes![0].damage!.sides)
     })
   })
 })

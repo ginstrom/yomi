@@ -1111,7 +1111,7 @@ describe('policies', () => {
     expect(isPolicyName('toString')).toBe(false)
   })
 
-  describe('the choices of today’s encounters (a snapshot, re-recorded in skill trees step 13 when heroes and bandits learned techniques, in step 16 when a technique came to be weighed by the blows that fit this turn and the Captain took Pin before Heavy Hand, in step 28 when nodes came to cost perk points and the heroes and bandits to save for them, and in step 30 when the knight, swordmaster and evoker_healer plans moved and the bandits at threat 4 went back to plain gear; and in long-campaign stage 9 step 01, when the Bandit Company and Freebooter Host came and the Spider Nest’s, Salamander Pool’s and Source’s bands widened, and in its step 09, when the Source’s guardians were raised to level 6 at most; and in long-campaign stage 10 step 02, when bandits from threat 9 took tiers 3 to 5; and in long-campaign stage 11 step 08, when ring 7’s wolves, worg riders and ogres came: their encounters’ lines added after the rest, every earlier line unchanged; and in long-campaign stage 11 step 09, when the Wyvern Roost came: its lines added after those, every earlier line unchanged; and in long-campaign stage 11 step 10, when ring 12’s wights, basilisks and giants came: their encounters’ lines added after those, every earlier line unchanged; and in long-campaign stage 11 step 11, when ring 15’s golems, cultists and young dragons came: their encounters’ lines added after those, every earlier line unchanged; and in long-campaign stage 11 step 12, when the Blight Lich’s Court and the Elder Wyrm came: their lines added after those, every earlier line unchanged)', () => {
+  describe('the choices of today’s encounters (a snapshot, re-recorded in skill trees step 13 when heroes and bandits learned techniques, in step 16 when a technique came to be weighed by the blows that fit this turn and the Captain took Pin before Heavy Hand, in step 28 when nodes came to cost perk points and the heroes and bandits to save for them, and in step 30 when the knight, swordmaster and evoker_healer plans moved and the bandits at threat 4 went back to plain gear; and in long-campaign stage 9 step 01, when the Bandit Company and Freebooter Host came and the Spider Nest’s, Salamander Pool’s and Source’s bands widened, and in its step 09, when the Source’s guardians were raised to level 6 at most; and in long-campaign stage 10 step 02, when bandits from threat 9 took tiers 3 to 5; and in long-campaign stage 11 step 08, when ring 7’s wolves, worg riders and ogres came: their encounters’ lines added after the rest, every earlier line unchanged; and in long-campaign stage 11 step 09, when the Wyvern Roost came: its lines added after those, every earlier line unchanged; and in long-campaign stage 11 step 10, when ring 12’s wights, basilisks and giants came: their encounters’ lines added after those, every earlier line unchanged; and in long-campaign stage 11 step 11, when ring 15’s golems, cultists and young dragons came: their encounters’ lines added after those, every earlier line unchanged; and in long-campaign stage 11 step 12, when the Blight Lich’s Court and the Elder Wyrm came: their lines added after those, every earlier line unchanged; and in long-campaign stage 11 step 13, when the Source’s guardians at 20 became the Blight Horror and two cultists: the source_guardians lines above threat 5 only, every other line unchanged)', () => {
     /** Every action `aggressive` chooses, both sides, over each encounter at each threat of its band against the ready-made party of that level, a few seeds, 8 rounds at most. */
     function choices(): string[] {
       const lines: string[] = []
@@ -1143,39 +1143,38 @@ describe('policies', () => {
     it('are what they were', () => {
       const lines = choices()
       const sha = (of: readonly string[]) => createHash('sha256').update(of.join('\n')).digest('hex')
-      // The encounters before stage 11, as recorded in stage 10 step 02: the high roster's lines come after them (`ENCOUNTERS` order).
-      const EARLIER = 14242
-      expect(sha(lines.slice(0, EARLIER))).toBe('b9cef6e182080a3fa26d796534ec1b631e6628d6a140c11525ebee8fabb728ac')
-      // With ring 7's (stage 11 step 08), as recorded there: ring 9's lines come after them.
-      const RING_7 = 16403
-      expect(new Set(lines.slice(EARLIER, RING_7).map((line) => line.split(' ')[0]))).toEqual(new Set(['wolf_pack', 'worg_riders', 'ogre_camp']))
-      expect(sha(lines.slice(0, RING_7))).toBe('082484296b928e87debbded89fc5b7b04d81e8513f3a2eab59e23096f076ebc1')
-      // With ring 9's (step 09), as recorded there, the Wyvern Roost's lines only: ring 12's lines come after them.
-      const RING_9 = 17051
-      expect(new Set(lines.slice(RING_7, RING_9).map((line) => line.split(' ')[0]))).toEqual(new Set(['wyvern_roost']))
-      expect(sha(lines.slice(0, RING_9))).toBe('8e432c095a9a75e2639402953d9fefb423c92aaeeda5c631ea5b233ca8514c60')
-      // With ring 12's (step 10), as recorded there, the Barrow Wights', the Basilisk Lair's and the Hill Giant Steading's lines only: ring 15's come after them.
-      const RING_12 = 19649
-      expect(new Set(lines.slice(RING_9, RING_12).map((line) => line.split(' ')[0]))).toEqual(new Set(['barrow_wights', 'basilisk_lair', 'hill_giant_steading']))
-      expect(sha(lines.slice(0, RING_12))).toBe('96ec580b1bd37e00f14c2c1b4df2f33f528dc178aa964bc8fe91fc85e6ca9136')
-      // Ring 15's (step 11): the Golem Ruin's, the Blight Cult's and the Dragon Lair's lines only.
-      const RING_15 = 22394
-      expect(new Set(lines.slice(RING_12, RING_15).map((line) => line.split(' ')[0]))).toEqual(new Set(['golem_ruin', 'blight_cult', 'young_dragon']))
-      // Re-recorded for the Blight Cult's four at 15 and 16 (step 11's trial, the user's decision): its lines only. The
-      // Golem Ruin's, before it, and the Dragon Lair's, after it, are as step 11 first recorded them (22,385 lines, `2177afc9…4dc5`).
-      const GOLEM_RUIN = 20573
-      expect(new Set(lines.slice(RING_12, GOLEM_RUIN).map((line) => line.split(' ')[0]))).toEqual(new Set(['golem_ruin']))
-      expect(sha(lines.slice(0, GOLEM_RUIN))).toBe('1ca7dcbb619fc7a6671ebb2a0075321557d9013de553f01eaf5921d63f0d9b4c')
+      // Step 13 re-recorded the Source's guardians above threat 5 (the Source at 20) and nothing else. Step 12's snapshot
+      // (24,048 lines, `b41a6374…ee3c`) without its 4,301 `source_guardians` lines above threat 5 is 19,747 lines,
+      // `a30c30ea…abed`; the lines now, without theirs, are those same lines in the same order.
+      const far = (line: string) => line.startsWith('source_guardians ') && Number(line.split(' ')[1]) > 5
+      expect(sha(lines.filter((line) => !far(line)))).toBe('a30c30ea2a4fa31315e9dc606994ba1fe996e25c8ed836407b919a2fc4c8abed')
+      // Before them, the four encounters and the Source near home, as step 12 had them.
+      const NEAR = 4218
+      expect(lines.slice(0, NEAR).some(far)).toBe(false)
+      expect(lines[NEAR - 1].startsWith('source_guardians 5 ')).toBe(true)
+      expect(sha(lines.slice(0, NEAR))).toBe('f1de79756b1a8917ae1d835923e9308d35b05a7f2e1f37929587aa782736e871')
+      // The Source at 20's lines (threats 6 to 20, each fought at 20), together.
+      const AT_20 = NEAR + 2317
+      expect(lines.slice(NEAR, AT_20).every(far)).toBe(true)
+      expect(sha(lines.slice(NEAR, AT_20))).toBe('98b4cab476bf3d511790dea31b80cd02ecaf39fa4a0f3615cbce353d8accc29a')
+      // After them, every other encounter as step 12 had them (15,529 lines), the rings in `ENCOUNTERS` order: the
+      // boundaries of steps 08 to 12 (14,242, 16,403, 17,051, 19,649, 20,573, 22,394), each 1,984 lines earlier now.
+      expect(lines.slice(AT_20).some(far)).toBe(false)
+      expect(sha(lines.slice(AT_20))).toBe('8ad17fbb6d659a41ef4a3fe4366449bf8ac925f5be1b6b3655be13f7f8cc3d1f')
+      const SHIFT = 4301 - 2317
+      const [EARLIER, RING_7, RING_9, RING_12, GOLEM_RUIN, RING_15] = [14242, 16403, 17051, 19649, 20573, 22394].map((n) => n - SHIFT)
+      const kinds = (from: number, to: number) => new Set(lines.slice(from, to).map((line) => line.split(' ')[0]))
+      expect(kinds(EARLIER, RING_7)).toEqual(new Set(['wolf_pack', 'worg_riders', 'ogre_camp']))
+      expect(kinds(RING_7, RING_9)).toEqual(new Set(['wyvern_roost']))
+      expect(kinds(RING_9, RING_12)).toEqual(new Set(['barrow_wights', 'basilisk_lair', 'hill_giant_steading']))
+      expect(kinds(RING_12, GOLEM_RUIN)).toEqual(new Set(['golem_ruin']))
       const LAIR = 736
-      expect(new Set(lines.slice(GOLEM_RUIN, RING_15 - LAIR).map((line) => line.split(' ')[0]))).toEqual(new Set(['blight_cult']))
-      expect(new Set(lines.slice(RING_15 - LAIR, RING_15).map((line) => line.split(' ')[0]))).toEqual(new Set(['young_dragon']))
+      expect(kinds(GOLEM_RUIN, RING_15 - LAIR)).toEqual(new Set(['blight_cult']))
+      expect(kinds(RING_15 - LAIR, RING_15)).toEqual(new Set(['young_dragon']))
       expect(sha(lines.slice(RING_15 - LAIR, RING_15))).toBe('059cf9209a6a8cb325dc0451244046a6a31cafa08f227a3b351be25f89ddb695')
-      // With ring 15's as recorded after step 11's trial 4 (22,394 lines): ring 18's come after them.
-      expect(sha(lines.slice(0, RING_15))).toBe('aed882773bb254acfebabad45925b90963bc152ad057f04a5c02da9a469f007c')
-      // Ring 18's (step 12): the Blight Lich's Court's and the Elder Wyrm's lines only.
-      expect(new Set(lines.slice(RING_15).map((line) => line.split(' ')[0]))).toEqual(new Set(['blight_lich_court', 'elder_wyrm']))
-      expect(lines.length).toBe(24048)
-      expect(sha(lines)).toBe('b41a63743165e578017b1da7c56d8d95d9e098337ee0d6b55d0e9b247aa1ee3c')
+      expect(kinds(RING_15, lines.length)).toEqual(new Set(['blight_lich_court', 'elder_wyrm']))
+      expect(lines.length).toBe(22064)
+      expect(sha(lines)).toBe('cea7a1debfa69766464ee883169727499405282dde706fd5acbf2759ee97db87')
     }, 60_000)
   })
 })

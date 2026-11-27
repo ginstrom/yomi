@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import { createWarrior, deriveCombatStats } from '../character/character.ts'
 import { mulberry32 } from '../combat/rng.ts'
@@ -14,6 +15,7 @@ import {
   YOUNG_DRAGON_STATS,
   BLIGHT_LICH_STATS,
   ELDER_WYRM_STATS,
+  SOURCE_HORROR_STATS,
   BASILISK_STATS,
   BLIGHT_HORROR_STATS,
   GIANT_SPIDER_STATS,
@@ -64,7 +66,6 @@ import {
   ogreCamp,
   salamanderPool,
   sourceGuardians,
-  SOURCE_FOE_LEVEL,
   spiderNest,
   trollLair,
   wolfPack,
@@ -137,10 +138,14 @@ describe.each(Object.entries(ENCOUNTERS))('the %s encounter, as the threat rises
    * Elder), five at 17 and 18, as every foe gains 5 to hit and armour class from 14 to 15 and the kit not until 17.
    * And the Blight Lich's Court (stage 11 step 12): five at 17 to 19 and four at 20 (without the Lich's Herald), as
    * the kit is the same from 17 to 20 while the court grows (five at 20 were won 287 times in 500).
+   * And the Source's guardians (stage 11 step 13): four near home at 5, then the Source at 20's three, fought at 20
+   * from threat 6 up, so its threats 7 to 20 are its threat 6 (`held`), and its three at 6 are worth more than the four.
    */
-  const falls = id === 'wyvern_roost' || id === 'blight_cult' || id === 'blight_lich_court'
+  const falls = id === 'wyvern_roost' || id === 'blight_cult' || id === 'blight_lich_court' || id === 'source_guardians'
   /** Where a falling encounter's count changes, by how many foes: the threats not named keep their count. */
-  const FALLS: Partial<Record<EncounterId, Record<number, number>>> = { wyvern_roost: { 11: -1 }, blight_cult: { 15: -1, 17: 1 }, blight_lich_court: { 20: -1 } }
+  const FALLS: Partial<Record<EncounterId, Record<number, number>>> = { wyvern_roost: { 11: -1 }, blight_cult: { 15: -1, 17: 1 }, blight_lich_court: { 20: -1 }, source_guardians: { 2: 1, 5: 1, 6: -1 } }
+  /** A threat fought as the one below it: the Source's from 7 (all at 20). */
+  const held = (threat: number) => id === 'source_guardians' && threat > HOME_THREATS + 1
   const fallsAt = (threat: number) => FALLS[id as EncounterId]?.[threat] ?? 0
 
   it('fields foes of that level, never fewer than before, each with a name and a hex of its own', { timeout: 20_000 }, () => {
@@ -156,10 +161,13 @@ describe.each(Object.entries(ENCOUNTERS))('the %s encounter, as the threat rises
       if (before !== null) {
         if (falls) expect([threat, now.length - before.length]).toEqual([threat, fallsAt(threat)])
         else expect(now.length).toBeGreaterThanOrEqual(before.length)
-        // The Source's guardians stop growing at SOURCE_FOE_LEVEL (stage 9 step 09), and hold there.
-        const held = id === 'source_guardians' && threat > SOURCE_FOE_LEVEL
-        if (held) expect(now[0].stats.maxHp).toBe(before[0].stats.maxHp)
-        else expect(now[0].stats.maxHp).toBeGreaterThan(before[0].stats.maxHp)
+        if (held(threat)) expect(now).toEqual(before)
+        // The Source at 20's Horror (171 hit points at its native 20) leads at 6 where the near-home one, raised from
+        // 1 to 5, had 353: it is the higher-level foe by armour class and chance to hit.
+        else if (id === 'source_guardians' && threat === HOME_THREATS + 1) {
+          expect(now[0].stats.ac).toBeGreaterThan(before[0].stats.ac)
+          expect(now[0].stats.toHit).toBeGreaterThan(before[0].stats.toHit)
+        } else expect(now[0].stats.maxHp).toBeGreaterThan(before[0].stats.maxHp)
       }
       before = now
     }
@@ -170,7 +178,8 @@ describe.each(Object.entries(ENCOUNTERS))('the %s encounter, as the threat rises
 
   it('is worth more the higher the threat', () => {
     for (let threat = min + 1; threat <= max; threat++) {
-      if (fallsAt(threat) < 0) expect(xpReward(build(party(), threat))).toBeLessThan(xpReward(build(party(), threat - 1)))
+      if (held(threat)) expect(xpReward(build(party(), threat))).toBe(xpReward(build(party(), threat - 1)))
+      else if (fallsAt(threat) < 0 && id !== 'source_guardians') expect(xpReward(build(party(), threat))).toBeLessThan(xpReward(build(party(), threat - 1)))
       else expect(xpReward(build(party(), threat))).toBeGreaterThan(xpReward(build(party(), threat - 1)))
     }
   })
@@ -196,6 +205,14 @@ describe('goblinRaid', () => {
 })
 
 describe('sourceGuardians', () => {
+  it('fights the Source near home (threats 1 to 5) exactly as before long-campaign stage 11 step 13', () => {
+    // A sha256 of the setups, kinds and threats for a party of three and of four, at threats 0, 1, 2, 3, 3.7, 4 and 5,
+    // recorded at `2ca3559` (before the Source at 20 was split off).
+    const parties = [partyFighters(readyMadeParty()), party()]
+    const json = JSON.stringify(parties.map((p) => [0, 1, 2, 3, 3.7, 4, 5].map((t) => sourceGuardians(p, t))))
+    expect(createHash('sha256').update(json).digest('hex')).toBe('baf6304439dc6fb2b7ac293c94968890203cf74a5d31358ac24ef2fb8abe008a')
+  })
+
   it('fields the Blight Horror at every threat, a caster of its level', () => {
     for (let threat = 1; threat <= HOME_THREATS; threat++) {
       const [horror] = sourceGuardians(party(), threat).setup.units.filter((u) => u.side === 'enemy')
@@ -204,36 +221,50 @@ describe('sourceGuardians', () => {
     expect(BLIGHT_HORROR_STATS.magic?.spells).toEqual(['death_cloud', 'bane'])
   })
 
-  it('raises its foes to SOURCE_FOE_LEVEL at most past threat 5, and to the threat itself up to 5', () => {
-    expect(SOURCE_FOE_LEVEL).toBeGreaterThanOrEqual(HOME_THREATS)
+  it('raises its foes to the threat itself up to 5, and fields the Source at 20 above, whatever the threat', () => {
     const horror = (threat: number) => sourceGuardians(party(), threat).setup.units.find((u) => u.id === 'horror')!.stats
-    for (let threat = 1; threat <= HOME_THREATS; threat++) expect(horror(threat).ac).toBe(foeAtLevel(BLIGHT_HORROR_STATS, threat).ac)
-    for (const threat of [6, 12, 20]) expect(horror(threat)).toEqual({ ...foeAtLevel(BLIGHT_HORROR_STATS, Math.min(threat, SOURCE_FOE_LEVEL)), name: 'Blight Horror' })
+    for (let threat = 1; threat <= HOME_THREATS; threat++) expect(horror(threat)).toEqual({ ...foeAtLevel(BLIGHT_HORROR_STATS, threat), name: 'Blight Horror' })
+    for (const threat of [6, 12, 20]) {
+      expect(sourceGuardians(party(), threat).threat).toBe(20)
+      expect(horror(threat)).toEqual({ ...foeStats('source_horror', 20), name: 'Blight Horror' })
+    }
+    expect(sourceGuardians(party(), 5.9)).toEqual(sourceGuardians(party(), 5))
   })
 
   it('is worth more than a Goblin Raid of the same threat', () => {
     expect(xpReward(sourceGuardians(party(), HOME_THREATS))).toBeGreaterThan(xpReward(goblinRaid(party(), HOME_THREATS)))
   })
 
-  it('is fought at threats 1 to 20: today\'s counts to 5, then all five guardians', () => {
+  it('is fought at threats 1 to 20: today\'s counts to 5, then the Source at 20\'s three', () => {
     expect(ENCOUNTER_BANDS.source_guardians).toEqual({ min: 1, max: 20 })
-    expect(ENCOUNTER_COUNTS.source_guardians).toEqual([2, 3, 3, 3, 4, ...Array(15).fill(5)])
+    expect(ENCOUNTER_COUNTS.source_guardians).toEqual([2, 3, 3, 3, 4, ...Array(15).fill(3)])
   })
 
-  it('fields the same four at threat 5 as before stage 9, and all five slots at the Source\'s threat, raised to SOURCE_FOE_LEVEL at most', () => {
+  it('fields the same four at threat 5 as before stage 9, and the Blight Horror of native 20 and two Blight Cultists at threats 6, 12 and 20, each at 20 from its own native level', () => {
     const field = (threat: number) => sourceGuardians(party(), threat).setup.units.filter((u) => u.side === 'enemy')
     expect(field(5).map((u) => u.id)).toEqual(['horror', 'brute', 'shaman', 'sneak'])
     const top = sourceGuardians(party(), 20)
     expect(top.threat).toBe(20)
-    expect(field(20).map((u) => [u.id, top.kinds[u.id]])).toEqual([
-      ['horror', 'horror'],
-      ['brute', 'goblin'],
-      ['shaman', 'shaman'],
-      ['sneak', 'kobold'],
-      ['cutter', 'goblin'],
-    ])
-    for (const u of field(20)) expect(u.stats).toEqual({ ...foeStats(top.kinds[u.id] as MonsterKind, SOURCE_FOE_LEVEL), name: u.stats.name })
+    for (const threat of [6, 12, 20]) {
+      const { kinds } = sourceGuardians(party(), threat)
+      expect(field(threat).map((u) => [u.id, kinds[u.id], u.stats.name])).toEqual([
+        ['horror', 'source_horror', 'Blight Horror'],
+        ['acolyte', 'blight_cultist', 'Blight Acolyte'],
+        ['zealot', 'blight_cultist', 'Blight Zealot'],
+      ])
+      for (const u of field(threat)) expect(u.stats).toEqual({ ...foeStats(kinds[u.id] as MonsterKind, 20), name: u.stats.name })
+      expect(sourceGuardians(party(), threat)).toEqual(top)
+    }
+    expect(foeStats('blight_cultist', 20)).toEqual(foeAtLevel(BLIGHT_CULTIST_STATS, 20, 14))
     expect(sourceGuardians(party(), 25)).toEqual(top)
+  })
+
+  it('writes the Source\'s Horror at 20 as campaign §5.5 has it: resistance 3, regeneration 2, blightborn, its breath and claws, 500 XP', () => {
+    expect(foeStats('source_horror', 20)).toEqual({ ...SOURCE_HORROR_STATS, abilityDamageBonus: 0 })
+    expect(SOURCE_HORROR_STATS).toMatchObject({ name: 'Blight Horror', resistance: 3, regeneration: 2, blightborn: true, abilities: ['blight_breath', 'horror_claws'] })
+    expect([FOE_XP.source_horror, FOE_NATIVE_LEVEL.source_horror]).toEqual([500, 20])
+    // It pierces all of the expected kit's resistance (21 on the fighter and archer from 17), as the Elder Wyrm does.
+    expect(SOURCE_HORROR_STATS.armorPierce).toBe(21)
   })
 })
 
@@ -892,13 +923,14 @@ const BLOCKS: Record<MonsterKind, CombatantStats> = {
   young_dragon: YOUNG_DRAGON_STATS,
   blight_lich: BLIGHT_LICH_STATS,
   elder_wyrm: ELDER_WYRM_STATS,
+  source_horror: SOURCE_HORROR_STATS,
 }
 
 describe('foeStats', () => {
   const kinds = Object.keys(BLOCKS) as MonsterKind[]
 
-  it('gives every monster kind a native level, 1 but for the Giant Spider\'s 4, the Salamander\'s 5 and stage 11\'s kinds (ring 7: the Wolf 6, the Worg Rider and the Ogre 7; ring 9: the Wyvern 9; ring 12: the Barrow Wight and the Basilisk 11, the Hill Giant 12; ring 15: the Stone Golem and the Blight Cultist 14, the Young Dragon 15; ring 18: the Blight Lich 17, the Elder Wyrm 18)', () => {
-    const above: Partial<Record<MonsterKind, number>> = { giant_spider: 4, salamander: 5, wolf: 6, worg_rider: 7, ogre: 7, wyvern: 9, barrow_wight: 11, basilisk: 11, hill_giant: 12, stone_golem: 14, blight_cultist: 14, young_dragon: 15, blight_lich: 17, elder_wyrm: 18 }
+  it('gives every monster kind a native level, 1 but for the Giant Spider\'s 4, the Salamander\'s 5 and stage 11\'s kinds (ring 7: the Wolf 6, the Worg Rider and the Ogre 7; ring 9: the Wyvern 9; ring 12: the Barrow Wight and the Basilisk 11, the Hill Giant 12; ring 15: the Stone Golem and the Blight Cultist 14, the Young Dragon 15; ring 18: the Blight Lich 17, the Elder Wyrm 18; the Source: its Horror 20)', () => {
+    const above: Partial<Record<MonsterKind, number>> = { giant_spider: 4, salamander: 5, wolf: 6, worg_rider: 7, ogre: 7, wyvern: 9, barrow_wight: 11, basilisk: 11, hill_giant: 12, stone_golem: 14, blight_cultist: 14, young_dragon: 15, blight_lich: 17, elder_wyrm: 18, source_horror: 20 }
     for (const kind of kinds) expect(FOE_NATIVE_LEVEL[kind]).toBe(above[kind] ?? 1)
   })
 
@@ -941,7 +973,7 @@ describe('the foe yardstick', () => {
    * The kinds added in long-campaign stage 11, held to the kitted yardstick (`foeYardstick(level, 'expected')`) until
    * stage 12 measures again; every other kind stays on the bare one. Each ring step adds its kinds here.
    */
-  const STAGE_11_KINDS: readonly MonsterKind[] = ['wolf', 'worg_rider', 'ogre', 'wyvern', 'barrow_wight', 'basilisk', 'hill_giant', 'stone_golem', 'blight_cultist', 'young_dragon', 'blight_lich', 'elder_wyrm']
+  const STAGE_11_KINDS: readonly MonsterKind[] = ['wolf', 'worg_rider', 'ogre', 'wyvern', 'barrow_wight', 'basilisk', 'hill_giant', 'stone_golem', 'blight_cultist', 'young_dragon', 'blight_lich', 'elder_wyrm', 'source_horror']
   /** The fields a stage 11 kind is meant to sit outside the kitted yardstick on, and why. */
   const STAGE_11_EXCEPTIONS: typeof EXCEPTIONS = [
     { kind: 'elder_wyrm', field: 'toHit', reason: 'the top threat hits as a Young Dragon raised to 18 does (115): at 100 it was the weaker of the two in its own lair' },

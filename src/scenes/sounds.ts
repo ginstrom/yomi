@@ -257,6 +257,7 @@ export const FOE_SOUNDS: Record<FoeKind, AttackSound> = {
   young_dragon: attackSound('battle.swing.bite', 'battle.hit.claw'),
   blight_lich: light('battle.hit.pierce'),
   elder_wyrm: attackSound('battle.swing.bite', 'battle.hit.claw'),
+  source_horror: claw,
   bandit_cutthroat: light('battle.hit.pierce'),
   bandit_captain: blade,
   bandit_brute: heavy('battle.hit.slash'),
@@ -349,6 +350,8 @@ export const ABILITY_SOUNDS: Partial<Record<AbilityId, AbilitySound>> = {
   dragon_breath: { release: 'battle.ability.spit', impact: 'battle.impact.fire' },
   // The Elder Wyrm's breath: the dragon's, greater.
   wyrm_breath: { release: 'battle.ability.spit', impact: 'battle.impact.fire' },
+  // The Source's Horror breathes the blight: the spit, and the blight where it lands, as Consecrate's.
+  blight_breath: { release: 'battle.ability.spit', impact: 'battle.element.blight' },
   // A shield struck for a challenge, and the hex of the foes it draws.
   taunt: { release: 'battle.armor.metal', impact: 'battle.impact.hex' },
   volley: { release: 'battle.shot.bow', impact: 'battle.hit.pierce', miss: 'battle.miss.shot' },
@@ -392,6 +395,7 @@ export const DEATH: Record<UnitKind, CueId> = {
   // Ring 18's: the lich falls as the blight's own, the wyrm as the other great lizards.
   blight_lich: 'battle.death.horror',
   elder_wyrm: 'battle.death.salamander',
+  source_horror: 'battle.death.horror',
 }
 
 type StepClass = 'light' | 'armored' | 'heavy' | 'skitter'
@@ -426,6 +430,7 @@ export const STEP: Record<UnitKind, StepClass> = {
   young_dragon: 'heavy',
   blight_lich: 'light',
   elder_wyrm: 'heavy',
+  source_horror: 'heavy',
 }
 
 /** A footstep's cue for a unit of `kind` wearing `body`; a kind of none known steps lightly. */

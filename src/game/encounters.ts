@@ -15,6 +15,7 @@ import {
   YOUNG_DRAGON_STATS,
   BLIGHT_LICH_STATS,
   ELDER_WYRM_STATS,
+  SOURCE_HORROR_STATS,
   OGRE_STATS,
   TROLL_STATS,
   WOLF_STATS,
@@ -63,7 +64,7 @@ function partyKinds(party: readonly Fighter[]): Record<UnitId, UnitKind> {
 }
 
 /** Monsters: stat blocks scaled by `foeAtLevel` from their native level. */
-export type MonsterKind = 'goblin' | 'kobold' | 'shaman' | 'horror' | 'hobgoblin' | 'troll' | 'armored_troll' | 'giant_spider' | 'salamander' | 'wolf' | 'worg_rider' | 'ogre' | 'wyvern' | 'barrow_wight' | 'basilisk' | 'hill_giant' | 'stone_golem' | 'blight_cultist' | 'young_dragon' | 'blight_lich' | 'elder_wyrm'
+export type MonsterKind = 'goblin' | 'kobold' | 'shaman' | 'horror' | 'hobgoblin' | 'troll' | 'armored_troll' | 'giant_spider' | 'salamander' | 'wolf' | 'worg_rider' | 'ogre' | 'wyvern' | 'barrow_wight' | 'basilisk' | 'hill_giant' | 'stone_golem' | 'blight_cultist' | 'young_dragon' | 'blight_lich' | 'elder_wyrm' | 'source_horror'
 
 /** Humanoids built by hero rules (bandits.ts). */
 export type BanditKind = 'bandit_cutthroat' | 'bandit_archer' | 'bandit_brute' | 'bandit_mage' | 'bandit_captain' | 'bandit_crossbowman'
@@ -142,6 +143,7 @@ export const FOE_XP: Record<UnitKind, number> = {
   young_dragon: 300,
   blight_lich: 300,
   elder_wyrm: 450,
+  source_horror: 500,
   bandit_cutthroat: 100,
   bandit_archer: 100,
   bandit_brute: 100,
@@ -196,6 +198,7 @@ const FOE_STATS: Record<MonsterKind, CombatantStats> = {
   young_dragon: YOUNG_DRAGON_STATS,
   blight_lich: BLIGHT_LICH_STATS,
   elder_wyrm: ELDER_WYRM_STATS,
+  source_horror: SOURCE_HORROR_STATS,
 }
 
 /** The level each monster kind's stat block is written for; it grows from there (`foeAtLevel`). */
@@ -221,6 +224,7 @@ export const FOE_NATIVE_LEVEL: Record<MonsterKind, number> = {
   young_dragon: 15,
   blight_lich: 17,
   elder_wyrm: 18,
+  source_horror: 20,
 }
 
 function isBandit(kind: FoeKind): kind is BanditKind {
@@ -261,8 +265,6 @@ interface EncounterDef {
    * changes. One count for each threat of the band.
    */
   counts: readonly number[]
-  /** The highest level its foes are raised to, if lower than the threat's (the Source's provisional block, stage 9). */
-  maxFoeLevel?: number
 }
 
 /**
@@ -272,7 +274,7 @@ interface EncounterDef {
  * a foe at that level (`foeStats`). The numbers behind the counts were
  * chosen with the simulator; see `.claude/skills/yomi-balance/levers.md`.
  */
-function encounter(party: readonly Fighter[], { slots, band, counts, maxFoeLevel = Infinity }: EncounterDef, threat: number): Encounter {
+function encounter(party: readonly Fighter[], { slots, band, counts }: EncounterDef, threat: number): Encounter {
   if (counts.length !== band.max - band.min + 1) throw new Error('An encounter needs a foe count for each threat of its band')
   const level = Math.min(Math.max(Math.floor(threat), band.min), band.max)
   const foes = slots.filter((slot) => (slot.fromThreat ?? 1) <= level).slice(0, counts[level - band.min])
@@ -284,7 +286,7 @@ function encounter(party: readonly Fighter[], { slots, band, counts, maxFoeLevel
         ...foes.map(({ id, kind, name, at }): UnitSetup => ({
           id,
           side: 'enemy',
-          stats: { ...foeStats(kind, Math.min(level, maxFoeLevel)), name },
+          stats: { ...foeStats(kind, level), name },
           position: offsetToHex(...at),
         })),
       ],
@@ -348,13 +350,19 @@ const SALAMANDER_POOL_SLOTS: readonly FoeSlot[] = [
   { id: 'kobold2', kind: 'kobold', name: 'Kobold Warden', at: [8, 6] },
 ]
 
-// The Horror first, so it takes the field at any threat; all five from threat 6, as at the Source's threat in the far ring.
+// The Horror first, so it takes the field at any threat; all four at threat 5, where the Source near home is fought.
 const SOURCE_GUARDIANS_SLOTS: readonly FoeSlot[] = [
   { id: 'horror', kind: 'horror', name: 'Blight Horror', at: [8, 4] },
   { id: 'brute', kind: 'goblin', name: 'Goblin Brute', at: [8, 2] },
   { id: 'shaman', kind: 'shaman', name: 'Blight Shaman', at: [9, 4] },
   { id: 'sneak', kind: 'kobold', name: 'Kobold Sneak', at: [8, 6] },
-  { id: 'cutter', kind: 'goblin', name: 'Goblin Cutter', at: [9, 6] },
+]
+
+// The Source at 20 (long-campaign stage 11 step 13): the Blight Horror, with two Blight Cultists behind it.
+const SOURCE_AT_20_SLOTS: readonly FoeSlot[] = [
+  { id: 'horror', kind: 'source_horror', name: 'Blight Horror', at: [8, 4] },
+  { id: 'acolyte', kind: 'blight_cultist', name: 'Blight Acolyte', at: [9, 2] },
+  { id: 'zealot', kind: 'blight_cultist', name: 'Blight Zealot', at: [9, 6] },
 ]
 
 // The Captain first, so it leads at every threat; then the Archer from threat 5, the Hedge-Mage from threat 4 and the
@@ -496,24 +504,15 @@ const GOBLIN_RAID: EncounterDef = { slots: GOBLIN_RAID_SLOTS, ...TODAY }
 const KOBOLD_SCOUTS: EncounterDef = { slots: KOBOLD_SCOUTS_SLOTS, ...TODAY }
 const HOBGOBLIN_WARBAND: EncounterDef = { slots: HOBGOBLIN_WARBAND_SLOTS, ...TODAY }
 const TROLL_LAIR: EncounterDef = { slots: TROLL_LAIR_SLOTS, ...TODAY }
+/** The Source near home: today's slots and counts at threats 1 to 5, the Horror at its native level 1 raised to the threat. */
+const SOURCE_GUARDIANS: EncounterDef = { slots: SOURCE_GUARDIANS_SLOTS, ...TODAY }
 /**
- * The level the Source's guardians are raised to at most (stage 9 step 09, the user's decision: the Source made
- * winnable). Raised from native level 1 to 20 they were barely hit (hit rate about 0.28; AC 105 to 115 against a
- * level-18 party's to-hit of about 100); at 6 a ready-made level-18 party wins 28 battles of 500 and the long campaign 8 of 50 (7 and above:
- * no `sg20-18` win). It is at least 5, so the Source near home (threats 1 to 5) fights as before.
+ * The Source in the far ring (`SOURCE_THREAT`), long-campaign stage 11 step 13: the Blight Horror of native 20 and two
+ * Blight Cultists, three foes fought at 20 whatever the threat above 5.
  */
-export const SOURCE_FOE_LEVEL = 6
-/**
- * The Source's guardians: today's counts at threats 1 to 5, where the Source near home is fought, and all five from
- * 6 to 20, where it stands in the far ring (`SOURCE_THREAT`), raised to `SOURCE_FOE_LEVEL` at most. The block past 5
- * is provisional (long-campaign stage 9; stage 11 replaces it).
- */
-const SOURCE_GUARDIANS: EncounterDef = {
-  slots: SOURCE_GUARDIANS_SLOTS,
-  band: { min: 1, max: 20 },
-  counts: [...TODAY.counts, ...Array<number>(15).fill(5)],
-  maxFoeLevel: SOURCE_FOE_LEVEL,
-}
+const SOURCE_AT_20: EncounterDef = { slots: SOURCE_AT_20_SLOTS, band: { min: 20, max: 20 }, counts: [3] }
+/** The threats past which the Source is `SOURCE_AT_20`: the near-home Source's band's top. */
+const SOURCE_NEAR_MAX = SOURCE_GUARDIANS.band.max
 /**
  * The Giant Spider's nest, fought at threats 4 to 9: three at 4 and all four from 5 (long-campaign stage 9; at stage
  * 2 the user kept it to threat 5, when at threat 4 its two foes were won 500 times in 500). The counts past 5 are
@@ -639,14 +638,14 @@ export function salamanderPool(party: readonly Fighter[], threat = 5): Encounter
 }
 
 /**
- * What guards the blight's Source: the Blight Horror, with a Goblin Brute
- * beside it and, at threat 5, where the Source near home is fought, a shaman
- * and a Kobold Sneak behind; from threat 6 a Goblin Cutter too, so the Source
- * in the far ring (threat 20) fields all five at the threat's level,
- * SOURCE_FOE_LEVEL (6) at most.
+ * What guards the blight's Source. Near home (threats 1 to 5): the Blight
+ * Horror, with a Goblin Brute beside it and, at threat 5, a shaman and a
+ * Kobold Sneak behind, each at the threat's level. Above threat 5, where the
+ * Source stands in the far ring (threat 20): `SOURCE_AT_20`, the Blight Horror
+ * of native 20 and two Blight Cultists, fought at 20 whatever the threat.
  */
 export function sourceGuardians(party: readonly Fighter[], threat = 1): Encounter {
-  return encounter(party, SOURCE_GUARDIANS, threat)
+  return encounter(party, Math.floor(threat) > SOURCE_NEAR_MAX ? SOURCE_AT_20 : SOURCE_GUARDIANS, threat)
 }
 
 /**
@@ -804,7 +803,7 @@ export const ENCOUNTER_BANDS: Record<EncounterId, ThreatBand> = {
   kobold_scouts: KOBOLD_SCOUTS.band,
   hobgoblin_warband: HOBGOBLIN_WARBAND.band,
   troll_lair: TROLL_LAIR.band,
-  source_guardians: SOURCE_GUARDIANS.band,
+  source_guardians: { min: SOURCE_GUARDIANS.band.min, max: SOURCE_AT_20.band.max },
   bandit_camp: BANDIT_CAMP.band,
   spider_nest: SPIDER_NEST.band,
   salamander_pool: SALAMANDER_POOL.band,
@@ -830,7 +829,8 @@ export const ENCOUNTER_COUNTS: Record<EncounterId, readonly number[]> = {
   kobold_scouts: KOBOLD_SCOUTS.counts,
   hobgoblin_warband: HOBGOBLIN_WARBAND.counts,
   troll_lair: TROLL_LAIR.counts,
-  source_guardians: SOURCE_GUARDIANS.counts,
+  // The near-home counts at 1 to 5, then the Source at 20's three at each threat from 6 to 20 (all fought at 20).
+  source_guardians: [...SOURCE_GUARDIANS.counts, ...Array<number>(SOURCE_AT_20.band.max - SOURCE_NEAR_MAX).fill(SOURCE_AT_20.counts[0])],
   bandit_camp: BANDIT_CAMP.counts,
   spider_nest: SPIDER_NEST.counts,
   salamander_pool: SALAMANDER_POOL.counts,

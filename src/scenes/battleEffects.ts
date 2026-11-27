@@ -109,6 +109,8 @@ export const ABILITY_LOOKS: Partial<Record<AbilityId, SpellLook>> = {
   dragon_breath: { ...FIRE, impact: 'burst' },
   // The Elder Wyrm's breath: the dragon's fire, further.
   wyrm_breath: { ...FIRE, impact: 'burst' },
+  // The Source's Horror breathes the blight: Death Cloud's green, bursting on each foe it catches.
+  blight_breath: { ...SPELL_LOOKS.death_cloud, impact: 'burst' },
   volley: { colour: 0xd7ccc8, glow: 0xffffff, missile: 'dart', impact: 'burst', arrows: true },
   consecrate: { ...SPELL_LOOKS.bless, impact: 'burst' },
   taunt: { colour: 0xe53935, glow: 0xffcdd2, missile: 'orb', impact: 'ring', onUser: true },

@@ -2,7 +2,7 @@
 
 ## What a tuner needs to know
 
-- A campaign is lost in a single battle at threat 5, mostly the Source's: the Blight Horror's hit points are the lever for it alone. The far Source (threat 20) has its own: `SOURCE_FOE_LEVEL` (6, `encounters.ts`) caps its guardians' level, so threats 1 to 5 are untouched (stage 9 step 09; at 7, `sg20-18` wins none).
+- A campaign is lost in a single battle at threat 5, mostly the Source's: the Blight Horror's hit points are the lever for it alone. The far Source (above threat 5, fought at 20) is its own encounter, `SOURCE_AT_20` (`encounters.ts`): the `source_horror` block (`SOURCE_HORROR_STATS`) and its slots and count are its levers, and threats 1 to 5 are untouched (stage 11 step 13; `sgk20`).
 - Foe counts feed back through experience, so move them first and in small steps: a fifth foe at threat 5 is a cliff, and threat 5 must never give less experience than threat 4. The one encounter whose counts fall with the threat is the Wyvern Roost (4, 4, 3, 3 over 9 to 12, the user's decision in stage 11 step 09: the expected kit is one row across its band), so its threat 11 gives less than 10; no ring has threat 10 or 11.
 - `FOE_HP_PER_LEVEL` is the finer lever (now 1.15).
 - Gear and several parties change little in the simulator; the game as played runs easier than the tuned figure.

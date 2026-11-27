@@ -356,6 +356,11 @@ describe('words', () => {
  * schema's bump to 27 and nothing else (each sample's `battle_start` writes
  * `schemaVersion`); play did not move: all 18 met the old digests with the
  * same code and the version held at 26, and no `forecast` tally changed.
+ *
+ * Long-campaign stage 11, step 13: the three `source_guardians` entries (threats
+ * 10 and 20) re-recorded, and nothing else, for the Source at 20 (the Blight
+ * Horror of native 20 and two cultists in place of five foes held at level 6):
+ * their `logs`, and the level-18 tally, 4 wins of 4 before, none now.
  */
 describe('the estimate fixture (stage 10 step 07)', () => {
   interface Entry {
@@ -442,13 +447,13 @@ describe('the estimate fixture (stage 10 step 07)', () => {
     { level: 12, tier: 3, encounter: 'bandit_company', threat: 12, base: 1008, samples: 6, forecast: { samples: 6, wins: 1, heroLost: 6, stalled: 0 },
       logs: 'c2184c3642122b42567b6a55e9de8af31bb7d681cbb0d5c60f2e85c2fa6c31d8' },
     { level: 10, tier: 3, encounter: 'source_guardians', threat: 10, base: 1009, samples: 6, forecast: { samples: 6, wins: 0, heroLost: 6, stalled: 0 },
-      logs: 'b4e9ea6c9028ffa38b65433a6928e179ee8994c8d4c91c9bc05a5063c7490e5f' },
+      logs: '7e39996a9418b8545abcbf5abb3ecc9ffc32ec58776f5002fc4aa798ce2433f8' },
     { level: 15, tier: 4, encounter: 'freebooter_host', threat: 15, base: 1010, samples: 40, forecast: { samples: 40, wins: 19, heroLost: 26, stalled: 0 },
       logs: '1899c8b6bacec70820e822ed9d254e5631a1d011dbf0d5ba554142cfe1a6da18' },
     { level: 18, tier: 5, encounter: 'freebooter_host', threat: 18, base: 1011, samples: 6, forecast: { samples: 6, wins: 0, heroLost: 6, stalled: 0 },
       logs: '62b93396048b163933fee4426e62b4164f659435eaedb773e481e0306497abb2' },
-    { level: 18, tier: 5, encounter: 'source_guardians', threat: 20, base: 1012, samples: 4, forecast: { samples: 4, wins: 4, heroLost: 0, stalled: 0 },
-      logs: 'a5f451b6f41a4cfa2cd009465536c207bf43698275f0ae3f78d8bc26d2afb1fb' },
+    { level: 18, tier: 5, encounter: 'source_guardians', threat: 20, base: 1012, samples: 4, forecast: { samples: 4, wins: 0, heroLost: 4, stalled: 0 },
+      logs: '97e2c67018e40e404a031908292ec1d8baac3f2a4438fa195a75c9e6b7575602' },
     { level: 15, tier: 4, encounter: 'freebooter_host', threat: 15, base: 1013, samples: 8, steps: 6, forecast: { samples: 8, wins: 5, heroLost: 4, stalled: 0 },
       logs: 'f9f5fec97d03d29047b70c01342fbee5f0b63acd5b5aeefa1bca3fb63969e45f' },
     { level: 6, tier: 2, encounter: 'spider_nest', threat: 6, base: 1014, samples: 8, steps: 15, forecast: { samples: 8, wins: 8, heroLost: 0, stalled: 0 },
@@ -456,7 +461,7 @@ describe('the estimate fixture (stage 10 step 07)', () => {
     { level: 4, tier: 1, encounter: 'troll_lair', threat: 3, base: 1015, samples: 8, steps: 20, forecast: { samples: 8, wins: 8, heroLost: 0, stalled: 0 },
       logs: '49c7933eca12cc83f84a31464e9a6978d42610ed5b384c6a1f7fa63eda33497d' },
     { level: 10, tier: 3, encounter: 'source_guardians', threat: 10, base: 1016, samples: 6, steps: 10, forecast: { samples: 6, wins: 0, heroLost: 6, stalled: 0 },
-      logs: '7e79aae4855f49248579dbe6ce983e15ad51f52640e59b681b9977c7a45bf36c' },
+      logs: 'efd59fa1aa27314f9a5236a4e9d7f53dbc4f74c101c1429393f32917b753cb35' },
     { level: 10, tier: 1, encounter: 'goblin_raid', threat: 1, base: 1017, samples: 4, foeHp: 3000, forecast: { samples: 4, wins: 0, heroLost: 0, stalled: 4 },
       logs: 'e806d8aece4848177ca039836d308e0c654f1fbcd1cc1029b138a5f3b79e5c95' },
   ]

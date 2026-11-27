@@ -113,6 +113,8 @@ export const ABILITY_IDS = [
   'dragon_strikes',
   'wyrm_breath',
   'wyrm_strikes',
+  'blight_breath',
+  'horror_claws',
   'power_attack',
   'cleave',
   'taunt',
@@ -135,7 +137,7 @@ export const ABILITY_IDS = [
 export type AbilityId = (typeof ABILITY_IDS)[number]
 
 /** The abilities only monsters have, in `ABILITY_IDS` order; every other ability is a hero's technique. */
-export const MONSTER_ABILITY_IDS: readonly AbilityId[] = ['troll_claws', 'spider_bite', 'spider_web', 'fire_spit', 'worg_strikes', 'ogre_sweep', 'wyvern_strikes', 'basilisk_gaze', 'giant_rock', 'dragon_breath', 'dragon_strikes', 'wyrm_breath', 'wyrm_strikes']
+export const MONSTER_ABILITY_IDS: readonly AbilityId[] = ['troll_claws', 'spider_bite', 'spider_web', 'fire_spit', 'worg_strikes', 'ogre_sweep', 'wyvern_strikes', 'basilisk_gaze', 'giant_rock', 'dragon_breath', 'dragon_strikes', 'wyrm_breath', 'wyrm_strikes', 'blight_breath', 'horror_claws']
 
 /** The Spellsword's Strikes, which Arcane Knight makes at the weapon's own AP. */
 export const SPELLSWORD_STRIKES: readonly AbilityId[] = ['flame_strike', 'frost_strike', 'thunder_strike']
@@ -313,6 +315,35 @@ export const ABILITIES: Record<AbilityId, Ability> = {
       { name: 'Bite', verb: 'bites', damage: { count: 2, sides: 10, bonus: 0 } },
       { name: 'Claw', verb: 'claws', damage: { count: 1, sides: 10, bonus: 0 } },
       { name: 'Claw', verb: 'claws', damage: { count: 1, sides: 10, bonus: 0 } },
+    ],
+  },
+  blight_breath: {
+    name: 'Blight Breath',
+    verb: 'breathes the blight',
+    description: 'Every foe within 2 hexes takes 8d6 blight, half on a miss, whatever the armour, and is corroded for 3 turns: -5 AC, -2 resistance, 1d4 acid a turn, no regeneration.',
+    apCost: 4,
+    recharge: 3,
+    area: {
+      shape: 'burst',
+      centredOnSelf: true,
+      range: 0,
+      radius: 2,
+      foesOnly: true,
+      damage: { count: 8, sides: 6, bonus: 0 },
+      element: 'blight',
+      status: { id: 'corroded', turns: 3 },
+      halfOnMiss: true,
+    },
+  },
+  horror_claws: {
+    name: 'Claws',
+    verb: 'claws',
+    description: 'Two claws at one foe; the second turns to the next foe beside it if the first falls.',
+    apCost: 6,
+    recharge: 0,
+    strikes: [
+      { name: 'Claw', verb: 'claws', damage: { count: 2, sides: 8, bonus: 0 } },
+      { name: 'Claw', verb: 'claws', damage: { count: 2, sides: 8, bonus: 0 } },
     ],
   },
   // ---- The heroes' techniques (design §4.3). `apCost` is ignored where `weaponAp` is set.

@@ -818,6 +818,34 @@ export const ELDER_WYRM_STATS: CombatantStats = {
   abilities: ['wyrm_breath', 'wyrm_strikes'],
 }
 
+/**
+ * The Blight Horror the Source raises at the top threat, native to level 20
+ * (the near-home Source keeps `BLIGHT_HORROR_STATS`). It breathes the blight
+ * on every foe within 2 hexes (`blight_breath`: whatever the armour, only a
+ * blight ward cuts it, and Corroded), sparing the cultists who guard it,
+ * then recharges for 3 turns, in which it claws (`horror_claws`) through all
+ * of the expected kit's resistance (21); with 10 action points it breathes
+ * and claws in one turn. It knits back 2 a turn unless Seared or Corroded.
+ * Blightborn, so Dawn's bane takes it.
+ */
+export const SOURCE_HORROR_STATS: CombatantStats = {
+  name: 'Blight Horror',
+  maxHp: 171,
+  ac: 80,
+  resistance: 3,
+  toHit: 100,
+  critChance: 5,
+  armorPierce: 21,
+  damage: { count: 1, sides: 10, bonus: 4 },
+  weapon: 'Claws',
+  attackApCost: 4,
+  attackRange: 1,
+  actionPoints: 10,
+  regeneration: 2,
+  abilities: ['blight_breath', 'horror_claws'],
+  blightborn: true,
+}
+
 /** What each level above the first adds to a monster: this share of its level 1 hit points... */
 export const FOE_HP_PER_LEVEL = 1.15
 /** ...this many points to its chance to hit and to its armour class... */
