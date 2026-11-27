@@ -621,12 +621,12 @@ export const WYVERN_STATS: CombatantStats = {
  * was buried in. It drains the life of a foe 5 hexes off (`drain_life`,
  * which no armour turns) and heals by half of it, with mana for one casting
  * at its native level, and then closes with a blade that goes through much
- * of a hero's armour. Its half damage from weapons that are not magic is
+ * of a hero's armour (`armorPierce` 8 of the expected kit's 11 to 13). Its half damage from weapons that are not magic is
  * deferred (long-campaign stage 11, decision 11): a plain block.
  */
 export const BARROW_WIGHT_STATS: CombatantStats = {
   name: 'Barrow Wight',
-  maxHp: 70,
+  maxHp: 66,
   ac: 54,
   resistance: 3,
   toHit: 95,
@@ -669,16 +669,19 @@ export const BASILISK_STATS: CombatantStats = {
  * stage 11, decision 11), so the giant's `armorPierce` serves both: a hero
  * in the expected kit has resistance 11 to 13 at its levels, and without
  * piercing the rock and the club would do next to nothing to two of three.
+ * Its hit points and dice are the third block tried against the cells (the
+ * plan's log has the trials): a monster raised from a lower native level,
+ * as the Ogre beside it, outgrows a block written at 12.
  */
 export const HILL_GIANT_STATS: CombatantStats = {
   name: 'Hill Giant',
-  maxHp: 115,
+  maxHp: 100,
   ac: 48,
   resistance: 3,
   toHit: 95,
   critChance: 5,
   armorPierce: 9,
-  damage: { count: 3, sides: 8, bonus: 2 },
+  damage: { count: 3, sides: 6, bonus: 3 },
   weapon: 'Club',
   attackApCost: 6,
   attackRange: 1,

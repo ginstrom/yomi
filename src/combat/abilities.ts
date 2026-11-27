@@ -245,7 +245,7 @@ export const ABILITIES: Record<AbilityId, Ability> = {
   giant_rock: {
     name: 'Rock',
     verb: 'hurls a rock',
-    description: 'A rock thrown at one foe up to 4 hexes off: 2d10+2, through armour.',
+    description: 'A rock thrown at one foe up to 4 hexes off: 2d8+2, through armour.',
     apCost: 6,
     recharge: 1,
     area: {
@@ -253,7 +253,7 @@ export const ABILITIES: Record<AbilityId, Ability> = {
       range: 4,
       radius: 0,
       throughResistance: true,
-      damage: { count: 2, sides: 10, bonus: 2 },
+      damage: { count: 2, sides: 8, bonus: 2 },
       halfOnMiss: false,
     },
   },

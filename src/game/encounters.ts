@@ -402,8 +402,9 @@ const WYVERN_ROOST_SLOTS: readonly FoeSlot[] = [
   { id: 'old', kind: 'wyvern', name: 'Old Wyvern', at: [9, 4] },
 ]
 
-// Ring 12 (long-campaign stage 11): the barrow's dead, its king first; a lair of basilisks with the ogres that keep
-// them; a steading of hill giants and their ogres, the chief last.
+// Ring 12 (long-campaign stage 11): the barrow's dead, its king first; a pair of basilisks and the ogre that keeps
+// them; a steading of two hill giants and their ogre. Three foes are each line-up's whole (a fourth was won 0 times
+// in 500 at the lair's top threat and 19 at the steading's), so the plan's second ogre of each has no slot.
 const BARROW_WIGHTS_SLOTS: readonly FoeSlot[] = [
   { id: 'king', kind: 'barrow_wight', name: 'Barrow King', at: [9, 4] },
   { id: 'wight', kind: 'barrow_wight', name: 'Barrow Wight', at: [8, 3] },
@@ -415,14 +416,12 @@ const BASILISK_LAIR_SLOTS: readonly FoeSlot[] = [
   { id: 'basilisk', kind: 'basilisk', name: 'Basilisk', at: [8, 4] },
   { id: 'keeper', kind: 'ogre', name: 'Ogre Keeper', at: [8, 2] },
   { id: 'mate', kind: 'basilisk', name: 'Basilisk Mate', at: [8, 6] },
-  { id: 'ogre', kind: 'ogre', name: 'Ogre', at: [9, 4] },
 ]
 
 const HILL_GIANT_STEADING_SLOTS: readonly FoeSlot[] = [
   { id: 'giant', kind: 'hill_giant', name: 'Hill Giant', at: [8, 4] },
-  { id: 'ogre', kind: 'ogre', name: 'Ogre', at: [8, 2] },
-  { id: 'thrall', kind: 'ogre', name: 'Ogre Thrall', at: [8, 6] },
-  { id: 'chief', kind: 'hill_giant', name: 'Giant Chief', at: [9, 4] },
+  { id: 'chief', kind: 'hill_giant', name: 'Giant Chief', at: [8, 2] },
+  { id: 'ogre', kind: 'ogre', name: 'Ogre Thrall', at: [8, 6] },
 ]
 
 /** Today's encounters are fought at threats 1 to 5, with these many foes at each. */
@@ -489,14 +488,15 @@ const OGRE_CAMP: EncounterDef = { slots: OGRE_CAMP_SLOTS, band: { min: 7, max: 1
  */
 const WYVERN_ROOST: EncounterDef = { slots: WYVERN_ROOST_SLOTS, band: { min: 9, max: 12 }, counts: [4, 4, 3, 3] }
 /**
- * Ring 12's encounters (stage 11 step 10); the cells' tuning is in the plan's log. The Barrow Wights, threats 11 to
- * 14: three, a fourth from 13.
+ * Ring 12's encounters (stage 11 step 10); the cells' tuning is in the plan's log. Each is the same line-up at every
+ * threat of its band: the expected kit steps up at 13, so the top of the band is far the harder end. The Barrow
+ * Wights, threats 11 to 14: four (three at 11 were won 500 times in 500).
  */
-const BARROW_WIGHTS: EncounterDef = { slots: BARROW_WIGHTS_SLOTS, band: { min: 11, max: 14 }, counts: [3, 3, 4, 4] }
-/** The Basilisk Lair, threats 11 to 14: a Basilisk, its keeper and its mate, the second Ogre at 14 (two foes are no battle for a party in the expected kit). */
-const BASILISK_LAIR: EncounterDef = { slots: BASILISK_LAIR_SLOTS, band: { min: 11, max: 14 }, counts: [3, 3, 3, 4] }
-/** The Hill Giant Steading, threats 12 to 15: a Hill Giant and two Ogres, the Giant Chief from 14. */
-const HILL_GIANT_STEADING: EncounterDef = { slots: HILL_GIANT_STEADING_SLOTS, band: { min: 12, max: 15 }, counts: [3, 3, 4, 4] }
+const BARROW_WIGHTS: EncounterDef = { slots: BARROW_WIGHTS_SLOTS, band: { min: 11, max: 14 }, counts: [4, 4, 4, 4] }
+/** The Basilisk Lair, threats 11 to 14: a Basilisk, its keeper and its mate (two foes are no battle for a party in the expected kit, and a second Ogre at 14 was never beaten). */
+const BASILISK_LAIR: EncounterDef = { slots: BASILISK_LAIR_SLOTS, band: { min: 11, max: 14 }, counts: [3, 3, 3, 3] }
+/** The Hill Giant Steading, threats 12 to 15: the Hill Giant, the Giant Chief and their Ogre (an Ogre raised to these levels is the tougher of the two kinds, so the steading fields one, not two). */
+const HILL_GIANT_STEADING: EncounterDef = { slots: HILL_GIANT_STEADING_SLOTS, band: { min: 12, max: 15 }, counts: [3, 3, 3, 3] }
 
 /**
  * A Goblin and a Kobold across the board from the party; where the threat is
@@ -628,12 +628,12 @@ export function barrowWights(party: readonly Fighter[], threat = 11): Encounter 
   return encounter(party, BARROW_WIGHTS, threat)
 }
 
-/** A lair of basilisks and the ogres that keep them, fought at threats 11 to 14: the gaze chills a cone of heroes while the ogres close. */
+/** A lair of two basilisks and the ogre that keeps them, fought at threats 11 to 14: the gaze chills a cone of heroes while the ogre closes. */
 export function basiliskLair(party: readonly Fighter[], threat = 11): Encounter {
   return encounter(party, BASILISK_LAIR, threat)
 }
 
-/** A steading of hill giants and their ogres, fought at threats 12 to 15: rocks thrown as the party closes, then clubs. */
+/** A steading of two hill giants and their ogre, fought at threats 12 to 15: rocks thrown as the party closes, then clubs. */
 export function hillGiantSteading(party: readonly Fighter[], threat = 12): Encounter {
   return encounter(party, HILL_GIANT_STEADING, threat)
 }

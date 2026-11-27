@@ -1156,8 +1156,8 @@ describe('policies', () => {
       expect(sha(lines.slice(0, RING_9))).toBe('8e432c095a9a75e2639402953d9fefb423c92aaeeda5c631ea5b233ca8514c60')
       // Ring 12's (step 10): the Barrow Wights', the Basilisk Lair's and the Hill Giant Steading's lines only.
       expect(new Set(lines.slice(RING_9).map((line) => line.split(' ')[0]))).toEqual(new Set(['barrow_wights', 'basilisk_lair', 'hill_giant_steading']))
-      expect(lines.length).toBe(19591)
-      expect(sha(lines)).toBe('2c883f09e40d35c09ad548ce31d8f47a2c2c75b01142e3743f4cf6bf3fa10214')
+      expect(lines.length).toBe(19649)
+      expect(sha(lines)).toBe('96ec580b1bd37e00f14c2c1b4df2f33f528dc178aa964bc8fe91fc85e6ca9136')
     }, 60_000)
   })
 })

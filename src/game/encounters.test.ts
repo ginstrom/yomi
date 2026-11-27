@@ -75,9 +75,9 @@ const OGRE_CAMP_COUNTS = [3, 3, 3, 4]
 /** Ring 9's counts (stage 11 step 09; the cells' tuning is in the plan's log). */
 const WYVERN_ROOST_COUNTS = [4, 4, 3, 3]
 /** Ring 12's counts (stage 11 step 10; the cells' tuning is in the plan's log). */
-const BARROW_WIGHTS_COUNTS = [3, 3, 4, 4]
-const BASILISK_LAIR_COUNTS = [3, 3, 3, 4]
-const HILL_GIANT_STEADING_COUNTS = [3, 3, 4, 4]
+const BARROW_WIGHTS_COUNTS = [4, 4, 4, 4]
+const BASILISK_LAIR_COUNTS = [3, 3, 3, 3]
+const HILL_GIANT_STEADING_COUNTS = [3, 3, 3, 3]
 
 describe.each(Object.entries(ENCOUNTERS))('the %s encounter', (_id, build) => {
   const wounded = party().map((fighter, i) => ({ ...fighter, hp: 5 + i }))
@@ -632,8 +632,8 @@ describe('ring 12\'s encounters (long-campaign stage 11 step 10)', () => {
     return foes.map((u) => [kinds[u.id], u.stats.name])
   }
   const WIGHTS = [['barrow_wight', 'Barrow King'], ['barrow_wight', 'Barrow Wight'], ['barrow_wight', 'Grave Wight'], ['barrow_wight', 'Pale Wight']]
-  const LAIR = [['basilisk', 'Basilisk'], ['ogre', 'Ogre Keeper'], ['basilisk', 'Basilisk Mate'], ['ogre', 'Ogre']]
-  const STEADING = [['hill_giant', 'Hill Giant'], ['ogre', 'Ogre'], ['ogre', 'Ogre Thrall'], ['hill_giant', 'Giant Chief']]
+  const LAIR = [['basilisk', 'Basilisk'], ['ogre', 'Ogre Keeper'], ['basilisk', 'Basilisk Mate']]
+  const STEADING = [['hill_giant', 'Hill Giant'], ['hill_giant', 'Giant Chief'], ['ogre', 'Ogre Thrall']]
 
   it('are registered after the Wyvern Roost, in order, with their bands and counts', () => {
     const ids = Object.keys(ENCOUNTERS)
