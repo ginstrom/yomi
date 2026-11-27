@@ -156,5 +156,5 @@ No rule, constant, count or band change; no simulation; no new feature. Fix only
 
 **Play script:** walked in the dev build; every fight, check and finding in `log.md`, "Step 15: the play script". Departure: the kit was planted in the save as `expectedGear` gives it rather than `give` and dressing by hand (25 fights × 3 heroes × 6 slots); the levels went through the console's `level <T> all auto`. Findings brought to the orchestrator (none fixed; none in this stage's code but the numbers): the Ember ward against Fire Breath is a sixth (hit) to a third (miss); a Young Dragon's drake scale is half a leather; "The Greyfang Pack are beaten." plural for singular nest names (scene text); the hover panel lists no spells for caster foes; the lich never cast Death Cloud in two fights; the Basilisk Lair lost at 11 and 14 and the Elder Wyrm at 20, one seeded battle each against cells 425, 304, 408.
 
-**Gates:** see the review round's record below (filled at the close-up).
+**Gates** at `4792ecd` (clean tree): `npm test` runlog #208, exit 0, 109 files, 3025 passed (the refactor guard among them, unedited); `npm run build` #209, exit 0; the manual's shot rerun #210, passed (it rewrote `battle-dragon.png` with a few pixels changed, as each take does; the committed take was kept). No `npm run test:browser`: no scene changed, and `manual.shots.ts` is outside its run.
 
