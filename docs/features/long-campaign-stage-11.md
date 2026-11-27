@@ -8,7 +8,6 @@
 - Branch: `long-campaign-stage-11`, off main at c138d83 (stage 10 merged as PR #12, e801f5c).
 - Path: the stage design is the approved design; straight to planning, as stages 2–10.
 - Links:
-  - Stages overview: `docs/designs/long-campaign/index.md`
   - Design: `docs/designs/long-campaign/stage-11-high-roster.md` (status "ready for planning")
   - Previous stage: `docs/features/long-campaign-stage-10.md`
   - Plan: `docs/implementation-plans/long-campaign-stage-11/index.md` (15 steps, bb47278; trimmed 3e77176)
@@ -18,7 +17,7 @@
 - Tiers (engineer / reviewer): planner opus. 01 sonnet / sonnet; 04–07, 15 sonnet / opus; 02, 03, 08–14 opus / opus. No escalations.
 - Done, each clean in 1 round: 01 (runlog #15), 02 (#22), 03 (#58), 08 (#69), 09 (#84), 10 (#94; browser by file #104–#126); cells in the plan log; sprites 04–07 merged. 50-check 1e85d023… (schema 27), unmoved. SAVE_VERSION 34.
 - `throughResistance` on an area means cut by resistance less `armorPierce`; without it resistance is ignored (plan corrected d06bdb9). Follow-ups outside the stage: `stopVoice` fade race in `src/scenes/soundPlayer.ts`; battle e2e A9 fails in the full file (order-dependent, pre-existing). A closed lid hangs browser runs.
-- Run npm with `PATH=/opt/homebrew/opt/node@26/bin:$PATH` (default node is 22). Sprite tool is `/Users/ryan/.local/bin/sprite`, never `npx sprite`.
+- Run npm with `PATH=/opt/homebrew/opt/node@26/bin:$PATH`. Sprite tool: `/Users/ryan/.local/bin/sprite`, never `npx sprite`.
 - Checkpoints to the user: a threat that occurs on the map (7, 9, 12, 15, 18) outside 300–475 after three trials (band-end misses are recorded for stage 12, no stop); an ability that needs a new engine field; the guard or 50-check moving; an early figure further out than accepted.
 - Carried from stage 10: trophies from kills (done through ring 9); Source Guardians at SOURCE_FOE_LEVEL 6 until step 13.
 - Not this stage (stage 12, the retune): the accepted early figures (288/289), the long campaign's gear lag, the Source at 1/100, market income, the simulator's spend order.
