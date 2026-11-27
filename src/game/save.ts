@@ -38,11 +38,13 @@ import { CUTSCENE_IDS } from '../story/cutscenes.ts'
  * ring 9: two Wyvern Roosts and an Ogre Camp; no migration.
  * Version 34 (stage 11, ring 12) does the same for ring 12: a barrow of
  * wights, a Basilisk Lair and a Hill Giant Steading; no migration.
+ * Version 35 (stage 11, ring 15) does the same for ring 15: a Golem Ruin, a
+ * Blight Cult and a Dragon Lair; no migration.
  * Rules and item numbers may change
  * freely, as a character stores no derived number and an item is saved by
  * its id.
  */
-export const SAVE_VERSION = 34
+export const SAVE_VERSION = 35
 
 /** One slot's contents. */
 export interface SaveFile {

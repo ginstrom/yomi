@@ -168,9 +168,9 @@ describe('newWorld', () => {
       'Marsh Steading': ['Emberblade'],
       'Dustroad Company': ['Wand of Sparks'],
       'The Red Freebooters': ['Wand of Storms'],
-      'The Grey Freebooters': ['Ring of Protection'],
-      'Wolfhead Host': ["Sage's Circlet"],
-      'Saltwind Host': ['Hawkeye Bow'],
+      'The Grey Ruin': ['Ring of Protection'],
+      'Wolfhead Cult': ["Sage's Circlet"],
+      'Saltwind Drake': ['Hawkeye Bow'],
       'Black Banner Host': ['Cloak of Shadows'],
       'The Iron Freebooters': ['Emberblade'],
       'The Ashen Host': ['Wand of Storms'],
@@ -692,7 +692,7 @@ describe('the outer rings (stage 9 step 05: their nests, sites and far partners)
     7: ['bandit_camp', 'wolf_pack', 'worg_riders', 'ogre_camp'],
     9: ['bandit_company', 'wyvern_roost', 'ogre_camp'],
     12: ['bandit_company', 'barrow_wights', 'basilisk_lair', 'hill_giant_steading'],
-    15: ['freebooter_host'],
+    15: ['freebooter_host', 'golem_ruin', 'blight_cult', 'young_dragon'],
     18: ['freebooter_host'],
   }
   const SITES: Record<string, [string, Material, number]> = {
@@ -756,6 +756,19 @@ describe('the outer rings (stage 9 step 05: their nests, sites and far partners)
     ])
     for (const l of nests.filter((l) => l.threat === 12)) expect(threatAt(l.position), l.id).toBe(12)
     for (const gone of ['stonegate_company', 'thornwall_company', 'marsh_company']) expect(world.locations.map((l) => l.id)).not.toContain(gone)
+  })
+
+  it('fill ring 15 with a Golem Ruin, a Blight Cult and a Dragon Lair, where three of its Freebooter Hosts were, and keep the other two (stage 11 step 11)', () => {
+    const ring = nests.filter((l) => l.threat === 15).map((l) => [l.id, l.name, l.kind === 'monsters' && l.encounter, l.position, l.kind === 'monsters' && l.loot.map((item) => item.name)])
+    expect(ring).toEqual([
+      ['red_freebooters', 'The Red Freebooters', 'freebooter_host', offsetToHex(95, 6), ['Wand of Storms']],
+      ['grey_ruin', 'The Grey Ruin', 'golem_ruin', offsetToHex(102, 20), ['Ring of Protection']],
+      ['wolfhead_cult', 'Wolfhead Cult', 'blight_cult', offsetToHex(110, 36), ["Sage's Circlet"]],
+      ['saltwind_drake', 'Saltwind Drake', 'young_dragon', offsetToHex(102, 52), ['Hawkeye Bow']],
+      ['black_banner_host', 'Black Banner Host', 'freebooter_host', offsetToHex(95, 66), ['Cloak of Shadows']],
+    ])
+    for (const l of nests.filter((l) => l.threat === 15)) expect(threatAt(l.position), l.id).toBe(15)
+    for (const gone of ['grey_freebooters', 'wolfhead_host', 'saltwind_host']) expect(world.locations.map((l) => l.id)).not.toContain(gone)
   })
 
   it('put 4 to 6 fixed nests in each outer ring, fighting the ring\'s encounters', () => {
@@ -858,7 +871,10 @@ const SESSION_TURN = 146
 // Re-recorded in stage 11 step 10: ring 12's three nests renamed (id, name, encounter) and its three spawn kinds joined
 // the eligible ones at threat 12, so three far spawns are of another kind (name, encounter, and the spawned event's
 // name); nothing else differs (18 values in the digested JSON, diffed before and after); SESSION_TURN unchanged.
-const SESSION_SHA256 = 'a25269a321bfa9c63c3fc907ea8c0d58edea7130f3792628640e761cfd833e5a'
+// Re-recorded in stage 11 step 11: ring 15's three nests renamed (id, name, encounter) and its three spawn kinds joined
+// the eligible ones at threats 15 and 18, so three far spawns are of another kind (name, encounter, and the spawned
+// event's name); nothing else differs (18 values in the digested JSON, diffed before and after); SESSION_TURN unchanged.
+const SESSION_SHA256 = '6d089a8e6916d8e135fe69a0ea5c50610c5ca4ad82bb306c8c9c311ebb22a665'
 
 describe('the trade partners on a new world', () => {
   const kinds = (world: WorldState) => world.locations.map((l) => l.kind)

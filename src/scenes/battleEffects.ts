@@ -105,6 +105,8 @@ export const ABILITY_LOOKS: Partial<Record<AbilityId, SpellLook>> = {
   basilisk_gaze: { colour: 0x9ccc65, glow: 0xdcedc8, missile: 'orb', impact: 'ring' },
   // The Hill Giant's rock: a grey stone thrown, bursting to dust.
   giant_rock: { colour: 0x8d8d8d, glow: 0xd7ccc8, missile: 'orb', impact: 'burst' },
+  // The Young Dragon's breath: the Salamander's fire, further.
+  dragon_breath: { ...FIRE, impact: 'burst' },
   volley: { colour: 0xd7ccc8, glow: 0xffffff, missile: 'dart', impact: 'burst', arrows: true },
   consecrate: { ...SPELL_LOOKS.bless, impact: 'burst' },
   taunt: { colour: 0xe53935, glow: 0xffcdd2, missile: 'orb', impact: 'ring', onUser: true },

@@ -316,11 +316,11 @@ export function newWorld(
       farMonsters('thornwall_lair', 'Thornwall Lair', 96, 36, 'basilisk_lair', [AMULET_FOCUS]),
       farMonsters('marsh_steading', 'Marsh Steading', 88, 52, 'hill_giant_steading', [EMBERBLADE]),
       farMonsters('dustroad_company', 'Dustroad Company', 80, 67, 'bandit_company', [SPARK_WAND]),
-      // Threat 15 (95 to 108).
+      // Threat 15 (95 to 108): a golem ruin, a blight cult and a young dragon's lair (long-campaign stage 11), and two freebooter hosts.
       farMonsters('red_freebooters', 'The Red Freebooters', 95, 6, 'freebooter_host', [STORM_WAND]),
-      farMonsters('grey_freebooters', 'The Grey Freebooters', 102, 20, 'freebooter_host', [RING_PROTECTION]),
-      farMonsters('wolfhead_host', 'Wolfhead Host', 110, 36, 'freebooter_host', [SAGE_CIRCLET]),
-      farMonsters('saltwind_host', 'Saltwind Host', 102, 52, 'freebooter_host', [HAWK_BOW]),
+      farMonsters('grey_ruin', 'The Grey Ruin', 102, 20, 'golem_ruin', [RING_PROTECTION]),
+      farMonsters('wolfhead_cult', 'Wolfhead Cult', 110, 36, 'blight_cult', [SAGE_CIRCLET]),
+      farMonsters('saltwind_drake', 'Saltwind Drake', 102, 52, 'young_dragon', [HAWK_BOW]),
       farMonsters('black_banner_host', 'Black Banner Host', 95, 66, 'freebooter_host', [SHADOW_CLOAK]),
       // Threat 18 (109 to 122), about the Source.
       farMonsters('iron_freebooters', 'The Iron Freebooters', 110, 8, 'freebooter_host', [EMBERBLADE]),

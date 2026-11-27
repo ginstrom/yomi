@@ -10,6 +10,9 @@ import {
   HILL_GIANT_STATS,
   HOBGOBLIN_CHIEF_STATS,
   KOBOLD_STATS,
+  STONE_GOLEM_STATS,
+  BLIGHT_CULTIST_STATS,
+  YOUNG_DRAGON_STATS,
   OGRE_STATS,
   TROLL_STATS,
   WOLF_STATS,
@@ -58,7 +61,7 @@ function partyKinds(party: readonly Fighter[]): Record<UnitId, UnitKind> {
 }
 
 /** Monsters: stat blocks scaled by `foeAtLevel` from their native level. */
-export type MonsterKind = 'goblin' | 'kobold' | 'shaman' | 'horror' | 'hobgoblin' | 'troll' | 'armored_troll' | 'giant_spider' | 'salamander' | 'wolf' | 'worg_rider' | 'ogre' | 'wyvern' | 'barrow_wight' | 'basilisk' | 'hill_giant'
+export type MonsterKind = 'goblin' | 'kobold' | 'shaman' | 'horror' | 'hobgoblin' | 'troll' | 'armored_troll' | 'giant_spider' | 'salamander' | 'wolf' | 'worg_rider' | 'ogre' | 'wyvern' | 'barrow_wight' | 'basilisk' | 'hill_giant' | 'stone_golem' | 'blight_cultist' | 'young_dragon'
 
 /** Humanoids built by hero rules (bandits.ts). */
 export type BanditKind = 'bandit_cutthroat' | 'bandit_archer' | 'bandit_brute' | 'bandit_mage' | 'bandit_captain' | 'bandit_crossbowman'
@@ -80,8 +83,8 @@ export interface Trophy {
  * (`takeTrophies`, loot.ts), from gear §4.3's table. It fills ring by ring
  * as long-campaign stage 11 adds the kinds: wolves and worg riders wolfhide 1
  * a foe (ring 7), wyverns wyvern hide 3 (ring 9), basilisks basilisk scale 3
- * (ring 12); still to come, young dragons drake scale 6, elder wyrms drake
- * scale 10.
+ * (ring 12), young dragons drake scale 6 (ring 15); still to come, elder
+ * wyrms drake scale 10.
  * No partner sells a trophy: Elder Glade's wyvern hide went when wyverns came.
  */
 export const TROPHIES: Partial<Record<FoeKind, Trophy>> = {
@@ -89,6 +92,7 @@ export const TROPHIES: Partial<Record<FoeKind, Trophy>> = {
   worg_rider: { material: 'wolfhide', amount: 1 },
   wyvern: { material: 'wyvern_hide', amount: 3 },
   basilisk: { material: 'basilisk_scale', amount: 3 },
+  young_dragon: { material: 'drake_scale', amount: 6 },
 }
 
 /**
@@ -105,7 +109,9 @@ export const TROPHIES: Partial<Record<FoeKind, Trophy>> = {
  * The kinds of long-campaign stage 11 (first values too): the Wolf a weak
  * foe of its level, the Worg Rider an even one, the Ogre well above one,
  * the Wyvern above one too, for its poison; ring 12's Barrow Wight an even
- * one, the Basilisk above it and the Hill Giant well above.
+ * one, the Basilisk above it and the Hill Giant well above; ring 15's Stone
+ * Golem well above one, the Blight Cultist an even one and the Young Dragon,
+ * a boss, worth three.
  * Bandits, built by hero rules (bandits.ts), are even foes for a hero of
  * their level, whatever their role, and so worth `EVEN_FOE_XP_PER_LEVEL`.
  */
@@ -127,6 +133,9 @@ export const FOE_XP: Record<UnitKind, number> = {
   barrow_wight: 110,
   basilisk: 150,
   hill_giant: 200,
+  stone_golem: 180,
+  blight_cultist: 100,
+  young_dragon: 300,
   bandit_cutthroat: 100,
   bandit_archer: 100,
   bandit_brute: 100,
@@ -176,6 +185,9 @@ const FOE_STATS: Record<MonsterKind, CombatantStats> = {
   barrow_wight: BARROW_WIGHT_STATS,
   basilisk: BASILISK_STATS,
   hill_giant: HILL_GIANT_STATS,
+  stone_golem: STONE_GOLEM_STATS,
+  blight_cultist: BLIGHT_CULTIST_STATS,
+  young_dragon: YOUNG_DRAGON_STATS,
 }
 
 /** The level each monster kind's stat block is written for; it grows from there (`foeAtLevel`). */
@@ -196,6 +208,9 @@ export const FOE_NATIVE_LEVEL: Record<MonsterKind, number> = {
   barrow_wight: 11,
   basilisk: 11,
   hill_giant: 12,
+  stone_golem: 14,
+  blight_cultist: 14,
+  young_dragon: 15,
 }
 
 function isBandit(kind: FoeKind): kind is BanditKind {
@@ -424,6 +439,29 @@ const HILL_GIANT_STEADING_SLOTS: readonly FoeSlot[] = [
   { id: 'ogre', kind: 'ogre', name: 'Ogre Thrall', at: [8, 6] },
 ]
 
+// Ring 15 (long-campaign stage 11): a ruin's golems and the wights that haunt it; a cult of the blight and the dead
+// it has raised; a young dragon and the wyverns of its lair.
+const GOLEM_RUIN_SLOTS: readonly FoeSlot[] = [
+  { id: 'golem', kind: 'stone_golem', name: 'Stone Golem', at: [8, 4] },
+  { id: 'wight', kind: 'barrow_wight', name: 'Ruin Wight', at: [9, 3] },
+  { id: 'warden', kind: 'stone_golem', name: 'Stone Warden', at: [8, 2] },
+  { id: 'pale', kind: 'barrow_wight', name: 'Pale Wight', at: [9, 5] },
+]
+
+const BLIGHT_CULT_SLOTS: readonly FoeSlot[] = [
+  { id: 'cultist', kind: 'blight_cultist', name: 'Blight Cultist', at: [9, 4] },
+  { id: 'wight', kind: 'barrow_wight', name: 'Risen Wight', at: [8, 3] },
+  { id: 'acolyte', kind: 'blight_cultist', name: 'Cult Acolyte', at: [9, 2] },
+  { id: 'grave', kind: 'barrow_wight', name: 'Grave Wight', at: [8, 5] },
+  { id: 'elder', kind: 'blight_cultist', name: 'Cult Elder', at: [9, 6] },
+]
+
+const YOUNG_DRAGON_SLOTS: readonly FoeSlot[] = [
+  { id: 'dragon', kind: 'young_dragon', name: 'Young Dragon', at: [8, 4] },
+  { id: 'wyvern', kind: 'wyvern', name: 'Lair Wyvern', at: [8, 2] },
+  { id: 'mate', kind: 'wyvern', name: 'Wyvern Mate', at: [8, 6] },
+]
+
 /** Today's encounters are fought at threats 1 to 5, with these many foes at each. */
 const TODAY = { band: { min: 1, max: 5 }, counts: [2, 3, 3, 3, 4] } as const satisfies Omit<EncounterDef, 'slots'>
 
@@ -497,6 +535,15 @@ const BARROW_WIGHTS: EncounterDef = { slots: BARROW_WIGHTS_SLOTS, band: { min: 1
 const BASILISK_LAIR: EncounterDef = { slots: BASILISK_LAIR_SLOTS, band: { min: 11, max: 14 }, counts: [3, 3, 3, 3] }
 /** The Hill Giant Steading, threats 12 to 15: the Hill Giant, the Giant Chief and their Ogre (an Ogre raised to these levels is the tougher of the two kinds, so the steading fields one, not two). */
 const HILL_GIANT_STEADING: EncounterDef = { slots: HILL_GIANT_STEADING_SLOTS, band: { min: 12, max: 15 }, counts: [3, 3, 3, 3] }
+/**
+ * Ring 15's encounters (stage 11 step 11); the cells' tuning is in the plan's log. The Golem Ruin, threats 14 to 17:
+ * the Stone Golem, a wight and the Stone Warden.
+ */
+const GOLEM_RUIN: EncounterDef = { slots: GOLEM_RUIN_SLOTS, band: { min: 14, max: 17 }, counts: [3, 3, 3, 3] }
+/** The Blight Cult, threats 14 to 18: two cultists and the two wights they have raised. */
+const BLIGHT_CULT: EncounterDef = { slots: BLIGHT_CULT_SLOTS, band: { min: 14, max: 18 }, counts: [4, 4, 4, 4, 4] }
+/** The Dragon Lair, threats 15 to 18: the Young Dragon and two wyverns (two foes are no battle for a party in the expected kit). */
+const YOUNG_DRAGON: EncounterDef = { slots: YOUNG_DRAGON_SLOTS, band: { min: 15, max: 18 }, counts: [3, 3, 3, 3] }
 
 /**
  * A Goblin and a Kobold across the board from the party; where the threat is
@@ -638,6 +685,21 @@ export function hillGiantSteading(party: readonly Fighter[], threat = 12): Encou
   return encounter(party, HILL_GIANT_STEADING, threat)
 }
 
+/** A ruin's stone golems and the wights that haunt it, fought at threats 14 to 17: the golems wall the party off while the wights drain it. */
+export function golemRuin(party: readonly Fighter[], threat = 14): Encounter {
+  return encounter(party, GOLEM_RUIN, threat)
+}
+
+/** A cult of the blight and the dead it has raised, fought at threats 14 to 18: lightning down the party's line, curses, and healing for its own. */
+export function blightCult(party: readonly Fighter[], threat = 14): Encounter {
+  return encounter(party, BLIGHT_CULT, threat)
+}
+
+/** A young dragon and the wyverns of its lair, fought at threats 15 to 18: its breath burns a cone of heroes, then it bites and claws. */
+export function youngDragon(party: readonly Fighter[], threat = 15): Encounter {
+  return encounter(party, YOUNG_DRAGON, threat)
+}
+
 /**
  * The experience each party member earns for winning `encounter`: what its
  * foes are worth together, a foe of level L being worth L times its kind's
@@ -668,6 +730,9 @@ export const ENCOUNTERS = {
   barrow_wights: barrowWights,
   basilisk_lair: basiliskLair,
   hill_giant_steading: hillGiantSteading,
+  golem_ruin: golemRuin,
+  blight_cult: blightCult,
+  young_dragon: youngDragon,
 } satisfies Record<string, (party: readonly Fighter[], threat?: number) => Encounter>
 
 export type EncounterId = keyof typeof ENCOUNTERS
@@ -691,6 +756,9 @@ export const ENCOUNTER_BANDS: Record<EncounterId, ThreatBand> = {
   barrow_wights: BARROW_WIGHTS.band,
   basilisk_lair: BASILISK_LAIR.band,
   hill_giant_steading: HILL_GIANT_STEADING.band,
+  golem_ruin: GOLEM_RUIN.band,
+  blight_cult: BLIGHT_CULT.band,
+  young_dragon: YOUNG_DRAGON.band,
 }
 
 /** How many foes each encounter fields at each threat of its band, from `band.min` up, from its definition. */
@@ -712,6 +780,9 @@ export const ENCOUNTER_COUNTS: Record<EncounterId, readonly number[]> = {
   barrow_wights: BARROW_WIGHTS.counts,
   basilisk_lair: BASILISK_LAIR.counts,
   hill_giant_steading: HILL_GIANT_STEADING.counts,
+  golem_ruin: GOLEM_RUIN.counts,
+  blight_cult: BLIGHT_CULT.counts,
+  young_dragon: YOUNG_DRAGON.counts,
 }
 
 /** The encounters whose band holds `threat`, in `ENCOUNTERS` order. */

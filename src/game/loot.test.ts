@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { mulberry32 } from '../combat/rng.ts'
 import { RUNE_IDS } from '../inventory/runes.ts'
 import type { UnitId } from '../engine/battleEngine.ts'
-import { ENCOUNTER_COUNTS, TROPHIES, banditCamp, basiliskLair, ogreCamp, wolfPack, wyvernRoost, type FoeKind, type Trophy, type UnitKind } from './encounters.ts'
+import { ENCOUNTER_COUNTS, TROPHIES, banditCamp, basiliskLair, ogreCamp, wolfPack, wyvernRoost, youngDragon, type FoeKind, type Trophy, type UnitKind } from './encounters.ts'
 import { FAVOURED_CHANCE, FAVOURED_RUNES, lootRng, rollRunes, takeRunes, takeTrophies, trophiesFor } from './loot.ts'
 import { newGame } from './gameState.ts'
 import { SOURCE_THREAT } from './worldMap.ts'
@@ -130,7 +130,7 @@ describe('rune loot', () => {
   })
 
   it('favours venom at a Wyvern Roost, across its band (stage 11 step 09), and no element at ring 7\'s nests', () => {
-    expect(FAVOURED_RUNES).toEqual({ salamander_pool: 'ember', spider_nest: 'venom', wyvern_roost: 'venom', basilisk_lair: 'rime' })
+    expect(FAVOURED_RUNES).toEqual({ salamander_pool: 'ember', spider_nest: 'venom', wyvern_roost: 'venom', basilisk_lair: 'rime', blight_cult: 'storm', young_dragon: 'ember' })
     for (const threat of [9, 12]) {
       const all = rolls(threat, 'wyvern_roost').flat()
       const venom = all.filter((k) => k.startsWith('venom')).length / all.length
@@ -148,6 +148,18 @@ describe('rune loot', () => {
       expect(rime).toBeLessThan(0.6)
     }
     for (const id of ['barrow_wights', 'hill_giant_steading'] as const) expect(FAVOURED_RUNES[id]).toBeUndefined()
+  })
+
+  it('favours storm at a Blight Cult and ember at a Dragon Lair, across their bands (stage 11 step 11), and no element at the Golem Ruin', () => {
+    for (const [id, rune, threats] of [['blight_cult', 'storm', [14, 18]], ['young_dragon', 'ember', [15, 18]]] as const) {
+      for (const threat of threats) {
+        const all = rolls(threat, id).flat()
+        const share = all.filter((k) => k.startsWith(rune)).length / all.length
+        expect(share, `${id} ${threat}`).toBeGreaterThan(0.5)
+        expect(share, `${id} ${threat}`).toBeLessThan(0.6)
+      }
+    }
+    expect(FAVOURED_RUNES.golem_ruin).toBeUndefined()
   })
 
   it('puts the runes in the pouch on top of what it held', () => {
@@ -179,12 +191,13 @@ describe('trophies', () => {
     expect(JSON.stringify({ ...game.world, stock: { gold: 5, wyvern_hide: 1 } })).toBe(rng)
   })
 
-  it('holds the trophies of rings 7, 9 and 12: wolfhide, one a Wolf and one a Worg Rider; wyvern hide, three a Wyvern; basilisk scale, three a Basilisk (gear §4.3; stage 11 steps 08 to 10)', () => {
+  it('holds the trophies of rings 7, 9, 12 and 15: wolfhide, one a Wolf and one a Worg Rider; wyvern hide, three a Wyvern; basilisk scale, three a Basilisk; drake scale, six a Young Dragon (gear §4.3; stage 11 steps 08 to 11)', () => {
     expect(TROPHIES).toEqual({
       wolf: { material: 'wolfhide', amount: 1 },
       worg_rider: { material: 'wolfhide', amount: 1 },
       wyvern: { material: 'wyvern_hide', amount: 3 },
       basilisk: { material: 'basilisk_scale', amount: 3 },
+      young_dragon: { material: 'drake_scale', amount: 6 },
     })
   })
 
@@ -206,6 +219,16 @@ describe('trophies', () => {
     expect(basilisks).toBe(2)
     expect(takeTrophies(game, lair.kinds)).toEqual({ basilisk_scale: 6 })
     expect(game.world.stock.basilisk_scale).toBe(6)
+  })
+
+  it('adds six drake scale for the Young Dragon of a won Dragon Lair, and its wyverns\' hides, to the stock; a golem and a cultist leave none', () => {
+    expect(trophiesFor(['young_dragon', 'warrior'])).toEqual({ drake_scale: 6 })
+    expect(trophiesFor(['stone_golem', 'blight_cultist', 'barrow_wight'])).toEqual({})
+    const game = newGame(undefined, null, 1)
+    const lair = youngDragon([], 15)
+    const wyverns = Object.values(lair.kinds).filter((kind) => kind === 'wyvern').length
+    expect(takeTrophies(game, lair.kinds)).toEqual({ drake_scale: 6, ...(wyverns ? { wyvern_hide: 3 * wyverns } : {}) })
+    expect(game.world.stock.drake_scale).toBe(6)
   })
 
   it('adds a wolfhide for each wolf of a won Wolf Pack, and for each wolf and rider of an Ogre Camp, to the stock', () => {

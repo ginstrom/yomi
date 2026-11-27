@@ -252,6 +252,9 @@ export const FOE_SOUNDS: Record<FoeKind, AttackSound> = {
   barrow_wight: blade,
   basilisk: attackSound('battle.swing.bite', 'battle.hit.claw'),
   hill_giant: heavy('battle.hit.crush'),
+  stone_golem: heavy('battle.hit.crush'),
+  blight_cultist: light('battle.hit.pierce'),
+  young_dragon: attackSound('battle.swing.bite', 'battle.hit.claw'),
   bandit_cutthroat: light('battle.hit.pierce'),
   bandit_captain: blade,
   bandit_brute: heavy('battle.hit.slash'),
@@ -340,6 +343,8 @@ export const ABILITY_SOUNDS: Partial<Record<AbilityId, AbilitySound>> = {
   basilisk_gaze: { release: 'battle.cast.frost', impact: 'battle.impact.hex' },
   // The Hill Giant's rock: a heavy heave, and a crushing blow where it lands.
   giant_rock: { release: 'battle.swing.heavy', impact: 'battle.hit.crush', miss: 'battle.miss.shot' },
+  // The Young Dragon's breath: the Salamander's spit, and fire where it lands.
+  dragon_breath: { release: 'battle.ability.spit', impact: 'battle.impact.fire' },
   // A shield struck for a challenge, and the hex of the foes it draws.
   taunt: { release: 'battle.armor.metal', impact: 'battle.impact.hex' },
   volley: { release: 'battle.shot.bow', impact: 'battle.hit.pierce', miss: 'battle.miss.shot' },
@@ -376,6 +381,10 @@ export const DEATH: Record<UnitKind, CueId> = {
   barrow_wight: 'battle.death.horror',
   basilisk: 'battle.death.salamander',
   hill_giant: 'battle.death.brute',
+  // No cues of their own: the golem falls as a brute, the cultist as the blight's own, the dragon as the other great lizards.
+  stone_golem: 'battle.death.brute',
+  blight_cultist: 'battle.death.horror',
+  young_dragon: 'battle.death.salamander',
 }
 
 type StepClass = 'light' | 'armored' | 'heavy' | 'skitter'
@@ -405,6 +414,9 @@ export const STEP: Record<UnitKind, StepClass> = {
   barrow_wight: 'armored',
   basilisk: 'heavy',
   hill_giant: 'heavy',
+  stone_golem: 'heavy',
+  blight_cultist: 'light',
+  young_dragon: 'heavy',
 }
 
 /** A footstep's cue for a unit of `kind` wearing `body`; a kind of none known steps lightly. */

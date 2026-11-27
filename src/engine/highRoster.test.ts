@@ -3,18 +3,23 @@ import { ABILITIES } from '../combat/abilities.ts'
 import {
   BARROW_WIGHT_STATS,
   BASILISK_STATS,
+  BLIGHT_CULTIST_STATS,
   HILL_GIANT_STATS,
   OGRE_STATS,
   WOLF_STATS,
   WORG_RIDER_STATS,
+  STONE_GOLEM_STATS,
   WYVERN_STATS,
+  YOUNG_DRAGON_STATS,
+  baneApplies,
   damageThrough,
   effectiveResistance,
   type CombatantStats,
 } from '../combat/combat.ts'
 import { SPELLS } from '../combat/spells.ts'
 import { hex, hexKey } from '../grid/hex.ts'
-import { BattleEngine, type AbilityEvent, type Action, type AttackEvent, type CastEvent, type UnitSetup } from './battleEngine.ts'
+import { BattleEngine, formatEvent, type AbilityEvent, type Action, type AttackEvent, type CastEvent, type UnitSetup } from './battleEngine.ts'
+import { POLICIES } from './policies.ts'
 
 /**
  * The kinds of long-campaign stage 11 (the high roster), ring by ring: what
@@ -447,6 +452,218 @@ describe('ring 12 (stage 11 step 10)', () => {
       expect(engine.legalActions('giant').some((a) => a.type === 'ability')).toBe(false)
       for (let turn = 0; turn < 2 * recharge; turn++) engine.step(END_TURN)
       expect(engine.legalActions('giant').some((a) => a.type === 'ability')).toBe(true)
+    })
+  })
+})
+
+describe('ring 15 (stage 11 step 11)', () => {
+  describe('the Stone Golem', () => {
+    const MAGE = { actionPoints: 12, magic: { maxMana: 60, skill: 100, spells: ['acid_arrow', 'curse', 'death_cloud'] as const } }
+    /** The player's turn: a caster 2 hexes from the golem. */
+    const field = (rng: () => number, golem: CombatantStats = STONE_GOLEM_STATS, hero: Partial<CombatantStats> = {}) =>
+      new BattleEngine({ board: BOARD, units: [heroAt('hero', 1, 1, { ...MAGE, magic: { ...MAGE.magic, spells: [...MAGE.magic.spells] }, ...hero }), foeAt('golem', golem, 3, 1)] }, { rng })
+    const cast = (spell: 'acid_arrow' | 'curse'): Action => ({ type: 'cast', unit: 'hero', spell, target: 'golem' })
+
+    it('is a wall with a Slam and no ability: resistance 8, immune, warded against poison', () => {
+      expect(STONE_GOLEM_STATS).toMatchObject({ weapon: 'Slam', resistance: 8, immune: true, wards: { poison: 99 } })
+      expect(STONE_GOLEM_STATS.abilities).toBeUndefined()
+      expect(STONE_GOLEM_STATS.magic).toBeUndefined()
+    })
+
+    it('is never Corroded: Acid Arrow hits and deals its damage, the status refused and the log saying so', () => {
+      const engine = field(() => HIT)
+      const [event] = engine.step(cast('acid_arrow')) as CastEvent[]
+      expect(event.outcomes[0]).toMatchObject({ unit: 'golem', hit: true, status: null, immune: true })
+      expect(event.outcomes[0].damage).toBeGreaterThan(0)
+      expect(unitOf(engine, 'golem').statuses).toEqual([])
+      expect(formatEvent(event, { hero: 'Hero', golem: 'Stone Golem' })).toContain('unaffected by the rest')
+    })
+
+    it('is never Poisoned: Death Cloud lays nothing on it', () => {
+      const engine = field(() => HIT)
+      const [event] = engine.step({ type: 'cast', unit: 'hero', spell: 'death_cloud', at: hex(3, 1) }) as CastEvent[]
+      expect(event.outcomes).toMatchObject([{ unit: 'golem', status: null, immune: true }])
+      expect(unitOf(engine, 'golem').statuses).toEqual([])
+      expect(formatEvent(event, { hero: 'Hero', golem: 'Stone Golem' })).toBe('Hero casts Death Cloud: Stone Golem is unaffected.')
+    })
+
+    it('is still Cursed: a status that does not tick is laid as on any foe', () => {
+      const engine = field(() => HIT)
+      const [event] = engine.step(cast('curse')) as CastEvent[]
+      expect(event.outcomes[0]).toMatchObject({ unit: 'golem', hit: true, status: { id: 'cursed' } })
+      expect('immune' in event.outcomes[0]).toBe(false)
+      expect(unitOf(engine, 'golem').statuses.map((s) => s.id)).toEqual(['cursed'])
+    })
+
+    it('loses nothing to a poison’s tick behind its ward of 99, were one laid (the block without the immunity)', () => {
+      const { immune: _immune, ...notImmune } = STONE_GOLEM_STATS
+      const engine = field(() => HIT, notImmune)
+      engine.step({ type: 'cast', unit: 'hero', spell: 'death_cloud', at: hex(3, 1) })
+      expect(unitOf(engine, 'golem').statuses.map((s) => s.id)).toEqual(['poisoned'])
+      engine.step(END_TURN)
+      expect(unitOf(engine, 'golem').statuses.map((s) => s.id)).toEqual(['poisoned'])
+      expect(unitOf(engine, 'golem').hp).toBe(STONE_GOLEM_STATS.maxHp)
+    })
+  })
+
+  describe('the Young Dragon’s Fire Breath', () => {
+    const { apCost, recharge } = ABILITIES.dragon_breath
+    const area = ABILITIES.dragon_breath.area!
+    const dice = area.damage!
+    const breathe: Action = { type: 'ability', unit: 'dragon', ability: 'dragon_breath', at: hex(4, 1) }
+    const ones = Array<number>(dice.count).fill(0)
+    const sixes = Array<number>(dice.count).fill(0.999)
+    /** The Dragon at (5,1) breathing west down the row: heroes 1, 2 and 3 hexes off in the cone and a fourth 4 off. */
+    const field = (rng: () => number, near: Partial<CombatantStats> = {}) =>
+      enemyTurn([heroAt('near', 4, 1, near), heroAt('mid', 3, 1), heroAt('far', 2, 1), heroAt('beyond', 1, 1), foeAt('dragon', YOUNG_DRAGON_STATS, 5, 1)], rng)
+
+    it('is a cone of fire 3 hexes long, 6d6, half on a miss, laying Seared, with a recharge of 3 and no word on resistance', () => {
+      expect(ABILITIES.dragon_breath.name).toBe('Fire Breath')
+      expect(area).toEqual({ shape: 'cone', range: 3, damage: { count: 6, sides: 6, bonus: 0 }, element: 'fire', status: { id: 'seared', turns: 1 }, halfOnMiss: true })
+      expect(area.throughResistance).toBeUndefined()
+      expect(recharge).toBe(3)
+      expect(YOUNG_DRAGON_STATS).toMatchObject({ resistance: 4, wards: { fire: 10 }, abilities: ['dragon_breath', 'dragon_strikes'] })
+    })
+
+    it('touches the heroes 1 to 3 hexes off toward the aim: a hit deals what it rolls whatever the armour and lays Seared, a miss half and nothing', () => {
+      // near: hit, six 6s; mid: missed, six 6s halved; far: hit, six 1s.
+      const stream = counted([HIT, ...sixes, MISS, ...sixes, HIT, ...ones])
+      const engine = field(stream.rng)
+      const [event] = engine.step(breathe) as AbilityEvent[]
+      expect(event).toMatchObject({ type: 'ability', unit: 'dragon', ability: 'dragon_breath', shape: 'cone', apCost, skill: YOUNG_DRAGON_STATS.toHit })
+      const most = dice.count * dice.sides + dice.bonus
+      const least = dice.count + dice.bonus
+      expect(event.outcomes.map((o) => [o.unit, o.hit, o.half, o.damage, o.status?.id])).toEqual([
+        ['near', true, false, most, 'seared'],
+        ['mid', false, true, Math.floor(most / 2), undefined],
+        ['far', true, false, least, 'seared'],
+      ])
+      // The heroes' resistance (6) cut nothing.
+      expect(HERO_STATS.resistance).toBeGreaterThan(0)
+      expect(unitOf(engine, 'near').hp).toBe(HERO_STATS.maxHp - most)
+      expect(unitOf(engine, 'mid').hp).toBe(HERO_STATS.maxHp - Math.floor(most / 2))
+      expect(unitOf(engine, 'beyond').hp).toBe(HERO_STATS.maxHp)
+      expect(unitOf(engine, 'mid').statuses).toEqual([])
+      expect(stream.draws()).toBe(3 * (1 + dice.count))
+      expect(unitOf(engine, 'dragon')).toMatchObject({ ap: YOUNG_DRAGON_STATS.actionPoints - apCost, recharging: { dragon_breath: recharge } })
+    })
+
+    it('recharges for 3 of its side’s turns', () => {
+      const engine = field(() => HIT)
+      const ready = () => engine.legalActions('dragon').some((a) => a.type === 'ability' && a.ability === 'dragon_breath')
+      engine.step(breathe)
+      for (let turn = 0; turn < recharge - 1; turn++) {
+        engine.step(END_TURN)
+        engine.step(END_TURN)
+        expect(ready(), `turn ${turn + 1}`).toBe(false)
+      }
+      engine.step(END_TURN)
+      engine.step(END_TURN)
+      expect(ready()).toBe(true)
+    })
+
+    it('is cut by a hero’s fire ward, each instance: Ember wards of 7 take a third of its mean 21, and all of a halved low roll', () => {
+      // near (warded 7): hit, six 1s: 6, all warded. mid: hit, six 1s: 6.
+      const low = field(counted([HIT, ...ones, HIT, ...ones]).rng, { wards: { fire: 7 } })
+      const [first] = low.step(breathe) as AbilityEvent[]
+      expect(first.outcomes.slice(0, 2).map((o) => [o.unit, o.damage, o.warded])).toEqual([
+        ['near', 0, 6],
+        ['mid', 6, 0],
+      ])
+      const high = field(counted([HIT, ...sixes]).rng, { wards: { fire: 7 } })
+      const [second] = high.step(breathe) as AbilityEvent[]
+      expect(second.outcomes[0]).toMatchObject({ unit: 'near', damage: 36 - 7, warded: 7 })
+      // The design's "a third": 7 of the breath's mean of 21.
+      const mean = (dice.count * (dice.sides + 1)) / 2 + dice.bonus
+      expect(7 / mean).toBeCloseTo(1 / 3)
+    })
+
+    it('scarcely feels Flame Arrow: its fire ward of 10 comes off the spell’s damage', () => {
+      const flame = SPELLS.flame_arrow.damage!
+      const engine = new BattleEngine(
+        { board: BOARD, units: [heroAt('hero', 1, 1, { magic: { maxMana: 60, skill: 100, spells: ['flame_arrow'] } }), foeAt('dragon', YOUNG_DRAGON_STATS, 4, 1)] },
+        { rng: counted([HIT, ...Array<number>(flame.count).fill(0.999)]).rng },
+      )
+      const [event] = engine.step({ type: 'cast', unit: 'hero', spell: 'flame_arrow', target: 'dragon' }) as CastEvent[]
+      const rolled = flame.count * flame.sides + flame.bonus
+      expect(event.outcomes[0]).toMatchObject({ unit: 'dragon', hit: true, damage: rolled - 10, warded: 10 })
+      expect(unitOf(engine, 'dragon').hp).toBe(YOUNG_DRAGON_STATS.maxHp - (rolled - 10))
+    })
+  })
+
+  describe('the Young Dragon’s Bite and Claws', () => {
+    const use: Action = { type: 'ability', unit: 'dragon', ability: 'dragon_strikes', target: 'hero' }
+    const { apCost, strikes } = ABILITIES.dragon_strikes
+
+    it('is a routine of a Bite of 2d8 and two Claws of 1d8', () => {
+      expect(ABILITIES.dragon_strikes.name).toBe('Bite and Claws')
+      expect(strikes!.map((s) => [s.name, s.damage!.count, s.damage!.sides])).toEqual([['Bite', 2, 8], ['Claw', 1, 8], ['Claw', 1, 8]])
+      expect(ABILITIES.dragon_strikes.area).toBeUndefined()
+    })
+
+    it('makes three weapon attacks on one foe in one action, each under its strike’s name, through armour less the Dragon’s piercing', () => {
+      // The Bite hits without a critical and rolls its most; the draws after it are the Claws'.
+      const engine = enemyTurn([heroAt('hero', 1, 1), foeAt('dragon', YOUNG_DRAGON_STATS, 2, 1)], counted([HIT, 0.999]).rng)
+      const attacks = engine.step(use).filter((e): e is AttackEvent => e.type === 'attack')
+      expect(attacks.map((e) => [e.attacker, e.ability, e.strike, e.defender])).toEqual([
+        ['dragon', 'dragon_strikes', 'Bite', 'hero'],
+        ['dragon', 'dragon_strikes', 'Claw', 'hero'],
+        ['dragon', 'dragon_strikes', 'Claw', 'hero'],
+      ])
+      expect(attacks.map((e) => e.apCost)).toEqual([apCost, 0, 0])
+      expect(attacks.map((e) => e.damageDice)).toEqual(strikes!.map((s) => s.damage))
+      const [bite] = attacks
+      expect(bite.hit).toBe(true)
+      const rolled = strikes![0].damage!.count * strikes![0].damage!.sides + strikes![0].damage!.bonus
+      expect(bite.damage).toBe(damageThrough(rolled, effectiveResistance(YOUNG_DRAGON_STATS, HERO_STATS.resistance!)))
+      expect(unitOf(engine, 'dragon').ap).toBe(YOUNG_DRAGON_STATS.actionPoints - apCost)
+    })
+  })
+
+  describe('the Blight Cultist', () => {
+    /** What `aggressive` has the enemy cast on its first turn: its steps' events until a cast or the turn's end. */
+    const firstCast = (units: UnitSetup[]) => {
+      const engine = enemyTurn(units, () => HIT)
+      while (engine.getState().phase === 'enemy') {
+        const action = POLICIES.aggressive({
+          state: engine.getState(),
+          legal: engine.legalActions(),
+          legalFor: (unit) => engine.legalActions(unit).filter((a) => a.type !== 'end_turn'),
+          rng: () => 0.5,
+        })
+        const cast = engine.step(action).find((e): e is CastEvent => e.type === 'cast')
+        if (cast) return cast
+      }
+      return null
+    }
+
+    it('is a frail caster of the blight: Heal, Curse and Lightning Bolt, the mana for a bolt, and a Dawn rune’s bane applies', () => {
+      expect(BLIGHT_CULTIST_STATS.magic!.spells).toEqual(['heal', 'curse', 'lightning_bolt'])
+      expect(BLIGHT_CULTIST_STATS.magic!.maxMana).toBeGreaterThanOrEqual(SPELLS.lightning_bolt.manaCost)
+      expect(BLIGHT_CULTIST_STATS).toMatchObject({ resistance: 1, blightborn: true })
+      expect(baneApplies(BLIGHT_CULTIST_STATS)).toBe(true)
+      expect(baneApplies(STONE_GOLEM_STATS)).toBe(false)
+      expect(baneApplies(YOUNG_DRAGON_STATS)).toBe(false)
+    })
+
+    it('heals a badly wounded ally in range', () => {
+      const cast = firstCast([
+        heroAt('hero', 0, 0),
+        foeAt('cultist', BLIGHT_CULTIST_STATS, 7, 1),
+        { ...foeAt('wight', { ...BARROW_WIGHT_STATS, magic: undefined }, 8, 1), hp: 10 },
+      ])
+      expect(cast).toMatchObject({ type: 'cast', caster: 'cultist', spell: 'heal', outcomes: [{ unit: 'wight' }] })
+    })
+
+    it('throws a Lightning Bolt down a line of two heroes, which their armour does not turn, and casts Curse or the Bolt at two that stand apart', () => {
+      const bolt = firstCast([heroAt('near', 3, 1), heroAt('far', 2, 1), foeAt('cultist', BLIGHT_CULTIST_STATS, 7, 1)])
+      expect(bolt).toMatchObject({ type: 'cast', caster: 'cultist', spell: 'lightning_bolt' })
+      expect(bolt!.outcomes.map((o) => [o.unit, o.hit])).toEqual([['near', true], ['far', true]])
+      // Every draw is 0.9: a 6 on each of the bolt's 4d6, whole, though the heroes have resistance 6.
+      expect(bolt!.outcomes.map((o) => o.damage)).toEqual([24, 24])
+      const apart = firstCast([heroAt('high', 3, 0), heroAt('low', 2, 2), foeAt('cultist', BLIGHT_CULTIST_STATS, 7, 1)])
+      expect(apart).toMatchObject({ type: 'cast', caster: 'cultist' })
+      expect(['curse', 'lightning_bolt']).toContain(apart!.spell)
     })
   })
 })

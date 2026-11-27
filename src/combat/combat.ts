@@ -689,6 +689,77 @@ export const HILL_GIANT_STATS: CombatantStats = {
   abilities: ['giant_rock'],
 }
 
+/**
+ * A stone golem, native to level 14: a wall. Its stone (resistance 8) turns
+ * all of a light weapon's blow, so it wants a hammer, a piercing shot or a
+ * spell; it is `immune` to the statuses that tick (Poisoned, Corroded) and
+ * warded against poison altogether. It slams once a turn, through most of a
+ * hero's armour.
+ */
+export const STONE_GOLEM_STATS: CombatantStats = {
+  name: 'Stone Golem',
+  maxHp: 120,
+  ac: 50,
+  resistance: 8,
+  toHit: 95,
+  critChance: 5,
+  armorPierce: 9,
+  damage: { count: 3, sides: 6, bonus: 4 },
+  weapon: 'Slam',
+  attackApCost: 6,
+  attackRange: 1,
+  actionPoints: 8,
+  wards: { poison: 99 },
+  immune: true,
+}
+
+/**
+ * A blight cultist, native to level 14: a frail caster and the blight's own
+ * (Dawn's bane applies). It throws a Lightning Bolt down a line of heroes,
+ * which no armour turns, curses one, and heals its fellows; its knife is a
+ * last resort. Mana for two bolts at its native level.
+ */
+export const BLIGHT_CULTIST_STATS: CombatantStats = {
+  name: 'Blight Cultist',
+  maxHp: 66,
+  ac: 52,
+  resistance: 1,
+  toHit: 85,
+  critChance: 5,
+  armorPierce: 4,
+  damage: { count: 1, sides: 6, bonus: 3 },
+  weapon: 'Ritual Knife',
+  attackApCost: 4,
+  attackRange: 1,
+  actionPoints: 8,
+  magic: { maxMana: 16, skill: 95, spells: ['heal', 'curse', 'lightning_bolt'] },
+  blightborn: true,
+}
+
+/**
+ * A young dragon, native to level 15: the boss of its lair. Its Fire Breath
+ * (`dragon_breath`) burns a cone 3 hexes long whatever the armour (a breath
+ * ignores resistance; only a fire ward cuts it), then recharges for 3 turns,
+ * in which it bites and claws (`dragon_strikes`) through most of a hero's
+ * armour. Warded against fire by 10, so Flame Arrow scarcely touches it.
+ */
+export const YOUNG_DRAGON_STATS: CombatantStats = {
+  name: 'Young Dragon',
+  maxHp: 125,
+  ac: 58,
+  resistance: 4,
+  toHit: 95,
+  critChance: 5,
+  armorPierce: 10,
+  damage: { count: 1, sides: 8, bonus: 3 },
+  weapon: 'Claws',
+  attackApCost: 4,
+  attackRange: 1,
+  actionPoints: 8,
+  wards: { fire: 10 },
+  abilities: ['dragon_breath', 'dragon_strikes'],
+}
+
 /** What each level above the first adds to a monster: this share of its level 1 hit points... */
 export const FOE_HP_PER_LEVEL = 1.15
 /** ...this many points to its chance to hit and to its armour class... */

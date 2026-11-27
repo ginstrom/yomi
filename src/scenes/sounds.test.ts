@@ -628,7 +628,7 @@ describe('AC3: every weapon, foe, spell and ability has a sound', () => {
 
   /** Abilities that are only strikes, which sound as the attacks they are. Any other needs an `ABILITY_SOUNDS` entry. */
   const SOUNDS_AS_ATTACKS: readonly AbilityId[] = [
-    'troll_claws', 'spider_bite', 'worg_strikes', 'wyvern_strikes',
+    'troll_claws', 'spider_bite', 'worg_strikes', 'wyvern_strikes', 'dragon_strikes',
     'power_attack', 'cleave', 'pin', 'flame_strike', 'frost_strike', 'thunder_strike', 'aimed_shot', 'pinning_shot',
     'dirty_trick', 'venom_strike', 'hamstring', 'smite',
   ]

@@ -1111,7 +1111,7 @@ describe('policies', () => {
     expect(isPolicyName('toString')).toBe(false)
   })
 
-  describe('the choices of today’s encounters (a snapshot, re-recorded in skill trees step 13 when heroes and bandits learned techniques, in step 16 when a technique came to be weighed by the blows that fit this turn and the Captain took Pin before Heavy Hand, in step 28 when nodes came to cost perk points and the heroes and bandits to save for them, and in step 30 when the knight, swordmaster and evoker_healer plans moved and the bandits at threat 4 went back to plain gear; and in long-campaign stage 9 step 01, when the Bandit Company and Freebooter Host came and the Spider Nest’s, Salamander Pool’s and Source’s bands widened, and in its step 09, when the Source’s guardians were raised to level 6 at most; and in long-campaign stage 10 step 02, when bandits from threat 9 took tiers 3 to 5; and in long-campaign stage 11 step 08, when ring 7’s wolves, worg riders and ogres came: their encounters’ lines added after the rest, every earlier line unchanged; and in long-campaign stage 11 step 09, when the Wyvern Roost came: its lines added after those, every earlier line unchanged; and in long-campaign stage 11 step 10, when ring 12’s wights, basilisks and giants came: their encounters’ lines added after those, every earlier line unchanged)', () => {
+  describe('the choices of today’s encounters (a snapshot, re-recorded in skill trees step 13 when heroes and bandits learned techniques, in step 16 when a technique came to be weighed by the blows that fit this turn and the Captain took Pin before Heavy Hand, in step 28 when nodes came to cost perk points and the heroes and bandits to save for them, and in step 30 when the knight, swordmaster and evoker_healer plans moved and the bandits at threat 4 went back to plain gear; and in long-campaign stage 9 step 01, when the Bandit Company and Freebooter Host came and the Spider Nest’s, Salamander Pool’s and Source’s bands widened, and in its step 09, when the Source’s guardians were raised to level 6 at most; and in long-campaign stage 10 step 02, when bandits from threat 9 took tiers 3 to 5; and in long-campaign stage 11 step 08, when ring 7’s wolves, worg riders and ogres came: their encounters’ lines added after the rest, every earlier line unchanged; and in long-campaign stage 11 step 09, when the Wyvern Roost came: its lines added after those, every earlier line unchanged; and in long-campaign stage 11 step 10, when ring 12’s wights, basilisks and giants came: their encounters’ lines added after those, every earlier line unchanged; and in long-campaign stage 11 step 11, when ring 15’s golems, cultists and young dragons came: their encounters’ lines added after those, every earlier line unchanged)', () => {
     /** Every action `aggressive` chooses, both sides, over each encounter at each threat of its band against the ready-made party of that level, a few seeds, 8 rounds at most. */
     function choices(): string[] {
       const lines: string[] = []
@@ -1154,10 +1154,14 @@ describe('policies', () => {
       const RING_9 = 17051
       expect(new Set(lines.slice(RING_7, RING_9).map((line) => line.split(' ')[0]))).toEqual(new Set(['wyvern_roost']))
       expect(sha(lines.slice(0, RING_9))).toBe('8e432c095a9a75e2639402953d9fefb423c92aaeeda5c631ea5b233ca8514c60')
-      // Ring 12's (step 10): the Barrow Wights', the Basilisk Lair's and the Hill Giant Steading's lines only.
-      expect(new Set(lines.slice(RING_9).map((line) => line.split(' ')[0]))).toEqual(new Set(['barrow_wights', 'basilisk_lair', 'hill_giant_steading']))
-      expect(lines.length).toBe(19649)
-      expect(sha(lines)).toBe('96ec580b1bd37e00f14c2c1b4df2f33f528dc178aa964bc8fe91fc85e6ca9136')
+      // With ring 12's (step 10), as recorded there, the Barrow Wights', the Basilisk Lair's and the Hill Giant Steading's lines only: ring 15's come after them.
+      const RING_12 = 19649
+      expect(new Set(lines.slice(RING_9, RING_12).map((line) => line.split(' ')[0]))).toEqual(new Set(['barrow_wights', 'basilisk_lair', 'hill_giant_steading']))
+      expect(sha(lines.slice(0, RING_12))).toBe('96ec580b1bd37e00f14c2c1b4df2f33f528dc178aa964bc8fe91fc85e6ca9136')
+      // Ring 15's (step 11): the Golem Ruin's, the Blight Cult's and the Dragon Lair's lines only.
+      expect(new Set(lines.slice(RING_12).map((line) => line.split(' ')[0]))).toEqual(new Set(['golem_ruin', 'blight_cult', 'young_dragon']))
+      expect(lines.length).toBe(22633)
+      expect(sha(lines)).toBe('7aaae1d4631850f16f18e51905ae26bf3fcec008e6bfc8ccd591ab287c805acc')
     }, 60_000)
   })
 })

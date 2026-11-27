@@ -109,6 +109,8 @@ export const ABILITY_IDS = [
   'wyvern_strikes',
   'basilisk_gaze',
   'giant_rock',
+  'dragon_breath',
+  'dragon_strikes',
   'power_attack',
   'cleave',
   'taunt',
@@ -131,7 +133,7 @@ export const ABILITY_IDS = [
 export type AbilityId = (typeof ABILITY_IDS)[number]
 
 /** The abilities only monsters have, in `ABILITY_IDS` order; every other ability is a hero's technique. */
-export const MONSTER_ABILITY_IDS: readonly AbilityId[] = ['troll_claws', 'spider_bite', 'spider_web', 'fire_spit', 'worg_strikes', 'ogre_sweep', 'wyvern_strikes', 'basilisk_gaze', 'giant_rock']
+export const MONSTER_ABILITY_IDS: readonly AbilityId[] = ['troll_claws', 'spider_bite', 'spider_web', 'fire_spit', 'worg_strikes', 'ogre_sweep', 'wyvern_strikes', 'basilisk_gaze', 'giant_rock', 'dragon_breath', 'dragon_strikes']
 
 /** The Spellsword's Strikes, which Arcane Knight makes at the weapon's own AP. */
 export const SPELLSWORD_STRIKES: readonly AbilityId[] = ['flame_strike', 'frost_strike', 'thunder_strike']
@@ -256,6 +258,33 @@ export const ABILITIES: Record<AbilityId, Ability> = {
       damage: { count: 2, sides: 8, bonus: 2 },
       halfOnMiss: false,
     },
+  },
+  dragon_breath: {
+    name: 'Fire Breath',
+    verb: 'breathes fire',
+    description: 'A cone of fire 3 hexes long: 6d6, half on a miss, whatever the armour, and no regeneration next turn.',
+    apCost: 4,
+    recharge: 3,
+    area: {
+      shape: 'cone',
+      range: 3,
+      damage: { count: 6, sides: 6, bonus: 0 },
+      element: 'fire',
+      status: { id: 'seared', turns: 1 },
+      halfOnMiss: true,
+    },
+  },
+  dragon_strikes: {
+    name: 'Bite and Claws',
+    verb: 'strikes',
+    description: 'Bites one foe and rakes it with both claws; it turns to the next foe beside it if the first falls.',
+    apCost: 6,
+    recharge: 0,
+    strikes: [
+      { name: 'Bite', verb: 'bites', damage: { count: 2, sides: 8, bonus: 0 } },
+      { name: 'Claw', verb: 'claws', damage: { count: 1, sides: 8, bonus: 0 } },
+      { name: 'Claw', verb: 'claws', damage: { count: 1, sides: 8, bonus: 0 } },
+    ],
   },
   // ---- The heroes' techniques (design §4.3). `apCost` is ignored where `weaponAp` is set.
   power_attack: {
