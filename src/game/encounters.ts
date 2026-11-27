@@ -639,8 +639,8 @@ export function salamanderPool(party: readonly Fighter[], threat = 5): Encounter
 
 /**
  * What guards the blight's Source. Near home (threats 1 to 5): the Blight
- * Horror, with a Goblin Brute beside it and, at threat 5, a shaman and a
- * Kobold Sneak behind, each at the threat's level. Above threat 5, where the
+ * Horror, with a Goblin Brute beside it, a shaman behind from threat 2 and,
+ * at threat 5, a Kobold Sneak, each at the threat's level. Above threat 5, where the
  * Source stands in the far ring (threat 20): `SOURCE_AT_20`, the Blight Horror
  * of native 20 and two Blight Cultists, fought at 20 whatever the threat.
  */
