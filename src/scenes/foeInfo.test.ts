@@ -42,11 +42,19 @@ describe('foeInfoLines', () => {
       expect(describe1({ abilities: ['spider_web'] })).toEqual(['Web: ready', '  burst 1, range 4: webbed 2 turns (−4 AP)'])
     })
 
-    it('Fire Spit: the cone, its dice and element, half on a miss, and the status it lays', () => {
+    it('Fire Spit: the cone, its dice and element, half on a miss, and the status it lays on each one it hits', () => {
       expect(describe1({ abilities: ['fire_spit'] })).toEqual([
         'Fire Spit: ready',
         '  cone 2: 4d6+2 fire, half on a miss',
-        '  seared 1 turn (no regeneration)',
+        '  each one hit: seared 1 turn (no regeneration)',
+      ])
+    })
+
+    it('Fire Breath: the status is laid on the ones it hits, not on the dragon', () => {
+      expect(describe1({ abilities: ['dragon_breath'] })).toEqual([
+        'Fire Breath: ready',
+        '  cone 3: 6d6 fire, half on a miss',
+        '  each one hit: seared 1 turn (no regeneration)',
       ])
     })
 
@@ -61,7 +69,7 @@ describe('foeInfoLines', () => {
         '  claw 1d4+4, claw 1d4+4',
         'Fire Spit: ready',
         '  cone 2: 4d6+4 fire, half on a miss',
-        '  seared 1 turn (no regeneration)',
+        '  each one hit: seared 1 turn (no regeneration)',
       ])
     })
   })

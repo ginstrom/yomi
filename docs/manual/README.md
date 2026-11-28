@@ -381,7 +381,7 @@ Some monsters can do more than swing a weapon:
 - **Area attacks**: a burst, a cone or a line. An area attack rolls against everyone in it, friend or foe, unless it strikes only its foes (the Ogre's Sweep, the Horror's Blight Breath). Armour's resistance does not reduce most areas' damage (breaths, spit and gazes; only a ward against the element does), but a blow that sweeps or is hurled (the Ogre's Sweep, the Hill Giant's Rock) is cut by it as a weapon hit is. Some area attacks (such as the Salamander's fire and the dragons' breath) still deal half damage on a miss.
 - **Recharge**: special attacks cost no mana, but some of them, once used, have to wait some turns before they can be used again.
 
-**Hover over a monster** to see what it can do: a small panel beside it, headed with its name, lists each special attack as "ready", "ready next turn" or "ready in 2 turns" (counting the monster's own turns), with what it does underneath (for example "cone 2: 4d6+2 fire, half on a miss" and "seared 1 turn (no regeneration)"), and any wards it has ("Wards: fire 99"). A monster that can never be poisoned or corroded, such as the Stone Golem, says so too: "Immune to acid and poison".
+**Hover over a monster** to see what it can do: a small panel beside it, headed with its name, lists each special attack as "ready", "ready next turn" or "ready in 2 turns" (counting the monster's own turns), with what it does underneath (for example "cone 2: 4d6+2 fire, half on a miss" and "each one hit: seared 1 turn (no regeneration)", a status laid on each hero the fire hits), and any wards it has ("Wards: fire 99"). A monster that can never be poisoned or corroded, such as the Stone Golem, says so too: "Immune to acid and poison".
 
 ### Skills: spells and techniques
 

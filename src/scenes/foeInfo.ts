@@ -83,7 +83,7 @@ function effectLines(ability: Ability, bonus: number): string[] {
     ...(area.halfOnMiss ? [', half on a miss'] : []),
     ...(area.bane ? [', double dice vs the regenerating and blightborn'] : []),
   ]
-  return [`${shape}: ${harm}${notes.join('')}`, ...(area.status ? [statusPhrase(area.status)] : [])]
+  return [`${shape}: ${harm}${notes.join('')}`, ...(area.status ? [`each one hit: ${statusPhrase(area.status)}`] : [])]
 }
 
 /** "power attack: weapon blow, −10 to hit, +6 dmg": a technique's strike with its own weapon, and what it adds. */
