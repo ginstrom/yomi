@@ -296,11 +296,36 @@ describe('spawning', () => {
       ['Goblin Brood', 'Kobold Nest', 'Bandit Gang'],
     ])
     expect([7, 9, 12, 15, 18].map(eligible)).toEqual([
-      ['Bandit Gang', 'Spider Brood', 'Salamander Spring'],
-      ['Spider Brood', 'Salamander Spring', 'Bandit Troop'],
-      ['Bandit Troop'],
-      ['Freebooter Band'],
-      ['Freebooter Band'],
+      ['Bandit Gang', 'Spider Brood', 'Salamander Spring', 'Wolf Pack', 'Worg Band', 'Ogre Camp'],
+      ['Spider Brood', 'Salamander Spring', 'Bandit Troop', 'Wolf Pack', 'Worg Band', 'Ogre Camp', 'Wyvern Roost'],
+      ['Bandit Troop', 'Wyvern Roost', 'Barrow', 'Basilisk Lair', 'Giant Steading'],
+      ['Freebooter Band', 'Giant Steading', 'Golem Ruin', 'Blight Cult', 'Dragon Lair'],
+      ['Freebooter Band', 'Blight Cult', 'Dragon Lair', 'Lich Court', 'Wyrm Lair'],
+    ])
+    // Ring 7's kinds (stage 11 step 08) come after the seven before them, each from threat 7.
+    expect(SPAWN_KINDS.slice(7, 10).map((k) => [k.encounter, k.name, k.fromThreat])).toEqual([
+      ['wolf_pack', 'Wolf Pack', 7],
+      ['worg_riders', 'Worg Band', 7],
+      ['ogre_camp', 'Ogre Camp', 7],
+    ])
+    // Ring 9's (step 09) after them.
+    expect(SPAWN_KINDS.slice(10, 11).map((k) => [k.encounter, k.name, k.fromThreat])).toEqual([['wyvern_roost', 'Wyvern Roost', 7]])
+    // Ring 12's (step 10) after it.
+    expect(SPAWN_KINDS.slice(11, 14).map((k) => [k.encounter, k.name, k.fromThreat])).toEqual([
+      ['barrow_wights', 'Barrow', 7],
+      ['basilisk_lair', 'Basilisk Lair', 7],
+      ['hill_giant_steading', 'Giant Steading', 7],
+    ])
+    // Ring 15's (step 11) after them.
+    expect(SPAWN_KINDS.slice(14, 17).map((k) => [k.encounter, k.name, k.fromThreat])).toEqual([
+      ['golem_ruin', 'Golem Ruin', 7],
+      ['blight_cult', 'Blight Cult', 7],
+      ['young_dragon', 'Dragon Lair', 7],
+    ])
+    // Ring 18's (step 12) after them.
+    expect(SPAWN_KINDS.slice(17).map((k) => [k.encounter, k.name, k.fromThreat])).toEqual([
+      ['blight_lich_court', 'Lich Court', 7],
+      ['elder_wyrm', 'Wyrm Lair', 7],
     ])
     expect(SPAWN_KINDS.slice(0, 3).map((k) => [k.encounter, k.name, k.fromThreat])).toEqual([
       ['goblin_raid', 'Goblin Brood', undefined],
@@ -435,13 +460,22 @@ describe('the numbers of one party, pinned', () => {
     // Re-pinned in stage 9 step 05: the outer rings' nests push the far land (4970 events), and its corruption
     // grows the spawn pressure, so five spawns, not two, the first of them a threat-4 brood that pushes on
     // the party's neighbours (the cells below). The net influence is unchanged.
+    // Re-pinned in stage 11 step 08: ring 7's three spawn kinds joined the eligible ones at threat 9 (six where three
+    // were), so the same draw picks a Bandit Troop where it picked a Salamander Spring: the two spawned events' names
+    // are all that differ (the events diffed before and after), and nothing else below.
+    // Re-pinned in stage 11 step 09: the Wyvern Roost joined the eligible kinds at threats 9 and 12 (seven where six
+    // were, two where one was), so the same draws pick a Wyvern Roost at 12 and a Wolf Pack at 9 where they picked
+    // Bandit Troops: two spawned events' names are all that differ (the events diffed before and after).
+    // Re-pinned in stage 11 step 10: ring 12's three kinds joined the eligible ones at threat 12 (five where two were),
+    // so the same draw picks a Giant Steading where it picked a Wyvern Roost: that one spawned event's name is all that
+    // differs (the events diffed before and after).
     expect(events.length).toBe(4970)
-    expect(sha(events)).toBe('bc53f07ea68c155b04e5084c9866a6956252b009f1023e0935fc1443b6da6911')
+    expect(sha(events)).toBe('ada503dcc04d5c95511f49e3efb5d5f3db8a2a1ccbc2afa028ebb42183cf3ffb')
     expect(events.filter((e) => e.type === 'spawned')).toEqual([
       { type: 'spawned', location: 'spawn_1', name: 'Goblin Brood', at: moved(36, 24), threat: 4 },
-      { type: 'spawned', location: 'spawn_2', name: 'Bandit Troop', at: moved(48, 53), threat: 12 },
-      { type: 'spawned', location: 'spawn_3', name: 'Salamander Spring', at: moved(62, 33), threat: 9 },
-      { type: 'spawned', location: 'spawn_4', name: 'Salamander Spring', at: moved(76, 15), threat: 9 },
+      { type: 'spawned', location: 'spawn_2', name: 'Giant Steading', at: moved(48, 53), threat: 12 },
+      { type: 'spawned', location: 'spawn_3', name: 'Bandit Troop', at: moved(62, 33), threat: 9 },
+      { type: 'spawned', location: 'spawn_4', name: 'Wolf Pack', at: moved(76, 15), threat: 9 },
       { type: 'spawned', location: 'spawn_5', name: 'Freebooter Band', at: moved(122, 0), threat: 18 },
     ])
     expect(world.spawnPressure).toBe(0)
@@ -465,9 +499,11 @@ describe('the numbers of one party, pinned', () => {
       world.turn++
       events.push(...advanceDay(world, pinned()))
     }
-    // Re-pinned in stage 9 step 04, as above (645 events before); and in step 05, as above (944 before).
+    // Re-pinned in stage 9 step 04, as above (645 events before); and in step 05, as above (944 before); and in stage 11
+    // step 08, as above (the same two spawns' names, nothing else); and in its step 09, as above (two spawns' names);
+    // and in its step 10, as above (one spawn's name).
     expect(events.length).toBe(4952)
-    expect(sha(events)).toBe('3a91bf54b486c2ecce88c8f998e61a2584c12ad05e59d7e826acc7bb94e92ec0')
+    expect(sha(events)).toBe('a6ef271099c062ebe8ac3b6dcb20f2ec7b365d7b818a06f49a2b6bfac3032a1f')
     expect(world.spawnPressure).toBe(0)
     expect(world.rng).toBe(-1391553733)
     expect(sha([world.blight, world.shift])).toBe('5881e1d4ad46f156d049e79d5fc709be7538f52121269739fb76d142e590df53')

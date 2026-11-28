@@ -1,0 +1,77 @@
+# A young dragon: a big red-scaled drake facing right on a raised neck, its head
+# horned in ivory with an ember glowing in the open jaws, gold plates down the
+# throat and along the belly, a wing of rust and bone folded up over the back,
+# four thick legs in two pairs, and a short spiked tail on the left.
+canvas = "unit"
+
+outline = "auto"
+
+[points]
+chest = [20, 15]
+
+[frames.idle_0.runs]
+1 = [[22, "W"]]
+2 = [[11, "W"], [23, "WRRRR"]]
+3 = [[10, "oW"], [24, "WrrrrrR"]]
+4 = [[9, "ooW"], [24, "rrFrrrr"]]
+5 = [[8, "ooRoW"], [25, "rrrrrR"]]
+6 = [[7, "RooRooW"], [25, "RRRRRR"]]
+7 = [[6, "oRooRooW"], [25, "yFFFFF"]]
+8 = [[6, "ooRooRooW"], [23, "rrrrrrr"]]
+9 = [[6, "oooRooRooW"], [21, "W"], [22, "rrrryy"]]
+10 = [[6, "oooRooRooW"], [20, "W"], [21, "rrrryy"]]
+11 = [[6, "ooooRooRooW"], [19, "W"], [20, "rrrrryy"]]
+12 = [[6, "oooooRooRooW"], [19, "rrrrrryy"]]
+13 = [[6, "oooooRooRooW"], [19, "rrrrrrryy"]]
+14 = [[6, "oooooRooRooW"], [19, "orrrrrrry"]]
+15 = [[8, "oooorrrrrrrrrrrrrrr"]]
+16 = [[6, "orrrrrrrrrrrrrrrrrrrr"]]
+17 = [[1, "W"], [5, "orrrrrrrrrrrrrrrrrrrrr"]]
+18 = [[1, "rrr"], [4, "rrrrrrrrrrrrrrrrrrrrrrr"]]
+19 = [[2, "rrr"], [5, "rrrrrrrrrrrrrrrrrrrrrr"]]
+20 = [[3, "rrr"], [6, "rrrrrrrrrrrrrrrrrrrr"]]
+21 = [[4, "rr"], [6, "Rrrrrrrrrrrrrrrrrrr"]]
+22 = [[7, "RRyyyyyyyyyyyyyRR"]]
+23 = [[9, "ROOOOOOOOOOOR"]]
+24 = [[7, "rrrRRR"], [19, "RRrrrR"]]
+25 = [[7, "rrrRRR"], [19, "RRrrrR"]]
+26 = [[7, "rrrRRR"], [19, "RRrrrR"]]
+27 = [[7, "rrrRRR"], [19, "RRrrrR"]]
+28 = [[7, "rrrRRR"], [19, "RRrrrR"]]
+29 = [[7, "rrrRRR"], [19, "RRrrrR"]]
+30 = [[6, "WrrrWRR"], [19, "RRWrrrW"]]
+
+# A breath: everything above the legs sinks a pixel.
+[frames.idle_1]
+from = "idle_0"
+move = { rows = [1, 23], by = [0, 1] }
+
+[anim.idle]
+frames = ["idle_0", "idle_1"]
+ms = 800
+
+# A stride: the hind pair reaches back, the fore pair forward.
+[frames.walk_0]
+from = "idle_0"
+[frames.walk_0.runs]
+27 = [[6, "rrrRRR."], [19, ".RRrrrR"]]
+28 = [[6, "rrrRRR."], [19, ".RRrrrR"]]
+29 = [[6, "rrrRRR."], [19, ".RRrrrR"]]
+30 = [[5, "WrrrWRR."], [19, ".RRWrrrW"]]
+
+# The pairs lift in turn: the hind feet, then the fore feet. Only the leg rows change.
+[frames.walk_1]
+from = "idle_0"
+[frames.walk_1.runs]
+29 = [[7, "......"]]
+30 = [[6, "......."]]
+
+[frames.walk_2]
+from = "idle_0"
+[frames.walk_2.runs]
+29 = [[19, "......"]]
+30 = [[19, "......."]]
+
+[anim.walk]
+frames = ["walk_0", "walk_1", "walk_0", "walk_2"]
+ms = 220

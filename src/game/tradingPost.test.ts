@@ -364,10 +364,10 @@ describe('partners\' goods at the Market Hall', () => {
     expect(buyGoodRefusal(game, game.parties[0], 'mithril', 1)).toBe("A level 5 trading post sells partners' goods.")
   })
 
-  it('list nothing with no partner contacted, else each good in partner order with the stand-in', () => {
+  it('list nothing with no partner contacted, else each partner\'s own good in partner order (no stand-in: stage 11 step 09)', () => {
     expect(goodsForSale(market(5, []).world)).toEqual([])
     expect(goodsForSale(market().world).map((o) => `${o.partner}:${o.material}`)).toEqual([
-      'millbrook:timber', 'saltmere:salt', 'stonehollow:mithril', 'elder_glade:elderwood', 'elder_glade:wyvern_hide', 'emberwatch:adamant',
+      'millbrook:timber', 'saltmere:salt', 'stonehollow:mithril', 'elder_glade:elderwood', 'emberwatch:adamant',
     ])
     expect(goodsForSale(market().world)[2]).toEqual({ partner: 'stonehollow', name: 'Stonehollow', material: 'mithril' })
   })
@@ -400,14 +400,23 @@ describe('partners\' goods at the Market Hall', () => {
     expect(buyGoodRefusal(game, party, 'mithril', 1)).toMatch(/^The trading post is at /)
   })
 
-  it('sell Stonehollow\'s mithril at 3 gold a unit, and the wyvern hide stand-in', () => {
+  it('sell Stonehollow\'s mithril at 3 gold a unit, and Elder Glade\'s elderwood', () => {
     const game = market()
     game.world.stock = { gold: 10 }
     expect(buyGood(game, game.parties[0], 'mithril', 3)).toBeNull()
     expect(game.world.stock).toMatchObject({ gold: 1, mithril: 3 })
     game.world.stock = { gold: 10 }
-    expect(buyGood(game, game.parties[0], 'wyvern_hide', 2)).toBeNull()
-    expect(game.world.stock).toMatchObject({ gold: 4, wyvern_hide: 2 })
+    expect(buyGood(game, game.parties[0], 'elderwood', 2)).toBeNull()
+    expect(game.world.stock).toMatchObject({ gold: 4, elderwood: 2 })
+  })
+
+  it('sell no wyvern hide: it comes from wyverns now, and no partner offers it', () => {
+    const game = market()
+    game.world.stock = { gold: 10 }
+    expect(goodsForSale(game.world).some((o) => o.material === 'wyvern_hide')).toBe(false)
+    expect(buyGoodRefusal(game, game.parties[0], 'wyvern_hide', 1)).toBe('No partner sells wyvern hide here.')
+    expect(buyGood(game, game.parties[0], 'wyvern_hide', 1)).toBe('No partner sells wyvern hide here.')
+    expect(game.world.stock).toEqual({ gold: 10 })
   })
 
   it('leave the stock untouched when refused', () => {

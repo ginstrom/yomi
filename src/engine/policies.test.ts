@@ -452,6 +452,13 @@ describe('policies', () => {
         it('not where only one foe it would touch is not yet baned', () => {
           expect(choose(laid(field(['bane'], foes), 'e1', 'baned'))).not.toMatchObject({ type: 'cast' })
         })
+
+        it('counts no foe immune to a status that ticks (Death Cloud), and still counts it for one that does not (stage 11 step 03)', () => {
+          const immune: Placing[] = [foes[0], { ...foes[1], stats: { ...GOBLIN_STATS, immune: true } }]
+          expect(choose(field(['death_cloud'], foes))).toMatchObject({ type: 'cast', spell: 'death_cloud' })
+          expect(choose(field(['death_cloud'], immune))).not.toMatchObject({ type: 'cast' })
+          expect(choose(field(['bane'], immune))).toMatchObject({ type: 'cast', spell: 'bane' })
+        })
       })
 
       describe('prisonCast (8)', () => {
@@ -706,6 +713,21 @@ describe('policies', () => {
     })
 
     describe('status value (2)', () => {
+      it('counts Venom Strike’s poison at 0 against an immune foe, as against one already poisoned (stage 11 step 03)', () => {
+        const immune = stage(hero(['venom_strike']), hex(1, 1), [{ id: 'e1', at: hex(2, 1), stats: { ...GOBLIN_STATS, immune: true } }])
+        const poisoned = stage(hero(['venom_strike']), hex(1, 1), [{ id: 'e1', at: hex(2, 1), statuses: [{ id: 'poisoned', turnsLeft: 2 }] }])
+        const fresh = stage(hero(['venom_strike']), hex(1, 1), [{ id: 'e1', at: hex(2, 1) }])
+        const score = (engine: BattleEngine) => techniqueScore(engine.getState(), unitAt(engine, 'p1'), 'venom_strike', unitAt(engine, 'e1'))
+        expect(score(immune)).toBeCloseTo(score(poisoned), 10)
+        expect(score(fresh) - score(immune)).toBeCloseTo(STATUS_VALUE.poisoned! * 0.55, 10)
+        // A status that does not tick is worth what it is on any foe.
+        const pin = (stats: CombatantStats) => {
+          const engine = stage(hero(['pin']), hex(1, 1), [{ id: 'e1', at: hex(2, 1), stats }])
+          return techniqueScore(engine.getState(), unitAt(engine, 'p1'), 'pin', unitAt(engine, 'e1'))
+        }
+        expect(pin({ ...GOBLIN_STATS, immune: true })).toBeCloseTo(pin(GOBLIN_STATS), 10)
+      })
+
       it('counts Venom Strike’s poison at 7 times the chance, only against a foe not already poisoned', () => {
         const fresh = stage(hero(['venom_strike']), hex(1, 1), [{ id: 'e1', at: hex(2, 1) }])
         const poisoned = stage(hero(['venom_strike']), hex(1, 1), [{ id: 'e1', at: hex(2, 1), statuses: [{ id: 'poisoned', turnsLeft: 2 }] }])
@@ -1089,7 +1111,7 @@ describe('policies', () => {
     expect(isPolicyName('toString')).toBe(false)
   })
 
-  describe('the choices of today’s encounters (a snapshot, re-recorded in skill trees step 13 when heroes and bandits learned techniques, in step 16 when a technique came to be weighed by the blows that fit this turn and the Captain took Pin before Heavy Hand, in step 28 when nodes came to cost perk points and the heroes and bandits to save for them, and in step 30 when the knight, swordmaster and evoker_healer plans moved and the bandits at threat 4 went back to plain gear; and in long-campaign stage 9 step 01, when the Bandit Company and Freebooter Host came and the Spider Nest’s, Salamander Pool’s and Source’s bands widened, and in its step 09, when the Source’s guardians were raised to level 6 at most; and in long-campaign stage 10 step 02, when bandits from threat 9 took tiers 3 to 5)', () => {
+  describe('the choices of today’s encounters (a snapshot, re-recorded in skill trees step 13 when heroes and bandits learned techniques, in step 16 when a technique came to be weighed by the blows that fit this turn and the Captain took Pin before Heavy Hand, in step 28 when nodes came to cost perk points and the heroes and bandits to save for them, and in step 30 when the knight, swordmaster and evoker_healer plans moved and the bandits at threat 4 went back to plain gear; and in long-campaign stage 9 step 01, when the Bandit Company and Freebooter Host came and the Spider Nest’s, Salamander Pool’s and Source’s bands widened, and in its step 09, when the Source’s guardians were raised to level 6 at most; and in long-campaign stage 10 step 02, when bandits from threat 9 took tiers 3 to 5; and in long-campaign stage 11 step 08, when ring 7’s wolves, worg riders and ogres came: their encounters’ lines added after the rest, every earlier line unchanged; and in long-campaign stage 11 step 09, when the Wyvern Roost came: its lines added after those, every earlier line unchanged; and in long-campaign stage 11 step 10, when ring 12’s wights, basilisks and giants came: their encounters’ lines added after those, every earlier line unchanged; and in long-campaign stage 11 step 11, when ring 15’s golems, cultists and young dragons came: their encounters’ lines added after those, every earlier line unchanged; and in long-campaign stage 11 step 12, when the Blight Lich’s Court and the Elder Wyrm came: their lines added after those, every earlier line unchanged; and in long-campaign stage 11 step 13, when the Source’s guardians at 20 became the Blight Horror and two cultists: the source_guardians lines above threat 5 only, every other line unchanged; and in long-campaign stage 11’s verification, when the Barrow Wights’, Blight Cult’s and Lich’s Court’s back rank stepped to column 10 so that no foe’s sprite hides another’s nameplate: those three encounters’ lines only, every other line unchanged; and in that verification’s tuning, when the Lich’s Court’s casters stood in column 9 and its wights in column 7: the blight_lich_court lines only; and when the Barrow Wights took that placement and a Grave Robber at 11: the barrow_wights lines only)', () => {
     /** Every action `aggressive` chooses, both sides, over each encounter at each threat of its band against the ready-made party of that level, a few seeds, 8 rounds at most. */
     function choices(): string[] {
       const lines: string[] = []
@@ -1120,8 +1142,43 @@ describe('policies', () => {
 
     it('are what they were', () => {
       const lines = choices()
-      expect(lines.length).toBe(14242)
-      expect(createHash('sha256').update(lines.join('\n')).digest('hex')).toBe('b9cef6e182080a3fa26d796534ec1b631e6628d6a140c11525ebee8fabb728ac')
+      const sha = (of: readonly string[]) => createHash('sha256').update(of.join('\n')).digest('hex')
+      // Step 13 re-recorded the Source's guardians above threat 5 (the Source at 20) and nothing else: step 12's snapshot
+      // (24,048 lines, `b41a6374…ee3c`) without its 4,301 `source_guardians` lines above threat 5 was 19,747 lines,
+      // `a30c30ea…abed`, and step 13's without them the same. The verification re-recorded the three encounters whose
+      // back rank moved and nothing else: step 13's snapshot (21,963 lines, `631a06bf…f88c`) without their 2,929 lines
+      // is 19,034 lines, `0a0879f5…8d75`; the lines now, without theirs, are those same lines in the same order.
+      const far = (line: string) => line.startsWith('source_guardians ') && Number(line.split(' ')[1]) > 5
+      const moved = (line: string) => /^(barrow_wights|blight_cult|blight_lich_court) /.test(line)
+      expect(sha(lines.filter((line) => !moved(line)))).toBe('0a0879f5a33e9839cb902f2040888575a1703c29f48b6ea7fbaf309540388d75')
+      // Before them, the four encounters and the Source near home, as step 12 had them.
+      const NEAR = 4218
+      expect(lines.slice(0, NEAR).some(far)).toBe(false)
+      expect(lines[NEAR - 1].startsWith('source_guardians 5 ')).toBe(true)
+      expect(sha(lines.slice(0, NEAR))).toBe('f1de79756b1a8917ae1d835923e9308d35b05a7f2e1f37929587aa782736e871')
+      // The Source at 20's lines (threats 6 to 20, each fought at 20), together.
+      const AT_20 = NEAR + 2216
+      expect(lines.slice(NEAR, AT_20).every(far)).toBe(true)
+      expect(sha(lines.slice(NEAR, AT_20))).toBe('b66cf7d2fe9ca69bf37fb175b78ba261f6fb13ec22a676a31d8333c040850f95')
+      // After them, every other encounter (15,529 lines as step 12 had them, 15,598 now), the rings in `ENCOUNTERS` order: the
+      // boundaries of steps 08 to 12 (14,242, 16,403, 17,051, 19,649, 20,573, 22,394), each 2,085 lines earlier now.
+      expect(lines.slice(AT_20).some(far)).toBe(false)
+      expect(sha(lines.slice(AT_20))).toBe('79368e87a566989233c33e602171c42358e32b76342f360325099df479b30c78')
+      // The verification's Barrow Wights fight 2 lines shorter and its Blight Cult 100 longer, so the boundaries after each move.
+      const SHIFT = 4301 - 2216
+      const [EARLIER, RING_7, RING_9, RING_12, GOLEM_RUIN, RING_15] = [14242, 16403, 17051, 19649 - 2, 20573 - 2, 22394 + 98].map((n) => n - SHIFT)
+      const kinds = (from: number, to: number) => new Set(lines.slice(from, to).map((line) => line.split(' ')[0]))
+      expect(kinds(EARLIER, RING_7)).toEqual(new Set(['wolf_pack', 'worg_riders', 'ogre_camp']))
+      expect(kinds(RING_7, RING_9)).toEqual(new Set(['wyvern_roost']))
+      expect(kinds(RING_9, RING_12)).toEqual(new Set(['barrow_wights', 'basilisk_lair', 'hill_giant_steading']))
+      expect(kinds(RING_12, GOLEM_RUIN)).toEqual(new Set(['golem_ruin']))
+      const LAIR = 736
+      expect(kinds(GOLEM_RUIN, RING_15 - LAIR)).toEqual(new Set(['blight_cult']))
+      expect(kinds(RING_15 - LAIR, RING_15)).toEqual(new Set(['young_dragon']))
+      expect(sha(lines.slice(RING_15 - LAIR, RING_15))).toBe('059cf9209a6a8cb325dc0451244046a6a31cafa08f227a3b351be25f89ddb695')
+      expect(kinds(RING_15, lines.length)).toEqual(new Set(['blight_lich_court', 'elder_wyrm']))
+      expect(lines.length).toBe(22032)
+      expect(sha(lines)).toBe('badab14bfeb2f0213a1bca3c8f2efcf066d4e399b4c3d804eb2d816ac89caaab')
     }, 60_000)
   })
 })

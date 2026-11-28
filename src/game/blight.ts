@@ -341,6 +341,18 @@ export const SPAWN_KINDS: ReadonlyArray<{ encounter: EncounterId; name: string; 
   { encounter: 'salamander_pool', name: 'Salamander Spring', fromThreat: 7 },
   { encounter: 'bandit_company', name: 'Bandit Troop', fromThreat: 7 },
   { encounter: 'freebooter_host', name: 'Freebooter Band', fromThreat: 7 },
+  { encounter: 'wolf_pack', name: 'Wolf Pack', fromThreat: 7 },
+  { encounter: 'worg_riders', name: 'Worg Band', fromThreat: 7 },
+  { encounter: 'ogre_camp', name: 'Ogre Camp', fromThreat: 7 },
+  { encounter: 'wyvern_roost', name: 'Wyvern Roost', fromThreat: 7 },
+  { encounter: 'barrow_wights', name: 'Barrow', fromThreat: 7 },
+  { encounter: 'basilisk_lair', name: 'Basilisk Lair', fromThreat: 7 },
+  { encounter: 'hill_giant_steading', name: 'Giant Steading', fromThreat: 7 },
+  { encounter: 'golem_ruin', name: 'Golem Ruin', fromThreat: 7 },
+  { encounter: 'blight_cult', name: 'Blight Cult', fromThreat: 7 },
+  { encounter: 'young_dragon', name: 'Dragon Lair', fromThreat: 7 },
+  { encounter: 'blight_lich_court', name: 'Lich Court', fromThreat: 7 },
+  { encounter: 'elder_wyrm', name: 'Wyrm Lair', fromThreat: 7 },
 ]
 
 function spawn(

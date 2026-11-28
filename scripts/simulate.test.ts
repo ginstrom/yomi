@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import type { SpellId } from '../src/combat/spells.ts'
 import { BattleEngine, type CastOutcome, type Side } from '../src/engine/battleEngine.ts'
-import { GOBLIN_STATS } from '../src/combat/combat.ts'
+import { GOBLIN_STATS, KITTED_FIGHTER_GROWTH } from '../src/combat/combat.ts'
 import { hex, hexDistance, offsetToHex } from '../src/grid/hex.ts'
 import { autoAdvance, planFor } from '../src/character/progression.ts'
 import type { PerkId } from '../src/character/perks.ts'
@@ -23,13 +23,13 @@ import { baseItem, type EquipmentSlot, type Item } from '../src/inventory/invent
 
 const GEAR_SLOT_NAMES = ['mainHand', 'offHand', 'armor'] as const
 import type { FamilyId } from '../src/inventory/catalog.ts'
-import { itemById, unruned } from '../src/inventory/inventory.ts'
+import { BASE_ITEMS, itemById, unruned } from '../src/inventory/inventory.ts'
 import { modifiersFor } from '../src/inventory/modifiers.ts'
 import { maxHp, type Character } from '../src/character/character.ts'
 import { worldHealing } from '../src/character/worldCasting.ts'
 import { lootRng, rollRunes } from '../src/game/loot.ts'
 import { MATERIALS_PER_GOLD, MAX_TRADING_POST_LEVEL, runePrice, salePrice } from '../src/game/tradingPost.ts'
-import { pouchKeys } from '../src/inventory/runes.ts'
+import { pouchKeys, socketsOf } from '../src/inventory/runes.ts'
 import { boardIndex, monsterStrength, seedBlight, type WorldEvent } from '../src/game/blight.ts'
 import { LOSS_LEVEL, daysToFall, type Stock } from '../src/game/territory.ts'
 import { extractRefusal } from '../src/game/runecraft.ts'
@@ -74,6 +74,10 @@ import {
   RUNE_ORDER,
   runecraftGear,
   expectedKit,
+  expectedGear,
+  kitLabel,
+  kittedFighterRow,
+  encounterLeadResistance,
   kitLines,
   kitNote,
   noteMarks,
@@ -340,6 +344,21 @@ describe('parseArgs', () => {
   it('takes --near-source for a campaign only', () => {
     expect(parseArgs(['--campaign', '--near-source']).nearSource).toBe(true)
     expect(() => parseArgs(['--near-source'])).toThrow('--near-source applies only to --campaign')
+  })
+
+  it('takes --player-kit own or expected, own by default; expected for single battles only and never with --player-weapon', () => {
+    expect(parseArgs([]).playerKit).toBe('own')
+    expect(parseArgs(['--campaign']).playerKit).toBe('own')
+    expect(parseArgs(['--player-kit', 'own']).playerKit).toBe('own')
+    expect(parseArgs(['--player-kit', 'expected', '--encounter', 'bandit_company', '--threat', '9', '--party-level', '9']).playerKit).toBe('expected')
+    for (const raw of ['best', 'Expected', '']) expect(() => parseArgs(['--player-kit', raw])).toThrow('--player-kit must be own or expected')
+    expect(() => parseArgs(['--player-kit'])).toThrow('Missing value for --player-kit')
+    expect(() => parseArgs(['--campaign', '--player-kit', 'expected'])).toThrow('--player-kit expected cannot be used with --campaign')
+    expect(parseArgs(['--campaign', '--player-kit', 'own']).playerKit).toBe('own')
+    for (const argv of [['--player-kit', 'expected', '--player-weapon', 'iron_sword'], ['--player-weapon', 'iron_sword', '--player-kit', 'expected']]) {
+      expect(() => parseArgs(argv)).toThrow(/^choose one of --player-kit expected and --player-weapon$/)
+    }
+    expect(parseArgs(['--player-kit', 'own', '--player-weapon', 'iron_sword']).playerWeapon?.id).toBe('iron_sword')
   })
 })
 
@@ -1336,6 +1355,121 @@ describe('the kit: roles, the expected kit and the record', () => {
   }, 20_000)
 })
 
+describe('the expected kit worn (--player-kit expected, stage 11)', () => {
+  const SLOTS: readonly EquipmentSlot[] = ['mainHand', 'offHand', 'armor', 'head', 'gloves', 'boots']
+  const LEVELS = [4, 8, 12, 16, 20]
+  /** The ready-made party raised to `level`, each in `expectedGear` against a lead foe of `lead` resistance. */
+  const kitted = (level: number, lead = 0) => {
+    const party = raisedParty(parseArgs(['--party-level', String(level)]))
+    for (const member of party) expectedGear(member, level, lead)
+    return party
+  }
+  const ids = (hero: Character) => SLOTS.map((slot) => hero.equipment[slot]?.id ?? null)
+
+  it('puts every slot the role wants at the expected tier and the low grade', () => {
+    for (const level of LEVELS) {
+      const kit = expectedKit(level)
+      const [fighter, archer, mage] = kitted(level)
+      for (const hero of [fighter, archer, mage]) {
+        const worn = Object.keys(hero.equipment) as EquipmentSlot[]
+        expect(worn.sort(), `${hero.name} at ${level}`).toEqual(SLOTS.filter((slot) => slot !== 'offHand' || hero === fighter).sort())
+        for (const slot of worn) {
+          const item = hero.equipment[slot]!
+          expect([item.tier, item.grade ?? 1], `${hero.name}'s ${slot} at ${level}`).toEqual([kit.tier, kit.grades[0]])
+          expect(item.mod).toBeUndefined()
+        }
+        expect(hero.hp).toBe(maxHp(hero))
+      }
+    }
+  })
+
+  it('picks the gear policy\'s families by role: the body armour and small slots by strength and armourScore, the mage in robe and hide', () => {
+    const [fighter, archer, mage] = kitted(4)
+    expect(ids(fighter)).toEqual(['iron_sword', 'oak_shield', 'iron_breastplate', 'iron_helm', 'iron_gauntlets', 'iron_greaves'])
+    expect(ids(mage)).toEqual(['ash_staff', null, 'linen_robe', 'leather_cap', 'leather_gloves', 'leather_boots'])
+    expect(archer.equipment.mainHand!.id).toBe('yew_bow')
+    for (const level of LEVELS) {
+      for (const hero of kitted(level)) {
+        for (const slot of SLOTS.filter((s) => s !== 'mainHand')) {
+          const item = hero.equipment[slot]
+          if (!item) continue
+          const base = baseItem(item)!
+          expect(wantsFamily(hero, slot, base.family!, base.stats ?? {}, 0), `${hero.name}'s ${item.id}`).toBe(true)
+          // None the policy wants in that slot at the tier scores higher.
+          const rivals = BASE_ITEMS.filter((rival) => rival.slot === slot && rival.tier === base.tier && wantsFamily(hero, slot, rival.family!, rival.stats ?? {}, 0))
+          for (const rival of rivals) expect(armourScore(rival.stats ?? {})).toBeLessThanOrEqual(armourScore(base.stats ?? {}))
+        }
+      }
+    }
+  })
+
+  it('arms the fighter with the longsword, and the war hammer against a lead foe of resistance 4 or more', () => {
+    for (const level of LEVELS) {
+      expect(baseItem(kitted(level, 3)[0].equipment.mainHand!)!.family).toBe('longsword')
+      expect(baseItem(kitted(level, 4)[0].equipment.mainHand!)!.family).toBe('war_hammer')
+      expect(kitted(level, 4)[0].equipment.offHand).toBeDefined()
+    }
+    expect(kitted(12, 4)[0].equipment.mainHand!.id).toBe('mithril_war_hammer@2#ember2')
+    expect(kitted(12, 9)[1].equipment.mainHand!.id).toBe('elderwood_crossbow@2#ember2')
+  })
+
+  it('arms the archer with the bow below tier 3 and the crossbow from it, the mage with the staff', () => {
+    const family = (level: number, member: number) => baseItem(kitted(level)[member].equipment.mainHand!)!.family
+    expect(LEVELS.map((level) => family(level, 1))).toEqual(['bow', 'bow', 'crossbow', 'crossbow', 'crossbow'])
+    expect(LEVELS.map((level) => family(level, 2))).toEqual(['staff', 'staff', 'staff', 'staff', 'staff'])
+  })
+
+  it('fills the low count of runes at the low rank: the main hand first (Ember, then Stone), then the armour (Stone, then Life)', () => {
+    for (const level of LEVELS) {
+      const kit = expectedKit(level)
+      for (const hero of kitted(level)) {
+        const runes = SLOTS.flatMap((slot) => hero.equipment[slot]?.runes ?? [])
+        expect(runes.length, `${hero.name} at ${level}`).toBe(kit.sockets[0])
+        for (const key of runes) expect(key.endsWith(String(kit.ranks[0]))).toBe(true)
+        // The main hand is full before anything else takes one.
+        const main = hero.equipment.mainHand!
+        expect(main.runes?.length ?? 0).toBe(Math.min(socketsOf(main), kit.sockets[0]))
+      }
+    }
+    const runesOf = (level: number) => SLOTS.map((slot) => kitted(level)[0].equipment[slot]?.runes ?? [])
+    expect(runesOf(4)).toEqual([[], [], [], [], [], []])
+    expect(runesOf(8)).toEqual([['ember1'], [], [], [], [], []])
+    expect(runesOf(12)).toEqual([['ember2'], [], ['stone2'], [], [], []])
+    expect(runesOf(16)).toEqual([['ember2', 'stone2'], [], ['stone2'], [], [], []])
+    expect(runesOf(20)).toEqual([['ember3', 'stone3', 'stone3'], [], ['stone3'], [], [], []])
+  })
+
+  it('replaces what was worn, draws nothing and is the same every time', () => {
+    const [fighter] = raisedParty(parseArgs(['--party-level', '8']))
+    fighter.equipment.ring1 = itemById('ring_protection')!
+    expectedGear(fighter, 8, 0)
+    expect(fighter.equipment.ring1).toBeUndefined()
+    expect(ids(kitted(16)[0])).toEqual(ids(kitted(16)[0]))
+  })
+
+  it('is worn by a single battle\'s party with --player-kit expected, against the encounter\'s lead foe; own changes nothing', () => {
+    const weapons = (argv: string[]) => (runBattle(0, 1, parseArgs(argv))[0] as unknown as { meta: { playerWeapons: string[] } }).meta.playerWeapons
+    const cell = ['--encounter', 'bandit_company', '--threat', '9', '--party-level', '9']
+    expect(weapons([...cell, '--player-kit', 'expected'])).toEqual(kitted(9, encounterLeadResistance('bandit_company', 9, readyMadeParty())).map((hero) => hero.equipment.mainHand!.id))
+    expect(weapons(['--encounter', 'hobgoblin_warband', '--threat', '5', '--party-level', '9', '--player-kit', 'expected'])[0]).toBe('mithril_war_hammer@2#ember2')
+    expect(runBattle(0, 1, parseArgs([...cell, '--player-kit', 'own']))).toEqual(runBattle(0, 1, parseArgs(cell)))
+    expect(weapons(cell)).toEqual(readyMadeParty().map((hero) => hero.equipment.mainHand!.id))
+  })
+
+  it('names the kit in the summary line, and nothing for own', () => {
+    expect(kitLabel(parseArgs(['--party-level', '12']))).toBe('')
+    expect(kitLabel(parseArgs(['--party-level', '12', '--player-kit', 'expected']))).toBe(', expected kit (tier 3 Fine, 2 runes of rank 2)')
+    expect(kitLabel(parseArgs(['--party-level', '20', '--player-kit', 'expected']))).toBe(', expected kit (tier 5 Masterwork, 4 runes of rank 3)')
+    expect(kitLabel(parseArgs(['--party-level', '1', '--player-kit', 'expected']))).toBe(', expected kit (tier 1 plain, 0 runes)')
+  })
+
+  it('measures KITTED_FIGHTER_GROWTH: the ready-made fighter at 5, 10, 15 and 20 in the expected kit', () => {
+    expect(KITTED_FIGHTER_GROWTH.map(([level]) => level)).toEqual([5, 10, 15, 20])
+    expect(KITTED_FIGHTER_GROWTH.map(([level]) => kittedFighterRow(level))).toEqual(KITTED_FIGHTER_GROWTH)
+    expect(KITTED_FIGHTER_GROWTH).toEqual([[5, 83, 59, 15.5], [10, 98, 89, 18.5], [15, 105, 119, 21.5], [20, 115, 149, 28.5]])
+  })
+})
+
 describe('the kit of forge-ready campaigns (report only)', () => {
   const party = () => readyMadeParty().map((member) => ({ ...member, level: 10 }))
 
@@ -1830,6 +1964,12 @@ describe('runes in a campaign', () => {
  * decision 12), and none of the five reaches a level 4 workshop (1, 1, 0, 1, 0 at the end) or holds an ore or wood
  * of tier 3+ it used to sell (`goldFromSales` unchanged), so nothing is forged, tempered, fused past rank 2 or kept
  * that was sold before. Events hash `e4dd3391...fb6394` unchanged; the 50-campaign check identical too.
+ *
+ * Stage 11 step 03 (the immunity): the events hash alone re-recorded, `e4dd3391...fb6394` became `0b0f4c20...e961af`,
+ * for the log schema's bump to 27 and nothing else: every `battle_start` writes `schemaVersion`. Play did not move:
+ * the records are untouched, the old hash is met with the same code and the version held at 26, and the
+ * 50-campaign log (`57fdea15...e53e75` became `1e85d023...ed216`) is the old one byte for byte once
+ * `"schemaVersion":27` is put back to 26. No unit is immune yet.
  */
 const GUARD_RECORDS: CampaignRecord[] = [
   { outcome: "source", days: 417, battles: 19, spawns: 52, captured: 3, lost: 0, blighted: 0.37430555555555556, healedHp: 108, campDays: 28, towersBuilt: 3, towersLost: 0, deaths: 2, recruits: 3, hallLevel: 3, shrineLevel: 1, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 56, tierTwoBought: 0, crafted: 7, fieldCraftDays: 2, runesFound: 17, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 20, finalLevels: [8, 8, 8, 7], callings: { heavy_knight: 2, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [2, 7], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 19, wipes: 0, finalLevels: [[8, 8, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkDays: 383, vanguardWalkHomeDays: 106, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [5, 0, 0, 0], lodgeLevel: 1, goldBySource: { sites: 332, market: 0, routes: 0, sales: 56 }, partnersContacted: 1, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 1.2973621103117505, waitingIncomePerDay: 0, goldOnForging: 0, kitAtLevel: { 5: [{ role: "fighter", tier: 1, sockets: 0 }, { role: "archer", tier: 1, sockets: 0 }, { role: "mage", tier: 1, sockets: 0 }] } },
@@ -1838,7 +1978,7 @@ const GUARD_RECORDS: CampaignRecord[] = [
   { outcome: "fallen", days: 362, battles: 22, spawns: 36, captured: 5, lost: 0, blighted: 0.29851190476190476, healedHp: 254, campDays: 48, towersBuilt: 1, towersLost: 0, deaths: 1, recruits: 3, hallLevel: 3, shrineLevel: 1, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 66, tierTwoBought: 0, crafted: 6, fieldCraftDays: 4, runesFound: 17, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 20, finalLevels: [8, 8, 8, 8, 7], callings: { heavy_knight: 3, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [3], battlesToLevel: { 5: 9 }, roles: { vanguard: { battles: 22, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkDays: 308, vanguardWalkHomeDays: 85, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [7, 0, 0, 0], lodgeLevel: 1, goldBySource: { sites: 288, market: 0, routes: 0, sales: 66 }, partnersContacted: 0, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 1.4116022099447514, waitingIncomePerDay: 0, goldOnForging: 0, kitAtLevel: { 5: [{ role: "fighter", tier: 1, sockets: 0 }, { role: "archer", tier: 1, sockets: 0 }, { role: "mage", tier: 1, sockets: 0 }, { role: "fighter", tier: 1, sockets: 0 }] } },
   { outcome: "fallen", days: 29, battles: 4, spawns: 0, captured: 0, lost: 0, blighted: 0.1177579365079365, healedHp: 1, campDays: 1, towersBuilt: 0, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 1, fieldCraftDays: 1, runesFound: 2, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [3, 3, 3], callings: { swordmaster: 1, heavy_knight: 1, ranger: 1, evoker: 1 }, capstones: {  }, deathsAtLevel: [], battlesToLevel: {  }, roles: { vanguard: { battles: 4, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkDays: 26, vanguardWalkHomeDays: 0, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [2, 0, 0, 0], lodgeLevel: 0, goldBySource: { sites: 20, market: 0, routes: 0, sales: 0 }, partnersContacted: 0, routesOpened: 0, routesRaided: 0, routesAbandoned: 0, routeRaidsTold: 0, routeFlickers: 0, routesRaidedLong: 0, incomePerDay: 0.8620689655172413, waitingIncomePerDay: 0, goldOnForging: 0, kitAtLevel: {} },
 ]
-const GUARD_EVENTS_SHA256 = 'e4dd3391cd473d66b35d9070815f49e7c84fb913268c20894506e03e0cfb6394'
+const GUARD_EVENTS_SHA256 = '0b0f4c20e93ec2b2ebbb30710c4ce04989dd8e1168a75fff487b66d376e961af'
 
 describe('the campaign’s policy on the day loop', () => {
   const args = parseArgs(['--campaign', '--parties', '1'])
@@ -2089,14 +2229,14 @@ describe('the company’s record', () => {
     expect(roleOf(run, party)).toBe('guard')
   })
 
-  it('logs the party and its role on battle_start, under schema version 26, and counts the battle to the role', () => {
+  it('logs the party and its role on battle_start, under schema version 27, and counts the battle to the role', () => {
     const { run, game, party } = campaignOf()
     const target = nextTarget(game.world, party, args.readyLevel)!
     party.position = { ...target.position }
     party.confronting = target.id
     carryOut(run, party, { kind: 'fight', target })
     const start = run.battles[0][0]
-    expect(start).toMatchObject({ type: 'battle_start', schemaVersion: 26, meta: { party: 'party_1', role: 'vanguard' } })
+    expect(start).toMatchObject({ type: 'battle_start', schemaVersion: 27, meta: { party: 'party_1', role: 'vanguard' } })
     // The new keys come after the old, so the old keys keep their order in the log.
     if (start.type !== 'battle_start') throw new Error('no battle_start')
     expect(Object.keys(start.meta).slice(-2)).toEqual(['party', 'role'])

@@ -2,7 +2,7 @@
 
 An ability is an entry in `ABILITIES` (`src/combat/abilities.ts`): a monster's, or a hero's technique. Touch every line, then run `npm test`.
 
-- `src/combat/abilities.ts` → `ABILITIES`, `ABILITY_IDS` (monsters' first, techniques after); its order is the Abilities tab's order.
+- `src/combat/abilities.ts` → `ABILITIES`, `ABILITY_IDS` (monsters' first, techniques after); its order is the Abilities tab's order. A monster's also goes in `MONSTER_ABILITY_IDS` (or the foe panel and the simulator count it a technique; `src/combat/abilities.test.ts` holds the list to the front of `ABILITY_IDS`, not enforced beyond that).
 - `src/character/perks.ts` → a node's `ability` to teach a technique; see `skill-node.md`.
 - `src/scenes/sounds.ts` → a sound in `ABILITY_SOUNDS`, unless it is a technique of strikes (a place in `SOUNDS_AS_ATTACKS`; `src/scenes/sounds.test.ts` enforces).
 - `src/scenes/battleEffects.ts` → an `ABILITY_LOOKS` or `STRIKE_FLASHES` entry for an area, status or elemental strike (optional otherwise).

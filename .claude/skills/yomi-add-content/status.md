@@ -8,6 +8,7 @@ A status is an entry in `STATUSES` (`src/combat/spells.ts`). Touch every line, t
 - `src/engine/battleEngine.ts` → anything not expressible as a `StatusRule` field needs engine code read through `effectiveStats` / `statsIn` so previews agree.
 - A new `StatusRule` field means engine code to apply it; keep it out of the RNG unless it is a roll. Statuses never draw from the RNG.
 - `src/engine/policies.ts` → `STATUS_VALUE`, if the policy should value laying it.
+- A status with a `tick` is refused by `immune` units (`refusesStatus`, `src/combat/spells.ts`) with no further code; lay every status through the engine's `layStatus` / `laidOn`, never by pushing onto `statuses`.
 
 ## Tests that catch a miss
 

@@ -32,12 +32,21 @@ import { CUTSCENE_IDS } from '../story/cutscenes.ts'
  * (`EARLY_SHIFT`) and the Source far out at threat 20: a new map, so an older
  * world cannot go on; no migration. Version 31 (stage 10) adds the trophies
  * (wolfhide, wyvern hide, basilisk scale, drake scale) to the stock's
- * materials; no migration.
+ * materials; no migration. Version 32 (stage 11, ring 7) renames three of
+ * ring 7's fixed nests and gives them the wolves', worg riders' and ogres'
+ * encounters; no migration. Version 33 (stage 11, ring 9) does the same for
+ * ring 9: two Wyvern Roosts and an Ogre Camp; no migration.
+ * Version 34 (stage 11, ring 12) does the same for ring 12: a barrow of
+ * wights, a Basilisk Lair and a Hill Giant Steading; no migration.
+ * Version 35 (stage 11, ring 15) does the same for ring 15: a Golem Ruin, a
+ * Blight Cult and a Dragon Lair; no migration.
+ * Version 36 (stage 11, ring 18) does the same for ring 18: the Ashen Court
+ * of a Blight Lich, the Last Wyrm and the Blightmarch Drake; no migration.
  * Rules and item numbers may change
  * freely, as a character stores no derived number and an item is saved by
  * its id.
  */
-export const SAVE_VERSION = 31
+export const SAVE_VERSION = 36
 
 /** One slot's contents. */
 export interface SaveFile {

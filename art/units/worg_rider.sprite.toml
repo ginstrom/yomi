@@ -1,0 +1,71 @@
+# A worg rider: a goblin in a leather jerkin, couched spear levelled, astride
+# a dark worg with a red eye and bared fangs.
+canvas = "unit"
+
+outline = "auto"
+
+[points]
+chest = [15, 17]
+
+[frames.idle_0.runs]
+5 = [[13, "GGgGg"]]
+6 = [[12, "GgggggG"]]
+7 = [[9, "eg"], [11, "gggggeg"]]
+8 = [[10, "gggggggYge"]]
+9 = [[12, "ggggeeeg"]]
+10 = [[13, "geWRWg"]]
+11 = [[12, "nttnnn"], [28, "w"]]
+12 = [[11, "nnttnnn"], [17, "gggg"], [21, "tttttttt"], [28, "ww"]]
+13 = [[11, "nnttnnn"], [17, "eg"], [28, "w"]]
+14 = [[11, "nnnnnnn"], [24, "M"], [27, "M"]]
+15 = [[11, "nTTTTnn"], [24, "Mm"], [27, "mM"]]
+16 = [[1, "MN"], [11, "nnnnnnn"], [23, "MmmmmmM"]]
+17 = [[2, "MMm"], [5, "MMmmmmmmgGgmmmmmmm"], [23, "mmrmmmM"]]
+18 = [[1, "MMMm"], [5, "mmmmmmmgGgmmmmmmm"], [22, "mmmmmmmmM"]]
+19 = [[1, "MMMMm"], [6, "mmmmmmnnnmmmmmmm"], [22, "mmmWWWWWM"]]
+20 = [[2, "MMMM"], [6, "MMmmmmmmmmmmmmmmm"], [23, "MmWWWWM"]]
+21 = [[6, "MMmmmmmmmmmmmmmmmm"], [24, "MMM"]]
+22 = [[7, "MMMMMMMMMMMMMMMMM"]]
+23 = [[8, "MMMMMMMMMMMMMMMM"]]
+24 = [[8, "MMMMMMMMMMMMMMMM"]]
+25 = [[8, "mmmm"], [13, "MM"], [19, "mmmm"], [24, "MM"]]
+26 = [[9, "mmm"], [13, "MM"], [20, "mmm"], [24, "MM"]]
+27 = [[9, "mmm"], [13, "MM"], [20, "mmm"], [24, "MM"]]
+28 = [[9, "mmm"], [13, "MM"], [20, "mmm"], [24, "MM"]]
+29 = [[9, "mmm"], [13, "MM"], [20, "mmm"], [24, "MM"]]
+30 = [[8, "mmmm"], [13, "MMM"], [20, "mmmm"], [24, "MMM"]]
+
+# A breath: rider and worg sink a pixel above the paws.
+[frames.idle_1]
+from = "idle_0"
+move = { rows = [0, 27], by = [0, 1] }
+
+[anim.idle]
+frames = ["idle_0", "idle_1"]
+ms = 540
+
+# A stretch: the near legs reach apart (back leg behind, front leg ahead).
+[frames.walk_0]
+from = "idle_0"
+[frames.walk_0.runs]
+27 = [[9, "m.."], [8, "m"], [20, "..."], [21, "m"]]
+28 = [[9, "..."], [7, "mm"], [20, "..."], [22, "mm"]]
+29 = [[9, "..."], [6, "mm"], [20, "..."], [23, "mm"]]
+30 = [[8, "...."], [5, "mmm"], [20, "...."], [23, "mmm"]]
+
+# The near paws lift, then the far ones.
+[frames.walk_1]
+from = "idle_0"
+[frames.walk_1.runs]
+29 = [[9, "..."], [20, "..."]]
+30 = [[8, "...."], [20, "...."]]
+
+[frames.walk_2]
+from = "idle_0"
+[frames.walk_2.runs]
+29 = [[13, ".."], [24, ".."]]
+30 = [[13, "..."], [24, "..."]]
+
+[anim.walk]
+frames = ["walk_0", "walk_1", "walk_0", "walk_2"]
+ms = 120

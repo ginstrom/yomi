@@ -12,7 +12,7 @@ An attack is percentile: a roll of 1 to 100 hits when it is within the attacker'
 
 A monster stat block is written for its kind's native level. `foeAtLevel(base, level, native)` scales it: a level below the native counts as the native; armour class, chance to hit, damage (its abilities' too, as `abilityDamageBonus`) and a caster's mana and skill grow by the levels above it; hit points are scaled so that the block is as written at its native level and grows as a level 1 block would from there.
 
-`foeYardstick(level)` gives the ranges a foe of a level should sit in: armour class, chance to hit, hit points and mean damage a turn (the better of its weapon's turn and a routine's), from the ready-made fighter's measured growth. A test in `encounters.test.ts` holds every monster kind to it at its native level, each field outside it a named exception.
+`foeYardstick(level)` gives the ranges a foe of a level should sit in: armour class, chance to hit, hit points and mean damage a turn (the better of its weapon's turn and a routine's), from the ready-made fighter's measured growth. A test in `encounters.test.ts` holds every monster kind to it at its native level, each field outside it a named exception. `foeYardstick(level, 'expected')` gives the same bands from the fighter in gear §5.8's expected kit (`KITTED_FIGHTER_GROWTH`, measured at levels 5, 10, 15 and 20 by the simulator's `kittedFighterRow`): the kinds of long-campaign stage 11 (`STAGE_11_KINDS` in that test) are held to it, until stage 12 measures again; today's kinds stay on the bare one.
 
 A stat block's optional `magic` (mana, spell skill, spells known) is what makes a unit a caster; without it a unit behaves as it always did.
 
@@ -33,7 +33,20 @@ A stat block's optional `magic` (mana, spell skill, spells known) is what makes 
 
 `ABILITIES`, by id as spells are, which a stat block's `abilities` names: a routine of weapon strikes at one foe, each with its own dice, verb and maybe a status, or an area. Each costs action points, and one with a `recharge` of N is used at most every N turns of its side.
 
-The monsters' four (Troll Claws, Spider Bite, Spider Web, Fire Spit) come first in `ABILITY_IDS` and set none of the heroes' fields. The heroes' techniques (17) come after them, taught by a node's `ability` (`knownAbilities`). A technique:
+The monsters' abilities (`MONSTER_ABILITY_IDS`: Troll Claws, Spider Bite, Spider Web, Fire Spit, then the high roster's of long-campaign stage 11) come first in `ABILITY_IDS` and set none of the heroes' cost fields. The high roster's, ring by ring:
+
+- `worg_strikes`, the Worg Rider's Spear and Bite: a routine of two strikes (1d8+2, 1d6+1), 6 AP;
+- `ogre_sweep`, the Ogre's Sweep: a burst of radius 1 centred on the ogre (`centredOnSelf`, `foesOnly`), 2d8+2 through resistance (`throughResistance`), 6 AP, recharge 1;
+- `wyvern_strikes`, the Wyvern's Bite and Tail Sting: 2d6+2, then 1d4 laying Poisoned for 3 turns, 6 AP;
+- `basilisk_gaze`, the Basilisk's Gaze: a cone 3 hexes long, no damage, Chilled for 1 turn, 3 AP, recharge 2;
+- `giant_rock`, the Hill Giant's Rock: a burst of radius 0 at range 4 (one foe), 2d8+2 through resistance, 6 AP, recharge 1;
+- `dragon_breath`, the Young Dragon's Fire Breath: a cone 3 hexes long, 6d6 fire, half on a miss, Seared for 1 turn, 4 AP, recharge 3; no `throughResistance`, so armour does not cut it and only a fire ward does;
+- `dragon_strikes`, its Bite and Claws: a routine of three strikes (2d8, 1d8, 1d8), 6 AP;
+- `wyrm_breath` and `wyrm_strikes`, the Elder Wyrm's: the same with a cone 4 hexes long and 8d6, and 2d10, 1d10, 1d10;
+- `blight_breath`, the Source's Blight Horror's Blight Breath: a burst of radius 2 centred on itself, foes only, 8d6 blight, half on a miss, Corroded for 3 turns, 4 AP, recharge 3;
+- `horror_claws`, its Claws: two strikes of 2d8, 6 AP.
+
+Sweep and Rock are built from the existing area fields. An area's `throughResistance` cuts its damage by the target's resistance as a blow is cut, less the user's `armorPierce` (`effectiveResistance`); an area without it ignores resistance, and only the element's ward cuts it (the breaths). The Barrow Wight, the Blight Cultist and the Blight Lich cast monster spells instead (`magic`). The heroes' techniques (17) come after them, taught by a node's `ability` (`knownAbilities`). A technique:
 
 - may cost mana (`manaCost`);
 - costs the weapon's attack AP plus `weaponAp` (`abilityApCost`, which every reader of an ability's AP goes through), plus nothing for the Spellsword Strikes (`SPELLSWORD_STRIKES`) of a unit with the trait `arcane_knight`;
@@ -62,7 +75,7 @@ An `ability` action uses one of the unit's abilities once `canUse` allows it: th
 - The first `AttackEvent` of a technique that costs mana carries `manaCost` and `manaAfter`, as a cast does.
 - **A status ability** (`selfStatus`, aimed at the user's own id, or `foeStatus`, at a standing foe within its range) draws nothing and logs one `AbilityEvent` on the target's hex, with one outcome shaped as a friendly spell's (and `manaCost`, `manaAfter` for one that costs mana).
 - **An area** is aimed `at` a hex: legal on the board, the user's own for `centredOnSelf`, else a burst within range (the weapon's `attackRange` for `weaponRange`), or a cone or line 1 to range away, touching a standing foe. It is one `AbilityEvent` resolved over everyone it touches (`abilityTouches`, which the policy reads too: both sides, or only foes for `foesOnly`) as a hostile area spell is, with the unit's own chance to hit (a critical doubling the dice):
-  - resistance ignored, or gone through as a shot's with `throughResistance` (`CastOutcome.resisted`);
+  - resistance ignored, or, with `throughResistance`, cut as a blow is by the target's resistance less the user's `armorPierce` (`effectiveResistance`; `CastOutcome.resisted`);
   - its element cut by wards;
   - half the dice (rounded down, no status) on a miss where it has `halfOnMiss` (`CastOutcome.half`);
   - the weapon's dice for `weaponDamage` (no `abilityDamageBonus`, no runes);
@@ -256,6 +269,10 @@ Lasting effects are `UnitRecord.statuses`; `STATUSES` (`spells.ts`) says what ea
 
 `hostile` marks a status a foe lays to harm, which is what Purify ends. The table is drawn from the code as of writing; `STATUSES` is the authority.
 
+### Immunity
+
+A unit with `CombatantStats.immune` is never laid a status whose rule has a `tick` (today Poisoned and Corroded), whatever would lay it: a spell, a rolled or `auto` area, a `foeStatus` ability, a routine's or technique's strike, a weapon's on-hit effect. `refusesStatus(stats, status)` (`spells.ts`) is the one test, read by the engine's `layStatus`, the policy and the foe hover panel. Every other status is laid on it as on any unit, and the damage of the blow that carried the status is dealt as ever (its wards are what stop that). The refusal draws nothing and changes no draw. It is recorded as `immune: true` on the `CastOutcome` (its `status` null) or on the `AttackEvent` (for the strike's status or any on-hit one; the statuses that were laid stay in `status` / `onHitStatuses`), absent otherwise (log schema 27), and `formatEvent` says "unaffected by the rest" after a hit's damage or "Stone Golem is unaffected." where nothing else landed. No unit has the flag until the Stone Golem (stage 11); a snapshot without the field reads as not immune.
+
 ### Duration and stacking
 
 A status lasts its unit's own turns, counting the one under way if it is laid on its side's turn, and ends after the end of the last (`status_end`); laid again it takes the longer duration, and different ones stack. AP changes apply as the unit's turn begins, and at once on its own turn. Damage over time is dealt as its side's turn begins, unit by unit in roster order (`status_tick`). A unit that falls loses its statuses, and none outlasts the battle.
@@ -282,16 +299,16 @@ None of the three draws from the RNG.
 4. Mirror Image or Shield (or Dark Shield) when a foe stands beside it.
 5. Taunt (`tauntUse`) at half its hit points or more, where it would taunt two foes not yet taunted, or one within its own reach of an ally worse hurt (by share) than the user.
 6. Support (`supportCast`): Mass Haste in its side's first two rounds where it touches two allies or more not hasted; else Renew where two allies or more in its radius are at 75% or less and none is renewing; else Haste on the first ally in roster order, not itself, that is not hasted; else Protect on the ally with a foe beside it, not protected, the most hurt by share.
-7. A hostile area spell that touches two foes or more and no ally. A spell with damage counts only the foes its average damage gets through the ward of; the Web spell counts one foe or more not yet webbed; another spell that only lays a status (Bane) counts only the foes not under it yet.
+7. A hostile area spell that touches two foes or more and no ally. A spell with damage counts only the foes its average damage gets through the ward of; the Web spell counts one foe or more not yet webbed; another spell that only lays a status (Bane) counts only the foes not under it yet and not immune to it (`refusesStatus`).
 8. Bless on two allies or more.
 9. Glacial Prison (`prisonCast`) and then Sleep on the healthiest foe not asleep or frozen and with no unit of its own side beside it (whose blows would wake it), while two stand.
 10. Curse on the healthiest foe not yet cursed, while two stand.
 11. Hunter's Mark (`markUse`) on the unmarked foe with the most hit points, when it has the AP to mark and then attack.
 12. Its hardest-hitting spell on the weakest foe: its damage reckoned with the caster's spell power by element, after the foe's ward, statuses and auras counted through `statsIn`, with Ice Lance's `bonusVs` dice where the foe has one of its statuses and Holy Light's doubled where its bane applies.
 13. Its best strike: the plain attack or routine of strikes that would do the most harm (each strike the chance to hit times an average hit through the foe's resistance, plus its weapon's on-hit damage through the foe's wards, a bane only where it applies; a routine the sum of its strikes'; a routine winning a tie). In its place:
-    - a technique (an ability with `weaponAp`) whose `techniqueScore` is strictly higher: its strikes' expected harm (the strike's `toHit`, `damageBonus` and on-hit, `imbueDamage` included; a strike that `spreads` scored on the foe it would go to), plus each status it lays worth `STATUS_VALUE` (Seared: the target's regeneration) times the chance, where the foe lacks it, less `MANA_WEIGHT` (0.5) a point of mana, all times the uses that fit in the AP left this turn (once with a recharge, no more than its mana pays for above the heal reserve) over the plain blows that fit (at least one); so a 7 AP Power Attack and a 5 AP blow at 8 AP are one against one;
+    - a technique (an ability with `weaponAp`) whose `techniqueScore` is strictly higher: its strikes' expected harm (the strike's `toHit`, `damageBonus` and on-hit, `imbueDamage` included; a strike that `spreads` scored on the foe it would go to), plus each status it lays worth `STATUS_VALUE` (Seared: the target's regeneration; 0 on a foe immune to it) times the chance, where the foe lacks it, less `MANA_WEIGHT` (0.5) a point of mana, all times the uses that fit in the AP left this turn (once with a recharge, no more than its mana pays for above the heal reserve) over the plain blows that fit (at least one); so a 7 AP Power Attack and a 5 AP blow at 8 AP are one against one;
     - or an area ability with damage whose net harm is above 0 and above that strike's: each foe's chance to hit times the mean after its ward, plus half on a miss with `halfOnMiss`, less the same for its own side; the weapon's dice for `weaponDamage`, through resistance for `throughResistance`, double dice where a `bane` applies; less `MANA_WEIGHT` a point of mana.
-14. An area ability that only lays a status with a roll (Web), where it touches a foe without it and none of its own side.
+14. An area ability that only lays a status with a roll (Web), where it touches a foe without it (and not immune to it) and none of its own side.
 15. Sprint (`sprintUse`), when no foe is in reach and only Sprint's AP lets the closing move end with AP to strike.
 
 A caster that knows a heal keeps the mana for its cheapest, as does a mana technique. Taunt, Mark and Sprint are known by their data (an `auto` area laying Taunted, a `foeStatus` laying Marked, a `selfStatus` laying Hasted), not by id.

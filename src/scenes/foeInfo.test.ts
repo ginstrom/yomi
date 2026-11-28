@@ -42,12 +42,25 @@ describe('foeInfoLines', () => {
       expect(describe1({ abilities: ['spider_web'] })).toEqual(['Web: ready', '  burst 1, range 4: webbed 2 turns (−4 AP)'])
     })
 
-    it('Fire Spit: the cone, its dice and element, half on a miss, and the status it lays', () => {
+    it('Fire Spit: the cone, its dice and element, half on a miss, and the status it lays on each one it hits', () => {
       expect(describe1({ abilities: ['fire_spit'] })).toEqual([
         'Fire Spit: ready',
         '  cone 2: 4d6+2 fire, half on a miss',
-        '  seared 1 turn (no regeneration)',
+        '  each one hit: seared 1 turn (no regeneration)',
       ])
+    })
+
+    it('Fire Breath: the status is laid on the ones it hits, not on the dragon', () => {
+      expect(describe1({ abilities: ['dragon_breath'] })).toEqual([
+        'Fire Breath: ready',
+        '  cone 3: 6d6 fire, half on a miss',
+        '  each one hit: seared 1 turn (no regeneration)',
+      ])
+    })
+
+    it('Sweep and Rock: an area that armour cuts, so the line says so (not that it goes through armour)', () => {
+      expect(describe1({ abilities: ['ogre_sweep'] })).toEqual(['Sweep: ready', '  burst 1, around itself, foes only: 2d8+2, cut by armour'])
+      expect(describe1({ abilities: ['giant_rock'] })).toEqual(['Rock: ready', '  burst 0, range 4: 2d8+2, cut by armour'])
     })
 
     it('adds the foe\'s level to the dice (abilityDamageBonus), as the engine does', () => {
@@ -56,9 +69,54 @@ describe('foeInfoLines', () => {
         '  claw 1d4+4, claw 1d4+4',
         'Fire Spit: ready',
         '  cone 2: 4d6+4 fire, half on a miss',
-        '  seared 1 turn (no regeneration)',
+        '  each one hit: seared 1 turn (no regeneration)',
       ])
     })
+  })
+
+  describe('lists a caster\'s spells, with the mana it has left, and under them each spell\'s reach and effect', () => {
+    const caster = (spells: Parameters<typeof unit>[0]['magic'], mana: number, extra: Partial<UnitSnapshot> = {}) => unit({ name: 'Blight Cultist', magic: spells, mana, ...extra })
+
+    it('the Blight Cultist: Heal, Curse and Lightning Bolt', () => {
+      expect(foeInfoLines(caster({ maxMana: 16, skill: 95, spells: ['heal', 'curse', 'lightning_bolt'] }, 16))).toEqual([
+        'Blight Cultist',
+        'Spells: Heal, Curse, Lightning Bolt (16 mana)',
+        '  heal: an ally within 4: +1d8+2',
+        '  curse: a foe within 5: cursed 3 turns (−15 to hit, −5 AC)',
+        '  lightning bolt: line 6: 4d6 lightning',
+      ])
+    })
+
+    it('the Blight Lich: an area, a drain and a spell on itself, and its mana as it stands now', () => {
+      const lich = caster({ maxMana: 30, skill: 100, spells: ['death_cloud', 'lightning_bolt', 'drain_life', 'dark_shield'] }, 22, { name: 'Blight Lich' })
+      expect(foeInfoLines(lich)).toEqual([
+        'Blight Lich',
+        'Spells: Death Cloud, Lightning Bolt, Drain Life, Dark Shield (22 mana)',
+        '  death cloud: burst 1, range 5: poisoned 3 turns (1d6 poison a turn)',
+        '  lightning bolt: line 6: 4d6 lightning',
+        '  drain life: a foe within 5: 3d6, half heals the caster',
+        '  dark shield: itself: shielded 3 turns (+15 AC)',
+      ])
+    })
+
+    it('adds the caster\'s spell power, heal bonus and longer statuses to what it shows', () => {
+      const strong = caster({ maxMana: 20, skill: 90, spells: ['flame_arrow', 'heal', 'curse'], power: { all: 1, fire: 2 }, healBonus: 3, extend: { hostile: 1 } }, 20, { name: 'Hedge-Mage' })
+      expect(foeInfoLines(strong).slice(2)).toEqual([
+        '  flame arrow: a foe within 5: 2d8+3 fire, seared 2 turns (no regeneration)',
+        '  heal: an ally within 4: +1d8+5',
+        '  curse: a foe within 5: cursed 4 turns (−15 to hit, −5 AC)',
+      ])
+    })
+
+    it('puts the spells after the abilities, before the wards', () => {
+      const lines = foeInfoLines(caster({ maxMana: 6, skill: 90, spells: ['drain_life'] }, 6, { abilities: ['troll_claws'], wards: { fire: 10 } }))
+      expect(lines.filter((line) => !line.startsWith('  '))).toEqual(['Blight Cultist', 'Claws: ready', 'Spells: Drain Life (6 mana)', 'Wards: fire 10'])
+    })
+  })
+
+  it('ends with what an immune unit is immune to, by the name of each ticking status’s damage', () => {
+    expect(foeInfoLines(unit({ name: 'Stone Golem', immune: true }))).toEqual(['Stone Golem', 'Immune to acid and poison'])
+    expect(foeInfoLines(unit({ name: 'Stone Golem', immune: true, wards: { poison: 99 } }))).toEqual(['Stone Golem', 'Wards: poison 99', 'Immune to acid and poison'])
   })
 
   it('then lists the wards above 0 in element order', () => {
@@ -84,7 +142,7 @@ describe('foeInfoLines', () => {
     expect(describe1({ ...sword, abilities: ['venom_strike'] })[1]).toBe('  2 mana, 6 AP (weapon + 1)')
     expect(describe1({ ...sword, abilities: ['venom_strike'] })[2]).toBe('  venom strike: weapon blow or shot')
     expect(describe1({ attackApCost: 4, abilities: ['volley'] })).toEqual([
-      'Volley: ready', '  6 AP (weapon + 2), ranged weapon', '  burst 1, weapon range: weapon damage, through armour',
+      'Volley: ready', '  6 AP (weapon + 2), ranged weapon', '  burst 1, weapon range: weapon damage, cut by armour',
     ])
   })
 

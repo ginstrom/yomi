@@ -201,6 +201,23 @@ describe('the manual’s screenshots', () => {
     await shot(game, 'battle-salamander')
   })
 
+  it('a Young Dragon of the far rings, its Fire Breath shown on hover', async () => {
+    const game = await games.open()
+    await game.newGame()
+    await game.press('Shift+Backquote')
+    for (const line of ['level 15 all auto', 'fight young_dragon 15']) {
+      await game.page.locator('#yomi-debug input').fill(line)
+      await game.press('Enter')
+    }
+    await game.waitForScenes(['Battle'])
+    await game.press('Escape')
+    const battle = await game.waitFor('Battle', (b) => b.playerControl && b.forecast !== null)
+    const dragon = battle.state.units.find((u) => u.side === 'enemy' && u.abilities?.includes('dragon_breath'))!
+    await game.hover(battleHexOnScreen(battle, dragon.position))
+    await game.waitFor('Battle', (b) => b.foeInfo.length > 0)
+    await shot(game, 'battle-dragon')
+  })
+
   it('the trading post and the workshop', async () => {
     const game = await games.open()
     await game.newGame()

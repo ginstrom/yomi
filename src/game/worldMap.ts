@@ -298,35 +298,36 @@ export function newWorld(
       monsters('bandit_hideout', 'Bandit Hideout', 47, 13, 'bandit_camp', [STORM_WAND]),
       monsters('salamander_pool', 'Salamander Pool', 54, 28, 'salamander_pool', [SAGE_CIRCLET]),
       monsters('spider_nest', 'Spider Nest', 57, 10, 'spider_nest', [EMBERBLADE]),
-      // Threat 7 (55 to 67 hexes out).
+      // Threat 7 (55 to 67 hexes out): the wolves, worg riders and ogres of long-campaign stage 11, and two bandit camps.
       farMonsters('wildland_bandits', 'Wildland Bandits', 55, 6, 'bandit_camp', [RING_FORTUNE]),
-      farMonsters('webwood_nest', 'Webwood Nest', 62, 20, 'spider_nest', [SHADOW_CLOAK]),
-      farMonsters('ashen_pool', 'Ashen Pool', 70, 36, 'salamander_pool', [SPARK_WAND]),
+      farMonsters('greyfang_pack', 'Greyfang Pack', 62, 20, 'wolf_pack', [SHADOW_CLOAK]),
+      farMonsters('ashen_ogres', 'Ashen Hill Ogres', 70, 36, 'ogre_camp', [SPARK_WAND]),
       farMonsters('moorland_bandits', 'Moorland Bandits', 62, 52, 'bandit_camp', [AMULET_FOCUS]),
-      farMonsters('hollow_spiders', 'Hollow Spiders', 55, 67, 'spider_nest', [HAWK_BOW]),
-      // Threat 9 (68 to 80).
+      farMonsters('hollow_riders', 'Hollow Riders', 55, 67, 'worg_riders', [HAWK_BOW]),
+      // Threat 9 (68 to 80): two wyvern roosts and an ogre camp (long-campaign stage 11), and two bandit companies.
       farMonsters('ironhold_company', 'Ironhold Company', 67, 4, 'bandit_company', [RING_PROTECTION]),
-      farMonsters('cinder_springs', 'Cinder Springs', 74, 18, 'salamander_pool', [EMBERBLADE]),
-      farMonsters('deepweb_hollow', 'Deepweb Hollow', 83, 36, 'spider_nest', [SAGE_CIRCLET]),
+      farMonsters('cinder_roost', 'Cinder Roost', 74, 18, 'wyvern_roost', [EMBERBLADE]),
+      farMonsters('deepcrag_roost', 'Deepcrag Roost', 83, 36, 'wyvern_roost', [SAGE_CIRCLET]),
       farMonsters('grey_company', 'Grey Company', 74, 54, 'bandit_company', [STORM_WAND]),
-      farMonsters('smoking_mere', 'Smoking Mere', 66, 69, 'salamander_pool', [RING_FORTUNE]),
-      // Threat 12 (81 to 94).
+      farMonsters('mere_ogres', 'Mere Ogres', 66, 69, 'ogre_camp', [RING_FORTUNE]),
+      // Threat 12 (81 to 94): a barrow, a basilisk lair and a giant steading (long-campaign stage 11), and two bandit companies.
       farMonsters('ravenhill_company', 'Ravenhill Company', 80, 5, 'bandit_company', [SHADOW_CLOAK]),
-      farMonsters('stonegate_company', 'Stonegate Company', 88, 20, 'bandit_company', [HAWK_BOW]),
-      farMonsters('thornwall_company', 'Thornwall Company', 96, 36, 'bandit_company', [AMULET_FOCUS]),
-      farMonsters('marsh_company', 'Marsh Company', 88, 52, 'bandit_company', [EMBERBLADE]),
+      farMonsters('stonegate_barrow', 'Stonegate Barrow', 88, 20, 'barrow_wights', [HAWK_BOW]),
+      farMonsters('thornwall_lair', 'Thornwall Lair', 96, 36, 'basilisk_lair', [AMULET_FOCUS]),
+      farMonsters('marsh_steading', 'Marsh Steading', 88, 52, 'hill_giant_steading', [EMBERBLADE]),
       farMonsters('dustroad_company', 'Dustroad Company', 80, 67, 'bandit_company', [SPARK_WAND]),
-      // Threat 15 (95 to 108).
+      // Threat 15 (95 to 108): a golem ruin, a blight cult and a young dragon's lair (long-campaign stage 11), and two freebooter hosts.
       farMonsters('red_freebooters', 'The Red Freebooters', 95, 6, 'freebooter_host', [STORM_WAND]),
-      farMonsters('grey_freebooters', 'The Grey Freebooters', 102, 20, 'freebooter_host', [RING_PROTECTION]),
-      farMonsters('wolfhead_host', 'Wolfhead Host', 110, 36, 'freebooter_host', [SAGE_CIRCLET]),
-      farMonsters('saltwind_host', 'Saltwind Host', 102, 52, 'freebooter_host', [HAWK_BOW]),
+      farMonsters('grey_ruin', 'The Grey Ruin', 102, 20, 'golem_ruin', [RING_PROTECTION]),
+      farMonsters('wolfhead_cult', 'Wolfhead Cult', 110, 36, 'blight_cult', [SAGE_CIRCLET]),
+      farMonsters('saltwind_drake', 'Saltwind Drake', 102, 52, 'young_dragon', [HAWK_BOW]),
       farMonsters('black_banner_host', 'Black Banner Host', 95, 66, 'freebooter_host', [SHADOW_CLOAK]),
-      // Threat 18 (109 to 122), about the Source.
+      // Threat 18 (109 to 122), about the Source: a blight lich's court, an elder wyrm's lair and a young dragon's
+      // (long-campaign stage 11), and a freebooter host.
       farMonsters('iron_freebooters', 'The Iron Freebooters', 110, 8, 'freebooter_host', [EMBERBLADE]),
-      farMonsters('ashen_host', 'The Ashen Host', 117, 22, 'freebooter_host', [STORM_WAND]),
-      farMonsters('last_host', 'The Last Host', 117, 50, 'freebooter_host', [RING_FORTUNE]),
-      farMonsters('blightmarch_freebooters', 'Blightmarch Freebooters', 110, 64, 'freebooter_host', [AMULET_FOCUS]),
+      farMonsters('ashen_court', 'The Ashen Court', 117, 22, 'blight_lich_court', [STORM_WAND]),
+      farMonsters('last_wyrm', 'The Last Wyrm', 117, 50, 'elder_wyrm', [RING_FORTUNE]),
+      farMonsters('blightmarch_drake', 'Blightmarch Drake', 110, 64, 'young_dragon', [AMULET_FOCUS]),
       {
         ...(monstersAt(SOURCE_ID, 'The Blight Source', { ...source.position }, 'source_guardians', [STORM_WAND]) as MonsterLocation),
         threat: source.threat,

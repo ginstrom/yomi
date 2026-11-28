@@ -65,7 +65,11 @@ export interface AreaAttack {
  * at one foe, an area, or (a hero's technique) a status laid with no roll on
  * itself or on a foe. It costs action points, and a hero's may cost mana; one
  * with a `recharge` is used at most every that many turns of its side.
- * Monsters' abilities set none of the heroes' fields.
+ * Monsters' abilities (`MONSTER_ABILITY_IDS`) set none of the heroes' cost
+ * fields (mana, weapon AP, a needed weapon) and their strikes have their own
+ * dice; the high roster's areas (long-campaign stage 11) may use the area
+ * fields the techniques brought (`centredOnSelf`, `foesOnly`,
+ * `throughResistance`).
  */
 export interface Ability {
   name: string
@@ -100,6 +104,17 @@ export const ABILITY_IDS = [
   'spider_bite',
   'spider_web',
   'fire_spit',
+  'worg_strikes',
+  'ogre_sweep',
+  'wyvern_strikes',
+  'basilisk_gaze',
+  'giant_rock',
+  'dragon_breath',
+  'dragon_strikes',
+  'wyrm_breath',
+  'wyrm_strikes',
+  'blight_breath',
+  'horror_claws',
   'power_attack',
   'cleave',
   'taunt',
@@ -120,6 +135,9 @@ export const ABILITY_IDS = [
 ] as const
 
 export type AbilityId = (typeof ABILITY_IDS)[number]
+
+/** The abilities only monsters have, in `ABILITY_IDS` order; every other ability is a hero's technique. */
+export const MONSTER_ABILITY_IDS: readonly AbilityId[] = ['troll_claws', 'spider_bite', 'spider_web', 'fire_spit', 'worg_strikes', 'ogre_sweep', 'wyvern_strikes', 'basilisk_gaze', 'giant_rock', 'dragon_breath', 'dragon_strikes', 'wyrm_breath', 'wyrm_strikes', 'blight_breath', 'horror_claws']
 
 /** The Spellsword's Strikes, which Arcane Knight makes at the weapon's own AP. */
 export const SPELLSWORD_STRIKES: readonly AbilityId[] = ['flame_strike', 'frost_strike', 'thunder_strike']
@@ -181,6 +199,152 @@ export const ABILITIES: Record<AbilityId, Ability> = {
       status: { id: 'seared', turns: 1 },
       halfOnMiss: true,
     },
+  },
+  // ---- The high roster (long-campaign stage 11), ring by ring.
+  worg_strikes: {
+    name: 'Spear and Bite',
+    verb: 'strikes',
+    description: 'The rider’s spear and the worg’s bite at one foe, turning to the next foe beside it if the first falls.',
+    apCost: 6,
+    recharge: 0,
+    strikes: [
+      { name: 'Spear', verb: 'spears', damage: { count: 1, sides: 8, bonus: 2 } },
+      { name: 'Bite', verb: 'bites', damage: { count: 1, sides: 6, bonus: 1 } },
+    ],
+  },
+  ogre_sweep: {
+    name: 'Sweep',
+    verb: 'sweeps its club',
+    description: 'Every foe beside the user takes 2d8+2, cut by armour.',
+    apCost: 6,
+    recharge: 1,
+    area: {
+      shape: 'burst',
+      centredOnSelf: true,
+      range: 0,
+      radius: 1,
+      foesOnly: true,
+      throughResistance: true,
+      damage: { count: 2, sides: 8, bonus: 2 },
+      halfOnMiss: false,
+    },
+  },
+  wyvern_strikes: {
+    name: 'Bite and Sting',
+    verb: 'strikes',
+    description: 'Bites one foe and stings it with its tail, the sting laying a poison; it turns to the next foe beside it if the first falls.',
+    apCost: 6,
+    recharge: 0,
+    strikes: [
+      { name: 'Bite', verb: 'bites', damage: { count: 2, sides: 6, bonus: 2 } },
+      { name: 'Tail Sting', verb: 'stings', damage: { count: 1, sides: 4, bonus: 0 }, status: { id: 'poisoned', turns: 3 } },
+    ],
+  },
+  basilisk_gaze: {
+    name: 'Gaze',
+    verb: 'fixes its gaze',
+    description: 'A cone 3 hexes long: no damage, but each one it catches is chilled for a turn, 3 fewer action points.',
+    apCost: 3,
+    recharge: 2,
+    area: { shape: 'cone', range: 3, status: { id: 'chilled', turns: 1 }, halfOnMiss: false },
+  },
+  giant_rock: {
+    name: 'Rock',
+    verb: 'hurls a rock',
+    description: 'A rock thrown at one foe up to 4 hexes off: 2d8+2, cut by armour.',
+    apCost: 6,
+    recharge: 1,
+    area: {
+      shape: 'burst',
+      range: 4,
+      radius: 0,
+      throughResistance: true,
+      damage: { count: 2, sides: 8, bonus: 2 },
+      halfOnMiss: false,
+    },
+  },
+  dragon_breath: {
+    name: 'Fire Breath',
+    verb: 'breathes fire',
+    description: 'A cone of fire 3 hexes long: 6d6, half on a miss, whatever the armour, and no regeneration next turn.',
+    apCost: 4,
+    recharge: 3,
+    area: {
+      shape: 'cone',
+      range: 3,
+      damage: { count: 6, sides: 6, bonus: 0 },
+      element: 'fire',
+      status: { id: 'seared', turns: 1 },
+      halfOnMiss: true,
+    },
+  },
+  dragon_strikes: {
+    name: 'Bite and Claws',
+    verb: 'strikes',
+    description: 'Bites one foe and rakes it with both claws; it turns to the next foe beside it if the first falls.',
+    apCost: 6,
+    recharge: 0,
+    strikes: [
+      { name: 'Bite', verb: 'bites', damage: { count: 2, sides: 8, bonus: 0 } },
+      { name: 'Claw', verb: 'claws', damage: { count: 1, sides: 8, bonus: 0 } },
+      { name: 'Claw', verb: 'claws', damage: { count: 1, sides: 8, bonus: 0 } },
+    ],
+  },
+  wyrm_breath: {
+    name: 'Fire Breath',
+    verb: 'breathes fire',
+    description: 'A cone of fire 4 hexes long: 8d6, half on a miss, whatever the armour, and no regeneration next turn.',
+    apCost: 4,
+    recharge: 3,
+    area: {
+      shape: 'cone',
+      range: 4,
+      damage: { count: 8, sides: 6, bonus: 0 },
+      element: 'fire',
+      status: { id: 'seared', turns: 1 },
+      halfOnMiss: true,
+    },
+  },
+  wyrm_strikes: {
+    name: 'Bite and Claws',
+    verb: 'strikes',
+    description: 'Bites one foe and rakes it with both claws; it turns to the next foe beside it if the first falls.',
+    apCost: 6,
+    recharge: 0,
+    strikes: [
+      { name: 'Bite', verb: 'bites', damage: { count: 2, sides: 10, bonus: 0 } },
+      { name: 'Claw', verb: 'claws', damage: { count: 1, sides: 10, bonus: 0 } },
+      { name: 'Claw', verb: 'claws', damage: { count: 1, sides: 10, bonus: 0 } },
+    ],
+  },
+  blight_breath: {
+    name: 'Blight Breath',
+    verb: 'breathes the blight',
+    description: 'Every foe within 2 hexes takes 8d6 blight, half on a miss, whatever the armour, and is corroded for 3 turns: -5 AC, -2 resistance, 1d4 acid a turn, no regeneration.',
+    apCost: 4,
+    recharge: 3,
+    area: {
+      shape: 'burst',
+      centredOnSelf: true,
+      range: 0,
+      radius: 2,
+      foesOnly: true,
+      damage: { count: 8, sides: 6, bonus: 0 },
+      element: 'blight',
+      status: { id: 'corroded', turns: 3 },
+      halfOnMiss: true,
+    },
+  },
+  horror_claws: {
+    name: 'Claws',
+    verb: 'claws',
+    description: 'Two claws at one foe; the second turns to the next foe beside it if the first falls.',
+    apCost: 6,
+    recharge: 0,
+    strikes: [
+      { name: 'Claw', verb: 'claws', damage: { count: 2, sides: 8, bonus: 0 } },
+      { name: 'Claw', verb: 'claws', damage: { count: 2, sides: 8, bonus: 0 } },
+    ],
   },
   // ---- The heroes' techniques (design §4.3). `apCost` is ignored where `weaponAp` is set.
   power_attack: {
@@ -279,7 +443,7 @@ export const ABILITIES: Record<AbilityId, Ability> = {
   volley: {
     name: 'Volley',
     verb: 'volleys',
-    description: 'A rain of shots on a hex within weapon range: everyone within 1 hex of it, allies too, takes a shot, through armour.',
+    description: 'A rain of shots on a hex within weapon range: everyone within 1 hex of it, allies too, takes a shot, cut by armour.',
     apCost: 0,
     weaponAp: 2,
     recharge: 2,

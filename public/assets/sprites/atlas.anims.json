@@ -297,6 +297,174 @@
     {
       "frames": [
         {
+          "duration": 700,
+          "frame": "barrow_wight/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 700,
+          "frame": "barrow_wight/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "barrow_wight/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 200,
+          "frame": "barrow_wight/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 200,
+          "frame": "barrow_wight/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 200,
+          "frame": "barrow_wight/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 200,
+          "frame": "barrow_wight/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "barrow_wight/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 760,
+          "frame": "basilisk/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 760,
+          "frame": "basilisk/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "basilisk/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 230,
+          "frame": "basilisk/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 230,
+          "frame": "basilisk/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 230,
+          "frame": "basilisk/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 230,
+          "frame": "basilisk/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "basilisk/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 750,
+          "frame": "blight_cultist/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 750,
+          "frame": "blight_cultist/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "blight_cultist/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 190,
+          "frame": "blight_cultist/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 190,
+          "frame": "blight_cultist/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 190,
+          "frame": "blight_cultist/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 190,
+          "frame": "blight_cultist/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "blight_cultist/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 750,
+          "frame": "blight_lich/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 750,
+          "frame": "blight_lich/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "blight_lich/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 200,
+          "frame": "blight_lich/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 200,
+          "frame": "blight_lich/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 200,
+          "frame": "blight_lich/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 200,
+          "frame": "blight_lich/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "blight_lich/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 260,
           "frame": "camp_fire/base",
           "key": "atlas"
@@ -308,6 +476,48 @@
         }
       ],
       "key": "camp_fire/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 900,
+          "frame": "elder_wyrm/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 900,
+          "frame": "elder_wyrm/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "elder_wyrm/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 240,
+          "frame": "elder_wyrm/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 240,
+          "frame": "elder_wyrm/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 240,
+          "frame": "elder_wyrm/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 240,
+          "frame": "elder_wyrm/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "elder_wyrm/walk",
       "repeat": -1
     },
     {
@@ -1233,6 +1443,48 @@
     {
       "frames": [
         {
+          "duration": 700,
+          "frame": "hill_giant/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 700,
+          "frame": "hill_giant/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "hill_giant/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 190,
+          "frame": "hill_giant/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 190,
+          "frame": "hill_giant/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 190,
+          "frame": "hill_giant/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 190,
+          "frame": "hill_giant/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "hill_giant/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 520,
           "frame": "hobgoblin/idle_0",
           "key": "atlas"
@@ -1633,6 +1885,48 @@
     {
       "frames": [
         {
+          "duration": 640,
+          "frame": "ogre/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 640,
+          "frame": "ogre/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "ogre/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 170,
+          "frame": "ogre/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 170,
+          "frame": "ogre/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 170,
+          "frame": "ogre/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 170,
+          "frame": "ogre/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "ogre/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 600,
           "frame": "salamander/idle_0",
           "key": "atlas"
@@ -1717,6 +2011,90 @@
     {
       "frames": [
         {
+          "duration": 650,
+          "frame": "source_horror/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 650,
+          "frame": "source_horror/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "source_horror/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 170,
+          "frame": "source_horror/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 170,
+          "frame": "source_horror/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 170,
+          "frame": "source_horror/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 170,
+          "frame": "source_horror/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "source_horror/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 900,
+          "frame": "stone_golem/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 900,
+          "frame": "stone_golem/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "stone_golem/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 260,
+          "frame": "stone_golem/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 260,
+          "frame": "stone_golem/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 260,
+          "frame": "stone_golem/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 260,
+          "frame": "stone_golem/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "stone_golem/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 560,
           "frame": "troll/idle_0",
           "key": "atlas"
@@ -1796,6 +2174,174 @@
         }
       ],
       "key": "warrior/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 520,
+          "frame": "wolf/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 520,
+          "frame": "wolf/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "wolf/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 110,
+          "frame": "wolf/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 110,
+          "frame": "wolf/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 110,
+          "frame": "wolf/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 110,
+          "frame": "wolf/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "wolf/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 540,
+          "frame": "worg_rider/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 540,
+          "frame": "worg_rider/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "worg_rider/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 120,
+          "frame": "worg_rider/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 120,
+          "frame": "worg_rider/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 120,
+          "frame": "worg_rider/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 120,
+          "frame": "worg_rider/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "worg_rider/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 620,
+          "frame": "wyvern/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 620,
+          "frame": "wyvern/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "wyvern/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 170,
+          "frame": "wyvern/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 170,
+          "frame": "wyvern/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 170,
+          "frame": "wyvern/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 170,
+          "frame": "wyvern/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "wyvern/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 800,
+          "frame": "young_dragon/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 800,
+          "frame": "young_dragon/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "young_dragon/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 220,
+          "frame": "young_dragon/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 220,
+          "frame": "young_dragon/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 220,
+          "frame": "young_dragon/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 220,
+          "frame": "young_dragon/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "young_dragon/walk",
       "repeat": -1
     }
   ]

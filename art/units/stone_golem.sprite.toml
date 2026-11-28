@@ -1,0 +1,82 @@
+# A stone golem: a wall of grey stone blocks, a blocky head with two cold cyan
+# eyes under a heavy brow, broad shoulder slabs, a rune ring glowing on the
+# chest, fists like boulders and two thick pillar legs; seams of dark stone
+# mark the joints.
+canvas = "unit"
+
+outline = "auto"
+
+[points]
+chest = [15, 14]
+
+[frames.idle_0.runs]
+2 = [[12, "aaaaaaaa"]]
+3 = [[11, "aaaaaaaaaa"]]
+4 = [[11, "mMMMMMMMMm"]]
+5 = [[11, "mmzmmmmzmm"]]
+6 = [[11, "mmmmmmmmmM"]]
+7 = [[12, "mmmmmmmM"]]
+8 = [[13, "MMMMMM"]]
+9 = [[3, "aaaaaaaammmmmmmmmmaaaaaaaa"]]
+10 = [[3, "ammmmmmMmmmmmmmmmmammmmmmM"]]
+11 = [[3, "ammmmmmMmmmmmmmmmmammmmmmM"]]
+12 = [[3, "ammmmmmMmmmmzzmmmmammmmmmM"]]
+13 = [[3, "MMMMMMMMmmmzmmzmmmMMMMMMMM"]]
+14 = [[3, "ammmmM"], [11, "mmmzmmzmmm"], [23, "ammmmM"]]
+15 = [[3, "ammmmM"], [11, "mmmmzzmmmm"], [23, "ammmmM"]]
+16 = [[3, "ammmmM"], [11, "MMMMMMMMMM"], [23, "ammmmM"]]
+17 = [[3, "ammmmM"], [11, "ammmmmmmmM"], [23, "ammmmM"]]
+18 = [[3, "ammmmM"], [11, "ammmmmmmmM"], [23, "ammmmM"]]
+19 = [[3, "mmmmmM"], [11, "ammmmmmmmM"], [23, "mmmmmM"]]
+20 = [[3, "MMMMMM"], [11, "MMMMMMMMMM"], [23, "MMMMMM"]]
+21 = [[1, "aaaaaaaa"], [11, "ammmmmmmmM"], [23, "aaaaaaaa"]]
+22 = [[1, "ammmmmmM"], [10, "ammmmmmmmmmM"], [23, "ammmmmmM"]]
+23 = [[1, "ammmmmmM"], [10, "ammmM"], [17, "ammmM"], [23, "ammmmmmM"]]
+24 = [[1, "mmmmmmmM"], [10, "ammmM"], [17, "ammmM"], [23, "mmmmmmmM"]]
+25 = [[2, "MMMMMMM"], [10, "ammmM"], [17, "ammmM"], [24, "MMMMMMM"]]
+26 = [[10, "MMMMM"], [17, "MMMMM"]]
+27 = [[10, "ammmM"], [17, "ammmM"]]
+28 = [[10, "ammmM"], [17, "ammmM"]]
+29 = [[9, "ammmmM"], [17, "ammmmM"]]
+30 = [[8, "aammmmM"], [17, "aammmmM"]]
+
+# A breath: the head, shoulders and upper-arm slabs (rows 0-13) sink a pixel; the
+# forearms, fists and legs stay. The rune ring sinks whole: its lower two rows are redrawn.
+[frames.idle_1]
+from = "idle_0"
+move = { rows = [0, 13], by = [0, 1] }
+[frames.idle_1.runs]
+15 = [[11, "mmmzmmzmmm"]]
+16 = [[11, "mmmmzzmmmm"]]
+
+[anim.idle]
+frames = ["idle_0", "idle_1"]
+ms = 900
+
+# A slow tread: both legs part, the left back and the right forward.
+[frames.walk_0]
+from = "idle_0"
+[frames.walk_0.runs]
+27 = [[9, "ammmM....ammmM"]]
+28 = [[9, "ammmM....ammmM"]]
+29 = [[8, "ammmmM....ammmmM"]]
+30 = [[7, "aammmmM....aammmmM"]]
+
+# The feet lift in turn: the left, then the right. Only the leg rows change.
+[frames.walk_1]
+from = "idle_0"
+[frames.walk_1.runs]
+28 = [[10, "....."]]
+29 = [[9, "......"]]
+30 = [[8, "......."]]
+
+[frames.walk_2]
+from = "idle_0"
+[frames.walk_2.runs]
+28 = [[17, "....."]]
+29 = [[17, "......"]]
+30 = [[17, "......."]]
+
+[anim.walk]
+frames = ["walk_0", "walk_1", "walk_0", "walk_2"]
+ms = 260

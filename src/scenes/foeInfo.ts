@@ -1,6 +1,6 @@
-import { ABILITIES, type Ability, type AbilityId, type Strike } from '../combat/abilities.ts'
+import { ABILITIES, MONSTER_ABILITY_IDS, type Ability, type AbilityId, type Strike } from '../combat/abilities.ts'
 import { ELEMENTS, formatDamage, type CombatantStats, type DamageRoll } from '../combat/combat.ts'
-import { STATUSES, type StatusLaid } from '../combat/spells.ts'
+import { SPELLS, STATUSES, STATUS_IDS, refusesStatus, spellPower, spellRange, type SpellId, type StatusLaid } from '../combat/spells.ts'
 import { TAUNT_PENALTY, type UnitSnapshot } from '../engine/battleEngine.ts'
 import { costWords } from './perkTree.ts'
 
@@ -11,8 +11,11 @@ export const DESCRIPTION_INDENT = '  '
  * What hovering a foe tells: its name, as the panel's title; then for each
  * ability a line with its name and when it is ready ("Fire Spit: ready",
  * "Web: ready in 2 turns"), and under it what it does, worked out from its
- * data (`describeAbility`); then its wards ("Wards: fire 99"). [] for a unit
- * with neither abilities nor wards.
+ * data (`describeAbility`); then its spells and the mana it has left
+ * ("Spells: Heal, Curse (16 mana)"), each spell's reach and effect under
+ * them (`spellLine`); then its wards ("Wards: fire 99"); then what it
+ * is immune to ("Immune to acid and poison": the statuses it refuses, by what
+ * their ticks are called). [] for a unit with none of these.
  *
  * The panel is read on the player's turn, and a recharge counter falls as the
  * foe's own turn begins, so a counter of N means the ability is usable on the
@@ -25,9 +28,44 @@ export function foeInfoLines(unit: UnitSnapshot): string[] {
     const described = describeAbility(id, unit.abilityDamageBonus ?? 0, unit).map((line) => DESCRIPTION_INDENT + line)
     return [`${ABILITIES[id].name}: ${state}`, ...described]
   })
+  const spells = unit.magic?.spells ?? []
+  if (spells.length > 0) {
+    lines.push(`Spells: ${spells.map((id) => SPELLS[id].name).join(', ')} (${unit.mana} mana)`)
+    lines.push(...spells.map((id) => DESCRIPTION_INDENT + spellLine(id, unit)))
+  }
   const wards = ELEMENTS.filter((e) => (unit.wards?.[e] ?? 0) > 0).map((e) => `${e} ${unit.wards![e]}`)
   if (wards.length > 0) lines.push(`Wards: ${wards.join(', ')}`)
+  const refused = STATUS_IDS.filter((id) => refusesStatus(unit, id)).map((id) => STATUSES[id].tickName ?? STATUSES[id].adjective)
+  if (refused.length > 0) lines.push(`Immune to ${refused.join(' and ')}`)
   return lines.length > 0 ? [unit.name, ...lines] : []
+}
+
+/**
+ * A caster's spell in a line: its name, whom or where it reaches, and what it
+ * does, with the caster's spell power, heal bonus and longer statuses as the
+ * engine adds them: "curse: a foe within 5: cursed 3 turns (−15 to hit, −5 AC)".
+ */
+export function spellLine(id: SpellId, caster: Pick<CombatantStats, 'magic'>): string {
+  const spell = SPELLS[id]
+  const range = spellRange(caster, id)
+  const shape = spell.shape ?? 'burst'
+  const reach =
+    spell.target === 'self' ? 'itself'
+    : spell.target === 'ally' ? `an ally within ${range}`
+    : spell.target === 'fallen' ? `a fallen ally within ${range}`
+    : spell.target === 'foe' ? `a foe within ${range}`
+    : shape !== 'burst' ? `${shape} ${range}`
+    : range === 0 ? `burst ${spell.radius ?? 0}, around itself`
+    : `burst ${spell.radius ?? 0}, range ${range}`
+  const magic = caster.magic
+  const extension = (spell.hostile ? magic?.extend?.hostile : magic?.extend?.friendly) ?? 0
+  const effects = [
+    ...(spell.damage ? [`${formatDamage({ ...spell.damage, bonus: spell.damage.bonus + spellPower(caster, id) })}${spell.element ? ` ${spell.element}` : ''}`] : []),
+    ...(spell.drain ? [`${spell.drain === 0.5 ? 'half' : `${Math.round(spell.drain * 100)}%`} heals the caster`] : []),
+    ...(spell.heal ? [`+${formatDamage({ ...spell.heal, bonus: spell.heal.bonus + (magic?.healBonus ?? 0) })}`] : []),
+    ...(spell.status ? [statusPhrase({ ...spell.status, turns: spell.status.turns + extension })] : []),
+  ]
+  return `${spell.name.toLowerCase()}: ${reach}${effects.length > 0 ? `: ${effects.join(', ')}` : ''}`
 }
 
 /**
@@ -45,11 +83,9 @@ export function describeAbility(id: AbilityId, bonus = 0, stats: Pick<CombatantS
   return [...cost, ...effectLines(ability, bonus)]
 }
 
-/** The abilities only monsters have; every other ability is a hero's technique, which shows what it costs. */
-const MONSTER_ABILITIES: readonly AbilityId[] = ['troll_claws', 'spider_bite', 'spider_web', 'fire_spit']
-
+/** A hero's technique, which shows what it costs; a monster's ability does not. */
 function isTechnique(id: AbilityId): boolean {
-  return !MONSTER_ABILITIES.includes(id)
+  return !MONSTER_ABILITY_IDS.includes(id)
 }
 
 function costLine(id: AbilityId, stats: Pick<CombatantStats, 'attackApCost'>): string {
@@ -78,11 +114,11 @@ function effectLines(ability: Ability, bonus: number): string[] {
   if (harm === null) return [area.status ? `${shape}: ${statusPhrase(area.status)}` : shape]
   const notes = [
     ...(area.element ? [` ${area.element}`] : []),
-    ...(area.throughResistance ? [', through armour'] : []),
+    ...(area.throughResistance ? [', cut by armour'] : []),
     ...(area.halfOnMiss ? [', half on a miss'] : []),
     ...(area.bane ? [', double dice vs the regenerating and blightborn'] : []),
   ]
-  return [`${shape}: ${harm}${notes.join('')}`, ...(area.status ? [statusPhrase(area.status)] : [])]
+  return [`${shape}: ${harm}${notes.join('')}`, ...(area.status ? [`each one hit: ${statusPhrase(area.status)}`] : [])]
 }
 
 /** "power attack: weapon blow, −10 to hit, +6 dmg": a technique's strike with its own weapon, and what it adds. */

@@ -7,7 +7,7 @@ A foe kind is a `UnitKind`. Touch every line, then run `npm test`.
 - `src/game/encounters.ts` → `FOE_XP`: an experience value.
 - `src/game/encounters.ts` → `FOE_NATIVE_LEVEL`: a native level, if not 1.
 - `src/scenes/sounds.ts` → `FOE_SOUNDS`: a sound.
-- The check, not an edit: `foeYardstick` (`src/combat/combat.ts`) gives the ranges a stat block must sit in at its native level; each field outside is a named exception in `src/game/encounters.test.ts`.
+- The check, not an edit: `foeYardstick` (`src/combat/combat.ts`) gives the ranges a stat block must sit in at its native level; each field outside is a named exception in `src/game/encounters.test.ts` (a stage 11 kind: add it to `STAGE_11_KINDS` there, held to `foeYardstick(level, 'expected')`).
 - Anything that changes a foe moves balance: `.claude/skills/yomi-balance/`.
 
 ## Tests that catch a miss

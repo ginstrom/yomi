@@ -82,6 +82,8 @@ export interface CombatantStats {
   imbueDamage?: number
   /** The blight's own: a Dawn rune's bane applies to it (`baneApplies`). */
   blightborn?: true
+  /** No status whose rule has a `tick` (Poisoned, Corroded) is ever laid on it (`refusesStatus`); every other status is. Its wards, not this, are what stop the damage. */
+  immune?: true
   /** The rules its nodes give it that the engine reads by name (`TRAIT_IDS` order); left out when none. */
   traits?: readonly TraitId[]
   /** Added to the chance and to a hit's damage (after the dice, never doubled) of its free attacks, counters included (Iron Skin); none when left out. */
@@ -215,6 +217,7 @@ export function sameCombatStats(a: CombatantStats, b: CombatantStats): boolean {
     sameOnHit(a.onHit, b.onHit) &&
     (a.imbueDamage ?? 0) === (b.imbueDamage ?? 0) &&
     (a.blightborn ?? false) === (b.blightborn ?? false) &&
+    (a.immune ?? false) === (b.immune ?? false) &&
     sameList(a.traits, b.traits) &&
     samePair(a.opportunity, b.opportunity) &&
     samePair(a.rear, b.rear) &&
@@ -520,6 +523,330 @@ export const SALAMANDER_STATS: CombatantStats = {
   abilities: ['fire_spit'],
 }
 
+/**
+ * A grey wolf of the outer wilds, native to level 6: fast (10 action points
+ * where other foes have 8), so it runs round the front rank to the archer and
+ * the mage, and bites once a turn, hard, its jaws finding the gaps in armour
+ * (`armorPierce`). Nothing on it stops a blow. Its pack bonus is deferred
+ * (long-campaign stage 11, decision 11): a plain block.
+ */
+export const WOLF_STATS: CombatantStats = {
+  name: 'Wolf',
+  maxHp: 55,
+  ac: 40,
+  toHit: 85,
+  critChance: 5,
+  armorPierce: 4,
+  damage: { count: 2, sides: 6, bonus: 3 },
+  weapon: 'Fangs',
+  attackApCost: 6,
+  attackRange: 1,
+  actionPoints: 10,
+}
+
+/**
+ * A goblin on a worg, native to level 7: in one action the rider's spear and
+ * the worg's bite at one foe (`worg_strikes`), or the spear alone after a
+ * long move. The rider's leathers turn a little of a blow; its spear and
+ * the worg's jaws go through most of a hero's armour (`armorPierce` 6, and
+ * 80 hit points, from 4 and 62: at threat 9 four of the first block's were
+ * won 500 times in 500 by a party in the expected kit, resistance 11).
+ */
+export const WORG_RIDER_STATS: CombatantStats = {
+  name: 'Worg Rider',
+  maxHp: 80,
+  ac: 44,
+  resistance: 1,
+  toHit: 85,
+  critChance: 5,
+  armorPierce: 6,
+  damage: { count: 1, sides: 8, bonus: 2 },
+  weapon: 'Spear',
+  attackApCost: 5,
+  attackRange: 1,
+  actionPoints: 8,
+  abilities: ['worg_strikes'],
+}
+
+/**
+ * A brute twice a man's height, native to level 7: easy to hit and slow to
+ * fall, its club staving in armour (`armorPierce`), one blow a turn; with two
+ * foes beside it, it sweeps the club round at all of them (`ogre_sweep`).
+ */
+export const OGRE_STATS: CombatantStats = {
+  name: 'Ogre',
+  maxHp: 90,
+  ac: 34,
+  resistance: 2,
+  toHit: 85,
+  critChance: 5,
+  armorPierce: 5,
+  damage: { count: 2, sides: 8, bonus: 2 },
+  weapon: 'Club',
+  attackApCost: 6,
+  attackRange: 1,
+  actionPoints: 8,
+  abilities: ['ogre_sweep'],
+}
+
+/**
+ * A wyvern, native to level 9: a winged hunter that closes fast (10 action
+ * points, as the Wolf) and in one action bites and stings with its tail
+ * (`wyvern_strikes`), the sting poisoning. Its hide turns a little of a blow.
+ * A hero in the expected kit has resistance 11 at its levels, so its bite
+ * goes through all of it (`armorPierce` 11) and its poison works whatever
+ * the armour; the sting itself is light. It hits often and falls fast (the
+ * third block tried against the cells: the plan's log has the trials). Its flight (moving over units) is
+ * deferred (long-campaign stage 11, decision 11): a plain block that moves
+ * as any unit.
+ */
+export const WYVERN_STATS: CombatantStats = {
+  name: 'Wyvern',
+  maxHp: 56,
+  ac: 50,
+  resistance: 2,
+  toHit: 100,
+  critChance: 5,
+  armorPierce: 11,
+  damage: { count: 2, sides: 6, bonus: 2 },
+  weapon: 'Fangs',
+  attackApCost: 6,
+  attackRange: 1,
+  actionPoints: 10,
+  abilities: ['wyvern_strikes'],
+}
+
+/**
+ * A barrow wight, native to level 11: the dead of an old war, in the mail it
+ * was buried in. It drains the life of a foe 5 hexes off (`drain_life`,
+ * which no armour turns) and heals by half of it, with mana for one casting
+ * at its native level, and then closes with a blade that goes through much
+ * of a hero's armour (`armorPierce` 8 of the expected kit's 11 to 13). Its half damage from weapons that are not magic is
+ * deferred (long-campaign stage 11, decision 11): a plain block.
+ */
+export const BARROW_WIGHT_STATS: CombatantStats = {
+  name: 'Barrow Wight',
+  maxHp: 66,
+  ac: 54,
+  resistance: 3,
+  toHit: 95,
+  critChance: 5,
+  armorPierce: 8,
+  damage: { count: 2, sides: 8, bonus: 3 },
+  weapon: 'Barrow Blade',
+  attackApCost: 6,
+  attackRange: 1,
+  actionPoints: 8,
+  magic: { maxMana: 6, skill: 90, spells: ['drain_life'] },
+}
+
+/**
+ * A basilisk, native to level 11: slow (7 action points) and tough, in
+ * scales that turn a good part of a blow. Its gaze (`basilisk_gaze`) chills
+ * everyone in a cone before it, and it has the action points to gaze and
+ * bite in one turn; the bite goes through most of a hero's armour.
+ */
+export const BASILISK_STATS: CombatantStats = {
+  name: 'Basilisk',
+  maxHp: 110,
+  ac: 46,
+  resistance: 4,
+  toHit: 95,
+  critChance: 5,
+  armorPierce: 9,
+  damage: { count: 2, sides: 10, bonus: 3 },
+  weapon: 'Jaws',
+  attackApCost: 4,
+  attackRange: 1,
+  actionPoints: 7,
+  abilities: ['basilisk_gaze'],
+}
+
+/**
+ * A hill giant, native to level 12: an ogre's bigger cousin, one blow of its
+ * club a turn, and a rock thrown 4 hexes (`giant_rock`) at whoever it cannot
+ * reach. The rock goes through resistance as a blow does (long-campaign
+ * stage 11, decision 11), so the giant's `armorPierce` serves both: a hero
+ * in the expected kit has resistance 11 to 13 at its levels, and without
+ * piercing the rock and the club would do next to nothing to two of three.
+ * Its hit points and dice are the third block tried against the cells (the
+ * plan's log has the trials): a monster raised from a lower native level,
+ * as the Ogre beside it, outgrows a block written at 12.
+ */
+export const HILL_GIANT_STATS: CombatantStats = {
+  name: 'Hill Giant',
+  maxHp: 100,
+  ac: 48,
+  resistance: 3,
+  toHit: 95,
+  critChance: 5,
+  armorPierce: 9,
+  damage: { count: 3, sides: 6, bonus: 3 },
+  weapon: 'Club',
+  attackApCost: 6,
+  attackRange: 1,
+  actionPoints: 8,
+  abilities: ['giant_rock'],
+}
+
+/**
+ * A stone golem, native to level 14: a wall. Its stone (resistance 8) turns
+ * all of a light weapon's blow, so it wants a hammer, a piercing shot or a
+ * spell; it is `immune` to the statuses that tick (Poisoned, Corroded) and
+ * warded against poison altogether. It slams once a turn, through most of a
+ * hero's armour.
+ */
+export const STONE_GOLEM_STATS: CombatantStats = {
+  name: 'Stone Golem',
+  maxHp: 120,
+  ac: 50,
+  resistance: 8,
+  toHit: 95,
+  critChance: 5,
+  armorPierce: 9,
+  damage: { count: 3, sides: 6, bonus: 4 },
+  weapon: 'Slam',
+  attackApCost: 6,
+  attackRange: 1,
+  actionPoints: 8,
+  wards: { poison: 99 },
+  immune: true,
+}
+
+/**
+ * A blight cultist, native to level 14: a frail caster and the blight's own
+ * (Dawn's bane applies). It throws a Lightning Bolt down a line of heroes,
+ * which no armour turns, curses one, and heals its fellows; between spells
+ * it throws darts of blight from 4 hexes off, which go through most of a
+ * hero's armour (with a knife it was no danger: five of the cult were beaten
+ * 499 times in 500). Mana for two bolts at its native level.
+ */
+export const BLIGHT_CULTIST_STATS: CombatantStats = {
+  name: 'Blight Cultist',
+  maxHp: 76,
+  ac: 52,
+  resistance: 1,
+  toHit: 100,
+  critChance: 5,
+  armorPierce: 10,
+  damage: { count: 1, sides: 8, bonus: 4 },
+  weapon: 'Blight Dart',
+  attackApCost: 4,
+  attackRange: 4,
+  actionPoints: 8,
+  magic: { maxMana: 16, skill: 95, spells: ['heal', 'curse', 'lightning_bolt'] },
+  blightborn: true,
+}
+
+/**
+ * A young dragon, native to level 15: the boss of its lair. Its Fire Breath
+ * (`dragon_breath`) burns a cone 3 hexes long whatever the armour (a breath
+ * ignores resistance; only a fire ward cuts it), then recharges for 3 turns,
+ * in which it bites and claws (`dragon_strikes`) through most of a hero's
+ * armour; with 10 action points it breathes and strikes in one turn. Warded
+ * against fire by 10, so Flame Arrow scarcely touches it.
+ */
+export const YOUNG_DRAGON_STATS: CombatantStats = {
+  name: 'Young Dragon',
+  maxHp: 125,
+  ac: 58,
+  resistance: 4,
+  toHit: 100,
+  critChance: 5,
+  armorPierce: 10,
+  damage: { count: 1, sides: 8, bonus: 3 },
+  weapon: 'Claws',
+  attackApCost: 4,
+  attackRange: 1,
+  actionPoints: 10,
+  wards: { fire: 10 },
+  abilities: ['dragon_breath', 'dragon_strikes'],
+}
+
+/**
+ * A blight lich, native to level 17: the caster boss of ring 18 and the
+ * blight's own (Dawn's bane applies). It poisons a knot of heroes with Death
+ * Cloud, throws a Lightning Bolt down a line, drains the life of one 5 hexes
+ * off (no armour turns it) to heal itself by half, and wraps itself in Dark
+ * Shield; mana for several castings. It knits back 3 a turn unless Seared or
+ * Corroded. Between spells its touch withers through most of a hero's armour.
+ */
+export const BLIGHT_LICH_STATS: CombatantStats = {
+  name: 'Blight Lich',
+  maxHp: 110,
+  ac: 62,
+  resistance: 3,
+  toHit: 100,
+  critChance: 5,
+  armorPierce: 14,
+  damage: { count: 1, sides: 8, bonus: 4 },
+  weapon: 'Withering Touch',
+  attackApCost: 4,
+  attackRange: 1,
+  actionPoints: 8,
+  regeneration: 3,
+  magic: { maxMana: 30, skill: 100, spells: ['death_cloud', 'lightning_bolt', 'drain_life', 'dark_shield'] },
+  blightborn: true,
+}
+
+/**
+ * An elder wyrm, native to level 18: the top threat of the far land. Its
+ * Fire Breath (`wyrm_breath`) burns a cone 4 hexes long whatever the armour
+ * (only a fire ward cuts it), then recharges for 3 turns, in which it bites
+ * and claws (`wyrm_strikes`) through most of a hero's armour; with 10 action
+ * points it breathes and strikes in one turn. Warded against fire by 15, so
+ * Ember runes and Flame Arrow scarcely touch it; it knits back 2 a turn
+ * unless Seared or Corroded. It hits as a Young Dragon raised to 18 does,
+ * pierces all of the expected kit's resistance from 17 (21), and has a
+ * boss's hit points: the plan's log has the trials.
+ */
+export const ELDER_WYRM_STATS: CombatantStats = {
+  name: 'Elder Wyrm',
+  maxHp: 185,
+  ac: 76,
+  resistance: 5,
+  toHit: 115,
+  critChance: 5,
+  armorPierce: 21,
+  damage: { count: 1, sides: 10, bonus: 4 },
+  weapon: 'Claws',
+  attackApCost: 4,
+  attackRange: 1,
+  actionPoints: 10,
+  regeneration: 2,
+  wards: { fire: 15 },
+  abilities: ['wyrm_breath', 'wyrm_strikes'],
+}
+
+/**
+ * The Blight Horror the Source raises at the top threat, native to level 20
+ * (the near-home Source keeps `BLIGHT_HORROR_STATS`). It breathes the blight
+ * on every foe within 2 hexes (`blight_breath`: whatever the armour, only a
+ * blight ward cuts it, and Corroded), sparing the cultists who guard it,
+ * then recharges for 3 turns, in which it claws (`horror_claws`) through all
+ * of the expected kit's resistance (21); with 10 action points it breathes
+ * and claws in one turn. It knits back 2 a turn unless Seared or Corroded.
+ * Blightborn, so Dawn's bane takes it. It hits as the Elder Wyrm and the
+ * Young Dragon raised to 20 do (125): the plan's log has the trial.
+ */
+export const SOURCE_HORROR_STATS: CombatantStats = {
+  name: 'Blight Horror',
+  maxHp: 171,
+  ac: 80,
+  resistance: 3,
+  toHit: 125,
+  critChance: 5,
+  armorPierce: 21,
+  damage: { count: 1, sides: 10, bonus: 4 },
+  weapon: 'Claws',
+  attackApCost: 4,
+  attackRange: 1,
+  actionPoints: 10,
+  regeneration: 2,
+  abilities: ['blight_breath', 'horror_claws'],
+  blightborn: true,
+}
+
 /** What each level above the first adds to a monster: this share of its level 1 hit points... */
 export const FOE_HP_PER_LEVEL = 1.15
 /** ...this many points to its chance to hit and to its armour class... */
@@ -576,14 +903,29 @@ const FIGHTER_GROWTH: ReadonlyArray<readonly [number, number, number, number]> =
   [20, 124, 133, 13.5],
 ]
 
-/** The fighter's `column` at `level`: linear between the levels measured, held at the first and the last outside them. */
-function fighterGrowth(level: number, column: 1 | 2 | 3): number {
-  const last = FIGHTER_GROWTH[FIGHTER_GROWTH.length - 1]
-  if (level <= FIGHTER_GROWTH[0][0]) return FIGHTER_GROWTH[0][column]
+/**
+ * The same fighter in gear §5.8's expected kit at the low end of each range (long-campaign stage 11, decision 5):
+ * [level, hero hit, hit points, mean damage a turn] of the ready-made fighter raised to each level and dressed by
+ * `expectedGear(fighter, level, 0)` (`scripts/simulate.ts`), read from `deriveCombatStats`: its chance to hit,
+ * its hit points, and its attacks a turn times the mean of its damage roll and on-hit damage. Measured
+ * 2026-11-26 by `kittedFighterRow`; a test in `scripts/simulate.test.ts` recomputes the rows and must match.
+ * Stage 12's measurement replaces it.
+ */
+export const KITTED_FIGHTER_GROWTH: ReadonlyArray<readonly [number, number, number, number]> = [
+  [5, 83, 59, 15.5],
+  [10, 98, 89, 18.5],
+  [15, 105, 119, 21.5],
+  [20, 115, 149, 28.5],
+]
+
+/** The fighter's `column` of `table` at `level`: linear between the levels measured, held at the first and the last outside them. */
+function fighterGrowth(table: typeof FIGHTER_GROWTH, level: number, column: 1 | 2 | 3): number {
+  const last = table[table.length - 1]
+  if (level <= table[0][0]) return table[0][column]
   if (level >= last[0]) return last[column]
-  const next = FIGHTER_GROWTH.findIndex((row) => row[0] >= level)
-  const from = FIGHTER_GROWTH[next - 1]
-  const to = FIGHTER_GROWTH[next]
+  const next = table.findIndex((row) => row[0] >= level)
+  const from = table[next - 1]
+  const to = table[next]
   return from[column] + ((to[column] - from[column]) * (level - from[0])) / (to[0] - from[0])
 }
 
@@ -601,12 +943,16 @@ export interface FoeYardstick {
  * growth: armour class 35 to 55 below the hero's chance to hit, a chance to
  * hit of 80 to 100, hit points 3 to 6 of the fighter's blows, and a turn's
  * damage a sixth to a tenth of the fighter's hit points. A yardstick for
- * a new kind, not a rule: a kind outside it should say why.
+ * a new kind, not a rule: a kind outside it should say why. `kit` picks the
+ * fighter: `'bare'`, in its starting gear (`FIGHTER_GROWTH`), which today's
+ * kinds are held to; `'expected'`, in the expected kit (`KITTED_FIGHTER_GROWTH`),
+ * which the kinds of long-campaign stage 11 are held to until stage 12 measures again.
  */
-export function foeYardstick(level: number): FoeYardstick {
-  const hit = fighterGrowth(level, 1)
-  const hp = fighterGrowth(level, 2)
-  const damage = fighterGrowth(level, 3)
+export function foeYardstick(level: number, kit: 'bare' | 'expected' = 'bare'): FoeYardstick {
+  const table = kit === 'expected' ? KITTED_FIGHTER_GROWTH : FIGHTER_GROWTH
+  const hit = fighterGrowth(table, level, 1)
+  const hp = fighterGrowth(table, level, 2)
+  const damage = fighterGrowth(table, level, 3)
   return {
     ac: [hit - 55, hit - 35],
     toHit: [80, 100],
