@@ -536,3 +536,18 @@ Findings (recorded, not tuned or fixed; for the orchestrator): the Ember ward ag
 ## Step 15 outcome
 
 Step 15 (document and play): engineer Opus 5.5 (model unset by the brief; the plan said sonnet), reviewer sonnet, verdict clean after 1 fix, 2 review rounds. The fix: the manual said a Wolf Pack is five wolves; `WOLF_PACK` counts are 4, 4, 4, 5 over threats 6 to 9 (four, five at 9); the manual's other counts (the Wyvern Roost's four, three further out; the Source's two cultists) checked against `encounters.ts` and true. Commits `e783824`, `c5db8ac`, `af01b3f`, `4792ecd`, `630d256`, `2da2467`. Gates: `npm test` #208, `npm run build` #209, the manual's shot #210.
+
+## Verification fixes
+
+2026-11-28, from the overall review, QA and the simulated player; one commit each, on `8248f10`.
+
+1. `docs/reference/game.md`'s encounter list: each ring (7, 9, 12, 15, 18) its own top-level bullet, the Ogre Camp back under ring 7 (`a9f7eee`).
+2. The reference's save history gains versions 34 and 35 (ring 12's and ring 15's nests renamed, no migration) (`0bf6bc0`).
+3. The bands-and-counts paragraph points to the list for stage 11's twelve encounters (`e8c65d0`).
+4. Area log lines and armour: the line already said "(armour stops N)" when `resisted` > 0 (`hostileOutcome`, since skill trees step 10); the reported "Hill Giant hurls a rock: HITS Delwyn for 14 dmg." was a rock the Giant's piercing 9 took wholly through the hero's resistance. A test now holds both cases (`370c60c`); no code change.
+5. Hover and ability text: "through armour" became "cut by armour" for Sweep, Rock and Volley (`foeInfo.ts`, the three `description`s, the manual's Volley row) (`b56fcfc`). The manual already said armour cuts Sweep and Rock.
+6. An area's status line in the hover panel reads "each one hit: seared 1 turn (no regeneration)"; the manual's example and `battle-salamander.png`, `battle-dragon.png` retaken (`0d26394`).
+7. Formations: the Barrow Wights', Blight Cult's and Lich's Court's back rank (the foes in column 9's even rows) moved to column 10, so none stands in a neighbouring hex of the next row, where its sprite covered the plate above; a test holds every encounter to it (the Goblin Raid's Shaman and Sneak at 5 excepted: moving them would move the refactor guard) (`146aa72`). The plates were already drawn over every sprite; the clutter was the sprites stacked behind them. Refactor guard green and unedited; 50-campaign hash identical (`1e85d023…d216` before and after). Policy snapshot re-recorded for those three encounters' lines only (every other line unchanged, `0a0879f5…8d75` without them before and after; 22,124 lines, `f8b6f8e9…9f95`). **The cells moved** (500 each, seed 1, `logs/s11-verif-fmt-<code>.txt`, against step 14's): bw11 485 (=), bw12 483 (+6), bw14 349 (+22), cu14 389 (+44), cu15 381 (−48), cu18 500 (+29), lc17 499 (+2), lc18 499 (+35, in play), lc20 268 (−64). Now out of 300–475: cu18 above, lc18 above (in play), lc20 below, besides bw11, bw12 and lc17 as before. Brought to the orchestrator; not tuned.
+8. `aggressive`-policy tests: the Ogre clubs one hero beside it and sweeps two; the Hill Giant throws its Rock at a hero 4 hexes off; the Blight Horror breathes whenever Blight Breath is ready and only then (turns 1 and 4 of 5) (`b56279f`).
+
+Gates at `b56279f`: `npm test` #238 (3053 passed), `npm run build` #239, browser `battle` #240 (32 passed, A9 included), `debug` #241 (5 passed); the manual's two shots #234.
