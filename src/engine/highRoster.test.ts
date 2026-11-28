@@ -950,7 +950,10 @@ describe('what `aggressive` has the new kinds do with their abilities', () => {
   const sturdy = (id: string, q: number, r: number) => heroAt(id, q, r, { maxHp: 2000 })
 
   it('the Ogre clubs one hero beside it, and sweeps when two stand beside it', () => {
-    const one = enemyPlays(enemyTurn([sturdy('west', 3, 1), foeAt('ogre', OGRE_STATS, 4, 1)], () => HIT))
+    const alone = enemyTurn([sturdy('west', 3, 1), foeAt('ogre', OGRE_STATS, 4, 1)], () => HIT)
+    // Sweep is there to be chosen: the club is picked over it, not for want of it.
+    expect(alone.legalActions('ogre')).toContainEqual({ type: 'ability', unit: 'ogre', ability: 'ogre_sweep', at: hex(4, 1) })
+    const one = enemyPlays(alone)
     expect(one[0]).toMatchObject({ type: 'attack', unit: 'ogre', target: 'west' })
     expect(abilitiesIn(one)).toEqual([])
     const two = enemyPlays(enemyTurn([sturdy('west', 3, 1), sturdy('east', 5, 1), foeAt('ogre', OGRE_STATS, 4, 1)], () => HIT))
@@ -958,7 +961,10 @@ describe('what `aggressive` has the new kinds do with their abilities', () => {
   })
 
   it('the Hill Giant throws its Rock at a hero 4 hexes off rather than walk to it first', () => {
-    const plays = enemyPlays(enemyTurn([sturdy('target', 2, 1), foeAt('giant', HILL_GIANT_STATS, 6, 1)], () => HIT))
+    const field = enemyTurn([sturdy('target', 2, 1), foeAt('giant', HILL_GIANT_STATS, 6, 1)], () => HIT)
+    // It could walk towards the hero instead: the Rock is picked over a step, not for want of one.
+    expect(field.legalActions('giant').some((a) => a.type === 'move')).toBe(true)
+    const plays = enemyPlays(field)
     expect(plays[0]).toEqual({ type: 'ability', unit: 'giant', ability: 'giant_rock', at: hex(2, 1) })
   })
 
