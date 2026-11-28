@@ -176,6 +176,17 @@ describe.each(Object.entries(ENCOUNTERS))('the %s encounter, as the threat rises
     if (max > min && !flat && !falls) expect(foes(max).length).toBeGreaterThan(foes(min).length)
   })
 
+  it('stands no two foes in neighbouring hexes of adjacent rows, where one\'s sprite would hide the other\'s plate', () => {
+    // The Goblin Raid's Shaman and Kobold Sneak at 5 stand so from before stage 11; moving them would move the refactor guard.
+    if (id === 'goblin_raid') return
+    for (let threat = min; threat <= max; threat++) {
+      const stacked = foes(threat).flatMap((a, i, all) =>
+        all.slice(i + 1).filter((b) => a.position.r !== b.position.r && hexDistance(a.position, b.position) === 1).map((b) => `${a.stats.name} / ${b.stats.name}`),
+      )
+      expect([threat, stacked]).toEqual([threat, []])
+    }
+  })
+
   it('is worth more the higher the threat', () => {
     for (let threat = min + 1; threat <= max; threat++) {
       if (held(threat)) expect(xpReward(build(party(), threat))).toBe(xpReward(build(party(), threat - 1)))

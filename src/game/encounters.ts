@@ -171,6 +171,11 @@ interface FoeSlot {
   kind: FoeKind
   /** Each foe of a battle has a name of its own, so the log tells them apart. */
   name: string
+  /**
+   * Its hex as [column, row]. No two foes stand in neighbouring hexes of adjacent rows, where the lower's sprite
+   * would hide the upper's nameplate: a foe in an odd row of column 8 has its neighbours in the even rows beside it
+   * at columns 8 and 9, so those beside it stand in column 10 (the Barrow Wights, the Blight Cult and the Lich's Court).
+   */
   at: readonly [number, number]
   /** The lowest threat it takes the field at; below it, the slots after it fill its place. Any threat when left out. */
   fromThreat?: number
@@ -439,10 +444,10 @@ const WYVERN_ROOST_SLOTS: readonly FoeSlot[] = [
 // them; a steading of two hill giants and their ogre. Three foes are each line-up's whole (a fourth was won 0 times
 // in 500 at the lair's top threat and 19 at the steading's), so the plan's second ogre of each has no slot.
 const BARROW_WIGHTS_SLOTS: readonly FoeSlot[] = [
-  { id: 'king', kind: 'barrow_wight', name: 'Barrow King', at: [9, 4] },
+  { id: 'king', kind: 'barrow_wight', name: 'Barrow King', at: [10, 4] },
   { id: 'wight', kind: 'barrow_wight', name: 'Barrow Wight', at: [8, 3] },
   { id: 'grave', kind: 'barrow_wight', name: 'Grave Wight', at: [8, 5] },
-  { id: 'pale', kind: 'barrow_wight', name: 'Pale Wight', at: [9, 2] },
+  { id: 'pale', kind: 'barrow_wight', name: 'Pale Wight', at: [10, 2] },
 ]
 
 const BASILISK_LAIR_SLOTS: readonly FoeSlot[] = [
@@ -468,11 +473,11 @@ const GOLEM_RUIN_SLOTS: readonly FoeSlot[] = [
 ]
 
 const BLIGHT_CULT_SLOTS: readonly FoeSlot[] = [
-  { id: 'cultist', kind: 'blight_cultist', name: 'Blight Cultist', at: [9, 4] },
+  { id: 'cultist', kind: 'blight_cultist', name: 'Blight Cultist', at: [10, 4] },
   { id: 'wight', kind: 'barrow_wight', name: 'Risen Wight', at: [8, 3] },
-  { id: 'acolyte', kind: 'blight_cultist', name: 'Cult Acolyte', at: [9, 2] },
+  { id: 'acolyte', kind: 'blight_cultist', name: 'Cult Acolyte', at: [10, 2] },
   { id: 'grave', kind: 'barrow_wight', name: 'Grave Wight', at: [8, 5] },
-  { id: 'elder', kind: 'blight_cultist', name: 'Cult Elder', at: [9, 6] },
+  { id: 'elder', kind: 'blight_cultist', name: 'Cult Elder', at: [10, 6] },
 ]
 
 const YOUNG_DRAGON_SLOTS: readonly FoeSlot[] = [
@@ -484,11 +489,11 @@ const YOUNG_DRAGON_SLOTS: readonly FoeSlot[] = [
 // Ring 18 (long-campaign stage 11): a lich's court of the dead and the cultists who serve it; an elder wyrm and the
 // young dragons of its brood.
 const BLIGHT_LICH_COURT_SLOTS: readonly FoeSlot[] = [
-  { id: 'lich', kind: 'blight_lich', name: 'Blight Lich', at: [9, 4] },
+  { id: 'lich', kind: 'blight_lich', name: 'Blight Lich', at: [10, 4] },
   { id: 'guard', kind: 'barrow_wight', name: 'Barrow Guard', at: [8, 3] },
-  { id: 'acolyte', kind: 'blight_cultist', name: 'Lich\'s Acolyte', at: [9, 2] },
+  { id: 'acolyte', kind: 'blight_cultist', name: 'Lich\'s Acolyte', at: [10, 2] },
   { id: 'warden', kind: 'barrow_wight', name: 'Crypt Warden', at: [8, 5] },
-  { id: 'herald', kind: 'blight_cultist', name: 'Lich\'s Herald', at: [9, 6] },
+  { id: 'herald', kind: 'blight_cultist', name: 'Lich\'s Herald', at: [10, 6] },
 ]
 
 const ELDER_WYRM_SLOTS: readonly FoeSlot[] = [

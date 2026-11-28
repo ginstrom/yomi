@@ -1111,7 +1111,7 @@ describe('policies', () => {
     expect(isPolicyName('toString')).toBe(false)
   })
 
-  describe('the choices of today’s encounters (a snapshot, re-recorded in skill trees step 13 when heroes and bandits learned techniques, in step 16 when a technique came to be weighed by the blows that fit this turn and the Captain took Pin before Heavy Hand, in step 28 when nodes came to cost perk points and the heroes and bandits to save for them, and in step 30 when the knight, swordmaster and evoker_healer plans moved and the bandits at threat 4 went back to plain gear; and in long-campaign stage 9 step 01, when the Bandit Company and Freebooter Host came and the Spider Nest’s, Salamander Pool’s and Source’s bands widened, and in its step 09, when the Source’s guardians were raised to level 6 at most; and in long-campaign stage 10 step 02, when bandits from threat 9 took tiers 3 to 5; and in long-campaign stage 11 step 08, when ring 7’s wolves, worg riders and ogres came: their encounters’ lines added after the rest, every earlier line unchanged; and in long-campaign stage 11 step 09, when the Wyvern Roost came: its lines added after those, every earlier line unchanged; and in long-campaign stage 11 step 10, when ring 12’s wights, basilisks and giants came: their encounters’ lines added after those, every earlier line unchanged; and in long-campaign stage 11 step 11, when ring 15’s golems, cultists and young dragons came: their encounters’ lines added after those, every earlier line unchanged; and in long-campaign stage 11 step 12, when the Blight Lich’s Court and the Elder Wyrm came: their lines added after those, every earlier line unchanged; and in long-campaign stage 11 step 13, when the Source’s guardians at 20 became the Blight Horror and two cultists: the source_guardians lines above threat 5 only, every other line unchanged)', () => {
+  describe('the choices of today’s encounters (a snapshot, re-recorded in skill trees step 13 when heroes and bandits learned techniques, in step 16 when a technique came to be weighed by the blows that fit this turn and the Captain took Pin before Heavy Hand, in step 28 when nodes came to cost perk points and the heroes and bandits to save for them, and in step 30 when the knight, swordmaster and evoker_healer plans moved and the bandits at threat 4 went back to plain gear; and in long-campaign stage 9 step 01, when the Bandit Company and Freebooter Host came and the Spider Nest’s, Salamander Pool’s and Source’s bands widened, and in its step 09, when the Source’s guardians were raised to level 6 at most; and in long-campaign stage 10 step 02, when bandits from threat 9 took tiers 3 to 5; and in long-campaign stage 11 step 08, when ring 7’s wolves, worg riders and ogres came: their encounters’ lines added after the rest, every earlier line unchanged; and in long-campaign stage 11 step 09, when the Wyvern Roost came: its lines added after those, every earlier line unchanged; and in long-campaign stage 11 step 10, when ring 12’s wights, basilisks and giants came: their encounters’ lines added after those, every earlier line unchanged; and in long-campaign stage 11 step 11, when ring 15’s golems, cultists and young dragons came: their encounters’ lines added after those, every earlier line unchanged; and in long-campaign stage 11 step 12, when the Blight Lich’s Court and the Elder Wyrm came: their lines added after those, every earlier line unchanged; and in long-campaign stage 11 step 13, when the Source’s guardians at 20 became the Blight Horror and two cultists: the source_guardians lines above threat 5 only, every other line unchanged; and in long-campaign stage 11’s verification, when the Barrow Wights’, Blight Cult’s and Lich’s Court’s back rank stepped to column 10 so that no foe’s sprite hides another’s nameplate: those three encounters’ lines only, every other line unchanged)', () => {
     /** Every action `aggressive` chooses, both sides, over each encounter at each threat of its band against the ready-made party of that level, a few seeds, 8 rounds at most. */
     function choices(): string[] {
       const lines: string[] = []
@@ -1143,11 +1143,14 @@ describe('policies', () => {
     it('are what they were', () => {
       const lines = choices()
       const sha = (of: readonly string[]) => createHash('sha256').update(of.join('\n')).digest('hex')
-      // Step 13 re-recorded the Source's guardians above threat 5 (the Source at 20) and nothing else. Step 12's snapshot
-      // (24,048 lines, `b41a6374…ee3c`) without its 4,301 `source_guardians` lines above threat 5 is 19,747 lines,
-      // `a30c30ea…abed`; the lines now, without theirs, are those same lines in the same order.
+      // Step 13 re-recorded the Source's guardians above threat 5 (the Source at 20) and nothing else: step 12's snapshot
+      // (24,048 lines, `b41a6374…ee3c`) without its 4,301 `source_guardians` lines above threat 5 was 19,747 lines,
+      // `a30c30ea…abed`, and step 13's without them the same. The verification re-recorded the three encounters whose
+      // back rank moved and nothing else: step 13's snapshot (21,963 lines, `631a06bf…f88c`) without their 2,929 lines
+      // is 19,034 lines, `0a0879f5…8d75`; the lines now, without theirs, are those same lines in the same order.
       const far = (line: string) => line.startsWith('source_guardians ') && Number(line.split(' ')[1]) > 5
-      expect(sha(lines.filter((line) => !far(line)))).toBe('a30c30ea2a4fa31315e9dc606994ba1fe996e25c8ed836407b919a2fc4c8abed')
+      const moved = (line: string) => /^(barrow_wights|blight_cult|blight_lich_court) /.test(line)
+      expect(sha(lines.filter((line) => !moved(line)))).toBe('0a0879f5a33e9839cb902f2040888575a1703c29f48b6ea7fbaf309540388d75')
       // Before them, the four encounters and the Source near home, as step 12 had them.
       const NEAR = 4218
       expect(lines.slice(0, NEAR).some(far)).toBe(false)
@@ -1157,12 +1160,13 @@ describe('policies', () => {
       const AT_20 = NEAR + 2216
       expect(lines.slice(NEAR, AT_20).every(far)).toBe(true)
       expect(sha(lines.slice(NEAR, AT_20))).toBe('b66cf7d2fe9ca69bf37fb175b78ba261f6fb13ec22a676a31d8333c040850f95')
-      // After them, every other encounter as step 12 had them (15,529 lines), the rings in `ENCOUNTERS` order: the
+      // After them, every other encounter (15,529 lines as step 12 had them, 15,690 now), the rings in `ENCOUNTERS` order: the
       // boundaries of steps 08 to 12 (14,242, 16,403, 17,051, 19,649, 20,573, 22,394), each 2,085 lines earlier now.
       expect(lines.slice(AT_20).some(far)).toBe(false)
-      expect(sha(lines.slice(AT_20))).toBe('8ad17fbb6d659a41ef4a3fe4366449bf8ac925f5be1b6b3655be13f7f8cc3d1f')
+      expect(sha(lines.slice(AT_20))).toBe('baf95f1987368da65e22ab779ac877cf28ebe13ca13f35e528ab134aee8bd476')
+      // The verification's Barrow Wights fight 26 lines longer and its Blight Cult 100, so the boundaries after each move on.
       const SHIFT = 4301 - 2216
-      const [EARLIER, RING_7, RING_9, RING_12, GOLEM_RUIN, RING_15] = [14242, 16403, 17051, 19649, 20573, 22394].map((n) => n - SHIFT)
+      const [EARLIER, RING_7, RING_9, RING_12, GOLEM_RUIN, RING_15] = [14242, 16403, 17051, 19649 + 26, 20573 + 26, 22394 + 126].map((n) => n - SHIFT)
       const kinds = (from: number, to: number) => new Set(lines.slice(from, to).map((line) => line.split(' ')[0]))
       expect(kinds(EARLIER, RING_7)).toEqual(new Set(['wolf_pack', 'worg_riders', 'ogre_camp']))
       expect(kinds(RING_7, RING_9)).toEqual(new Set(['wyvern_roost']))
@@ -1173,8 +1177,8 @@ describe('policies', () => {
       expect(kinds(RING_15 - LAIR, RING_15)).toEqual(new Set(['young_dragon']))
       expect(sha(lines.slice(RING_15 - LAIR, RING_15))).toBe('059cf9209a6a8cb325dc0451244046a6a31cafa08f227a3b351be25f89ddb695')
       expect(kinds(RING_15, lines.length)).toEqual(new Set(['blight_lich_court', 'elder_wyrm']))
-      expect(lines.length).toBe(21963)
-      expect(sha(lines)).toBe('631a06bfb2f6deea5a3df8f087bd557ac5b24d423e9737a8ca5b67323f4af88c')
+      expect(lines.length).toBe(22124)
+      expect(sha(lines)).toBe('f8b6f8e9ca72f49a061f2511905be0e30760a3b37757f593eb8fbf7131229f95')
     }, 60_000)
   })
 })
