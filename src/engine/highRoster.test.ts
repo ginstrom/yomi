@@ -928,3 +928,53 @@ describe('the Source at 20 (stage 11 step 13)', () => {
     })
   })
 })
+
+describe('what `aggressive` has the new kinds do with their abilities', () => {
+  /** The actions `aggressive` chooses for the enemy over the rest of its turn. */
+  const enemyPlays = (engine: BattleEngine): Action[] => {
+    const chosen: Action[] = []
+    while (engine.getState().phase === 'enemy') {
+      const action = POLICIES.aggressive({
+        state: engine.getState(),
+        legal: engine.legalActions(),
+        legalFor: (unit) => engine.legalActions(unit).filter((a) => a.type !== 'end_turn'),
+        rng: () => 0.5,
+      })
+      chosen.push(action)
+      engine.step(action)
+    }
+    return chosen
+  }
+  const abilitiesIn = (actions: Action[]) => actions.flatMap((a) => (a.type === 'ability' ? [a.ability] : []))
+  /** A hero to stand through every blow of a few turns. */
+  const sturdy = (id: string, q: number, r: number) => heroAt(id, q, r, { maxHp: 2000 })
+
+  it('the Ogre clubs one hero beside it, and sweeps when two stand beside it', () => {
+    const one = enemyPlays(enemyTurn([sturdy('west', 3, 1), foeAt('ogre', OGRE_STATS, 4, 1)], () => HIT))
+    expect(one[0]).toMatchObject({ type: 'attack', unit: 'ogre', target: 'west' })
+    expect(abilitiesIn(one)).toEqual([])
+    const two = enemyPlays(enemyTurn([sturdy('west', 3, 1), sturdy('east', 5, 1), foeAt('ogre', OGRE_STATS, 4, 1)], () => HIT))
+    expect(two[0]).toEqual({ type: 'ability', unit: 'ogre', ability: 'ogre_sweep', at: hex(4, 1) })
+  })
+
+  it('the Hill Giant throws its Rock at a hero 4 hexes off rather than walk to it first', () => {
+    const plays = enemyPlays(enemyTurn([sturdy('target', 2, 1), foeAt('giant', HILL_GIANT_STATS, 6, 1)], () => HIT))
+    expect(plays[0]).toEqual({ type: 'ability', unit: 'giant', ability: 'giant_rock', at: hex(2, 1) })
+  })
+
+  it('the Blight Horror breathes on its first turn, then not again until Blight Breath has recharged', () => {
+    const { recharge } = ABILITIES.blight_breath
+    const engine = enemyTurn([sturdy('h1', 3, 1), sturdy('h2', 5, 1), foeAt('horror', SOURCE_HORROR_STATS, 4, 1)], () => HIT)
+    const breathed: boolean[] = []
+    for (let turn = 0; turn <= recharge + 1; turn++) {
+      if (turn > 0) engine.step(END_TURN)
+      const ready = engine.legalActions('horror').some((a) => a.type === 'ability' && a.ability === 'blight_breath')
+      const plays = enemyPlays(engine)
+      breathed.push(abilitiesIn(plays).includes('blight_breath'))
+      // It breathes whenever the breath is ready, and only then; its claws fill the rest of each turn.
+      expect([turn, breathed[turn]]).toEqual([turn, ready])
+      expect(abilitiesIn(plays).some((id) => id === 'horror_claws')).toBe(true)
+    }
+    expect(breathed).toEqual([true, ...Array<boolean>(recharge - 1).fill(false), true, false].slice(0, recharge + 2))
+  })
+})
