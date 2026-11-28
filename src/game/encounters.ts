@@ -490,7 +490,7 @@ const YOUNG_DRAGON_SLOTS: readonly FoeSlot[] = [
 ]
 
 // Ring 18 (long-campaign stage 11): a lich's court of the dead and the cultists who serve it; an elder wyrm and the
-// young dragons of its brood.
+// young dragon of its brood (the second, the Brood Drake, sits out; see ELDER_WYRM).
 const BLIGHT_LICH_COURT_SLOTS: readonly FoeSlot[] = [
   { id: 'lich', kind: 'blight_lich', name: 'Blight Lich', at: [9, 4] },
   { id: 'guard', kind: 'barrow_wight', name: 'Barrow Guard', at: [7, 3] },
@@ -713,7 +713,7 @@ export function worgRiders(party: readonly Fighter[], threat = 7): Encounter {
 
 /**
  * Two Ogres, which sweep their clubs round at everyone beside them, with a
- * Worg Rider between them and, at threat 10, a wolf of their camp; fought at
+ * Worg Rider beside the first and, at threat 10, a wolf of their camp; fought at
  * threats 7 to 10.
  */
 export function ogreCamp(party: readonly Fighter[], threat = 7): Encounter {
@@ -764,7 +764,7 @@ export function blightLichCourt(party: readonly Fighter[], threat = 17): Encount
   return encounter(party, BLIGHT_LICH_COURT, threat)
 }
 
-/** An elder wyrm and the young dragons of its brood, fought at threats 18 to 20: a breath 4 hexes long, then bite and claws. */
+/** An elder wyrm and a young dragon of its brood (the Brood Drake sits out; see ELDER_WYRM), fought at threats 18 to 20: a breath 4 hexes long, then bite and claws. */
 export function elderWyrm(party: readonly Fighter[], threat = 18): Encounter {
   return encounter(party, ELDER_WYRM, threat)
 }
