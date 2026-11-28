@@ -856,7 +856,7 @@ This lists every node of the game, 95 in all, by tree and path. **Tier** is the 
 |  | Aimed Shot | L2 | At will | Archery 40% | weapon AP + 2. A weapon shot at +20 to hit for +3 damage. |
 |  | Far Shot | L2 | Passive | Perception 6 | Ranged weapons reach 2 hexes further; +1 Perception |
 |  | Hunter's Mark | L2 | At will | Archery 40% | 2 AP, recharge 3. Marks a foe within weapon range for 2 turns: 10 off its armour class. |
-|  | Volley | L6 | At will | Archery 55% | weapon AP + 2, recharge 2. A rain of shots on a hex within weapon range: everyone within 1 hex of it, allies too, takes a shot, through armour. |
+|  | Volley | L6 | At will | Archery 55% | weapon AP + 2, recharge 2. A rain of shots on a hex within weapon range: everyone within 1 hex of it, allies too, takes a shot, cut by armour. |
 |  | Pinning Shot | L6 | Mana | Archery 55% | 3 mana, weapon AP + 1, recharge 1. A weapon shot; a hit pins the foe for a turn. |
 |  | Deadeye | L12 ★ | Passive | Archery 70% | +10% Archery; its shots pierce 3 points of resistance, and a critical shot rolls triple dice instead of double |
 | Rogue | Dodger | L1 | Passive | Agility 6 | +10 armour class |

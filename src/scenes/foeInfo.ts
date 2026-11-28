@@ -79,7 +79,7 @@ function effectLines(ability: Ability, bonus: number): string[] {
   if (harm === null) return [area.status ? `${shape}: ${statusPhrase(area.status)}` : shape]
   const notes = [
     ...(area.element ? [` ${area.element}`] : []),
-    ...(area.throughResistance ? [', through armour'] : []),
+    ...(area.throughResistance ? [', cut by armour'] : []),
     ...(area.halfOnMiss ? [', half on a miss'] : []),
     ...(area.bane ? [', double dice vs the regenerating and blightborn'] : []),
   ]

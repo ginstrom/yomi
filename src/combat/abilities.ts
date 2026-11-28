@@ -215,7 +215,7 @@ export const ABILITIES: Record<AbilityId, Ability> = {
   ogre_sweep: {
     name: 'Sweep',
     verb: 'sweeps its club',
-    description: 'Every foe beside the user takes 2d8+2, through armour.',
+    description: 'Every foe beside the user takes 2d8+2, cut by armour.',
     apCost: 6,
     recharge: 1,
     area: {
@@ -251,7 +251,7 @@ export const ABILITIES: Record<AbilityId, Ability> = {
   giant_rock: {
     name: 'Rock',
     verb: 'hurls a rock',
-    description: 'A rock thrown at one foe up to 4 hexes off: 2d8+2, through armour.',
+    description: 'A rock thrown at one foe up to 4 hexes off: 2d8+2, cut by armour.',
     apCost: 6,
     recharge: 1,
     area: {
@@ -443,7 +443,7 @@ export const ABILITIES: Record<AbilityId, Ability> = {
   volley: {
     name: 'Volley',
     verb: 'volleys',
-    description: 'A rain of shots on a hex within weapon range: everyone within 1 hex of it, allies too, takes a shot, through armour.',
+    description: 'A rain of shots on a hex within weapon range: everyone within 1 hex of it, allies too, takes a shot, cut by armour.',
     apCost: 0,
     weaponAp: 2,
     recharge: 2,

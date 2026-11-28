@@ -50,6 +50,11 @@ describe('foeInfoLines', () => {
       ])
     })
 
+    it('Sweep and Rock: an area that armour cuts, so the line says so (not that it goes through armour)', () => {
+      expect(describe1({ abilities: ['ogre_sweep'] })).toEqual(['Sweep: ready', '  burst 1, around itself, foes only: 2d8+2, cut by armour'])
+      expect(describe1({ abilities: ['giant_rock'] })).toEqual(['Rock: ready', '  burst 0, range 4: 2d8+2, cut by armour'])
+    })
+
     it('adds the foe\'s level to the dice (abilityDamageBonus), as the engine does', () => {
       expect(describe1({ abilities: ['troll_claws', 'fire_spit'], abilityDamageBonus: 2 })).toEqual([
         'Claws: ready',
@@ -89,7 +94,7 @@ describe('foeInfoLines', () => {
     expect(describe1({ ...sword, abilities: ['venom_strike'] })[1]).toBe('  2 mana, 6 AP (weapon + 1)')
     expect(describe1({ ...sword, abilities: ['venom_strike'] })[2]).toBe('  venom strike: weapon blow or shot')
     expect(describe1({ attackApCost: 4, abilities: ['volley'] })).toEqual([
-      'Volley: ready', '  6 AP (weapon + 2), ranged weapon', '  burst 1, weapon range: weapon damage, through armour',
+      'Volley: ready', '  6 AP (weapon + 2), ranged weapon', '  burst 1, weapon range: weapon damage, cut by armour',
     ])
   })
 
