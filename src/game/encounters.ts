@@ -174,9 +174,9 @@ interface FoeSlot {
   /**
    * Its hex as [column, row]. No two foes stand in neighbouring hexes of adjacent rows, where the lower's sprite
    * would hide the upper's nameplate: a foe in an odd row of column 8 has its neighbours in the even rows beside it
-   * at columns 8 and 9, so those beside it stand in column 10 (the Barrow Wights and the Blight Cult); or the odd rows'
-   * foes stand in column 7 and the even rows' in column 9 (the Lich's Court, whose casters standing in column 10 left
-   * it won 499 times in 500 at 18; the stage 11 verification's tuning, in the plan's log).
+   * at columns 8 and 9, so those beside it stand in column 10 (the Blight Cult); or the odd rows' foes stand in
+   * column 7 and the even rows' in column 9 (the Barrow Wights and the Lich's Court, which with the even rows' in
+   * column 10 were won 483 times in 500 at 12 and 499 at 18; the stage 11 verification's tuning, in the plan's log).
    */
   at: readonly [number, number]
   /** The lowest threat it takes the field at; below it, the slots after it fill its place. Any threat when left out. */
@@ -446,10 +446,11 @@ const WYVERN_ROOST_SLOTS: readonly FoeSlot[] = [
 // them; a steading of two hill giants and their ogre. Three foes are each line-up's whole (a fourth was won 0 times
 // in 500 at the lair's top threat and 19 at the steading's), so the plan's second ogre of each has no slot.
 const BARROW_WIGHTS_SLOTS: readonly FoeSlot[] = [
-  { id: 'king', kind: 'barrow_wight', name: 'Barrow King', at: [10, 4] },
-  { id: 'wight', kind: 'barrow_wight', name: 'Barrow Wight', at: [8, 3] },
-  { id: 'grave', kind: 'barrow_wight', name: 'Grave Wight', at: [8, 5] },
-  { id: 'pale', kind: 'barrow_wight', name: 'Pale Wight', at: [10, 2] },
+  { id: 'king', kind: 'barrow_wight', name: 'Barrow King', at: [9, 4] },
+  { id: 'wight', kind: 'barrow_wight', name: 'Barrow Wight', at: [7, 3] },
+  { id: 'grave', kind: 'barrow_wight', name: 'Grave Wight', at: [7, 5] },
+  { id: 'pale', kind: 'barrow_wight', name: 'Pale Wight', at: [9, 2] },
+  { id: 'robber', kind: 'kobold', name: 'Grave Robber', at: [7, 1] },
 ]
 
 const BASILISK_LAIR_SLOTS: readonly FoeSlot[] = [
@@ -561,9 +562,11 @@ const WYVERN_ROOST: EncounterDef = { slots: WYVERN_ROOST_SLOTS, band: { min: 9, 
 /**
  * Ring 12's encounters (stage 11 step 10); the cells' tuning is in the plan's log. Each is the same line-up at every
  * threat of its band: the expected kit steps up at 13, so the top of the band is far the harder end. The Barrow
- * Wights, threats 11 to 14: four (three at 11 were won 500 times in 500).
+ * Wights, threats 11 to 14: four (three at 11 were won 500 times in 500), and at 11 a kobold Grave Robber with them
+ * (four were won 485 times in 500 there; the stage 11 verification's tuning). So one of the encounters whose numbers
+ * fall as the threat rises.
  */
-const BARROW_WIGHTS: EncounterDef = { slots: BARROW_WIGHTS_SLOTS, band: { min: 11, max: 14 }, counts: [4, 4, 4, 4] }
+const BARROW_WIGHTS: EncounterDef = { slots: BARROW_WIGHTS_SLOTS, band: { min: 11, max: 14 }, counts: [5, 4, 4, 4] }
 /** The Basilisk Lair, threats 11 to 14: a Basilisk, its keeper and its mate (two foes are no battle for a party in the expected kit, and a second Ogre at 14 was never beaten). */
 const BASILISK_LAIR: EncounterDef = { slots: BASILISK_LAIR_SLOTS, band: { min: 11, max: 14 }, counts: [3, 3, 3, 3] }
 /** The Hill Giant Steading, threats 12 to 15: the Hill Giant, the Giant Chief and their Ogre (an Ogre raised to these levels is the tougher of the two kinds, so the steading fields one, not two). */

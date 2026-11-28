@@ -570,3 +570,16 @@ Kept: trial 1 for the Lich's Court (lc18 inside, lc17 and lc20 both nearer the r
 Gates at `3883acf`: `npm test` #249 (3056 passed; 1 failed, the same `scripts/records.test.ts` size limits from `b2f9906`), `npm run build` #250, browser `debug` #251 (5 passed), `battle` #252 (32 passed).
 
 Fixes review (three non-blocking items): the readability test's Goblin Raid exception narrowed to the Shaman and Kobold Sneak at 5 (`b72acd7`); the Ogre and Giant policy tests assert Sweep and a move were legal (`4e72018`); `BattleScene`'s foe-panel comment names spells (`07c1ac3`). `npm test` at `07c1ac3` #255, 3057 passed.
+
+### Tuning the Barrow Wights at 12 (the user's decision)
+
+Cells as above (`logs/s11-bw-t<N>-<code>.txt`); before: bw11 485, bw12 483 (in play), bw14 349.
+
+| Trial | Change | bw11 | bw12 (in play) | bw14 |
+| --- | --- | --- | --- | --- |
+| before | King and Pale Wight in column 10, the two wights in column 8 | 485 | 483 | 349 |
+| 1 | the Lich's Court's placement: King and Pale Wight in column 9, the wights in column 7 | 486 | **473** | 341 |
+| 2 | trial 1, and a fifth at 11 only (`counts` 5, 4, 4, 4): a wolf, the Barrow Hound, at (7,1) | 291 | 473 | 341 |
+| 3 | trial 1, and the fifth at 11 a kobold, the Grave Robber, at (7,1) | **425** | **473** | **341** |
+
+Trial 1 brought 12 inside but left 11 a win worse (486 against 485), so it was not kept alone; trial 2 overshot 11; trial 3 kept: all three cells inside (bw14 8 lower, inside). The Barrow Wights now fall as the threat rises (five at 11, four from 12; the encounter tests' `FALLS`). Readability test green. Policy snapshot re-recorded for the barrow_wights lines only (22,032 lines, `badab14b…aaab`; without the three moved encounters still `0a0879f5…8d75`). 50-campaign hash identical (`1e85d023…d216`); refactor guard green and unedited. The design's cells line: BW11 and BW12 inside after tuning.

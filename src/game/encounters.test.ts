@@ -86,7 +86,8 @@ const OGRE_CAMP_COUNTS = [3, 3, 3, 4]
 /** Ring 9's counts (stage 11 step 09; the cells' tuning is in the plan's log). */
 const WYVERN_ROOST_COUNTS = [4, 4, 3, 3]
 /** Ring 12's counts (stage 11 step 10; the cells' tuning is in the plan's log). */
-const BARROW_WIGHTS_COUNTS = [4, 4, 4, 4]
+/** The Barrow Wights' fifth, a kobold Grave Robber, at 11 only (stage 11's verification tuning). */
+const BARROW_WIGHTS_COUNTS = [5, 4, 4, 4]
 const BASILISK_LAIR_COUNTS = [3, 3, 3, 3]
 const HILL_GIANT_STEADING_COUNTS = [3, 3, 3, 3]
 /** Ring 15's counts (stage 11 step 11; the cells' tuning is in the plan's log). */
@@ -138,12 +139,14 @@ describe.each(Object.entries(ENCOUNTERS))('the %s encounter, as the threat rises
    * Elder), five at 17 and 18, as every foe gains 5 to hit and armour class from 14 to 15 and the kit not until 17.
    * And the Blight Lich's Court (stage 11 step 12): five at 17 to 19 and four at 20 (without the Lich's Herald), as
    * the kit is the same from 17 to 20 while the court grows (five at 20 were won 287 times in 500).
+   * And the Barrow Wights (stage 11's verification tuning): five at 11 (a kobold Grave Robber with the four wights), four
+   * from 12, as four were won 485 times in 500 at 11 and the robber brings it to 425 without touching 12 to 14.
    * And the Source's guardians (stage 11 step 13): four near home at 5, then the Source at 20's three, fought at 20
    * from threat 6 up, so its threats 7 to 20 are its threat 6 (`held`), and its three at 6 are worth more than the four.
    */
-  const falls = id === 'wyvern_roost' || id === 'blight_cult' || id === 'blight_lich_court' || id === 'source_guardians'
+  const falls = id === 'wyvern_roost' || id === 'barrow_wights' || id === 'blight_cult' || id === 'blight_lich_court' || id === 'source_guardians'
   /** Where a falling encounter's count changes, by how many foes: the threats not named keep their count. */
-  const FALLS: Partial<Record<EncounterId, Record<number, number>>> = { wyvern_roost: { 11: -1 }, blight_cult: { 15: -1, 17: 1 }, blight_lich_court: { 20: -1 }, source_guardians: { 2: 1, 5: 1, 6: -1 } }
+  const FALLS: Partial<Record<EncounterId, Record<number, number>>> = { wyvern_roost: { 11: -1 }, barrow_wights: { 12: -1 }, blight_cult: { 15: -1, 17: 1 }, blight_lich_court: { 20: -1 }, source_guardians: { 2: 1, 5: 1, 6: -1 } }
   /** A threat fought as the one below it: the Source's from 7 (all at 20). */
   const held = (threat: number) => id === 'source_guardians' && threat > HOME_THREATS + 1
   const fallsAt = (threat: number) => FALLS[id as EncounterId]?.[threat] ?? 0
@@ -698,7 +701,7 @@ describe('ring 12\'s encounters (long-campaign stage 11 step 10)', () => {
     for (const u of foes) expect(u.stats).toEqual({ ...foeStats(kinds[u.id] as MonsterKind, threat), name: u.stats.name })
     return foes.map((u) => [kinds[u.id], u.stats.name])
   }
-  const WIGHTS = [['barrow_wight', 'Barrow King'], ['barrow_wight', 'Barrow Wight'], ['barrow_wight', 'Grave Wight'], ['barrow_wight', 'Pale Wight']]
+  const WIGHTS = [['barrow_wight', 'Barrow King'], ['barrow_wight', 'Barrow Wight'], ['barrow_wight', 'Grave Wight'], ['barrow_wight', 'Pale Wight'], ['kobold', 'Grave Robber']]
   const LAIR = [['basilisk', 'Basilisk'], ['ogre', 'Ogre Keeper'], ['basilisk', 'Basilisk Mate']]
   const STEADING = [['hill_giant', 'Hill Giant'], ['hill_giant', 'Giant Chief'], ['ogre', 'Ogre Thrall']]
 
