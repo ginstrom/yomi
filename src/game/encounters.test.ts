@@ -177,13 +177,14 @@ describe.each(Object.entries(ENCOUNTERS))('the %s encounter, as the threat rises
   })
 
   it('stands no two foes in neighbouring hexes of adjacent rows, where one\'s sprite would hide the other\'s plate', () => {
-    // The Goblin Raid's Shaman and Kobold Sneak at 5 stand so from before stage 11; moving them would move the refactor guard.
-    if (id === 'goblin_raid') return
+    // The one pair excepted: the Goblin Raid's Shaman (9,4) and Kobold Sneak (9,5) at 5 stand so from before stage 11;
+    // moving them would move the refactor guard.
+    const excepted = (threat: number) => (id === 'goblin_raid' && threat === 5 ? ['Goblin Shaman / Kobold Sneak'] : [])
     for (let threat = min; threat <= max; threat++) {
       const stacked = foes(threat).flatMap((a, i, all) =>
         all.slice(i + 1).filter((b) => a.position.r !== b.position.r && hexDistance(a.position, b.position) === 1).map((b) => `${a.stats.name} / ${b.stats.name}`),
       )
-      expect([threat, stacked]).toEqual([threat, []])
+      expect([threat, stacked]).toEqual([threat, excepted(threat)])
     }
   })
 
