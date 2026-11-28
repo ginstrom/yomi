@@ -4,7 +4,7 @@
 
 - Request (user's words):
   > Merge PR #12 (stage 10), then start stage 11, the high roster. [...] Its design, docs/designs/long-campaign/stage-11-high-roster.md, is marked "ready for planning". It covers ogres, wyverns, wights, basilisks, giants, golems, cultists, dragons, the lich, the elder wyrm, and the Source rebuilt at 20, each with a sprite. Stage 11 picks up two things stage 10 left for it. The trophies table is empty until then, and the Source Guardians stay capped at level 6 until then.
-- Slug `long-campaign-stage-11` · Phase 6, report · Next action: the user's go-ahead to push and open the PR (pr-reviewer, then pr-creator).
+- Slug `long-campaign-stage-11` · Phase 6, report · Next action: pr-reviewer on the branch, then pr-creator (user approved 2026-11-28).
 - Fixes re-review (opus) at 458d311: code correct (#253, build #254); blocker BW12 483 'accepted' without a decision (→ user: three trials); 3 cleanups done b72acd7–36d3573 (#255). QA re-check pass (5/5). BW tuning 6cda296 (bw11 425, bw12 473, bw14 341), review clean (#261); its doc nits 67d9b41; npm test #263 at 67d9b41, build #258, e2e battle #260, debug #259.
 - Verification at 8248f10: overall review clean (#230, build #231); QA pass, 2 minor; simulated user (e2e driver) goals met. Fixes 1–9 a9f7eee–03321ae (opus engineer); retune kept lc18 439, lc20 309; cu18 500 after three trials, recorded for stage 12. Guard and 50-check unmoved.
 - Branch `long-campaign-stage-11` off main c138d83. Path: stage design approved; straight to planning.
@@ -45,3 +45,4 @@
 | 2026-11-28 | Verification: caster foes' hover lists their spells | user | leave for stage 12 | Players couldn't see what the lich court casts |
 | 2026-11-28 | Keep the new back-rank placement and retune: lc18 inside 300–475 in up to three trials; cu18 top end if cu15 stays inside; lc20 recorded | user | keep and record; revert the placement | Readability fixed for good, a test guards it |
 | 2026-11-28 | Barrow Wights at 12 (in play, 483): up to three tuning trials; if still out, record for stage 12 | user | record; accept | Same rule as other in-play threats |
+| 2026-11-28 | Push and open the PR: pr-reviewer first, then pr-creator | user | check only; not yet | Stage done and verified |
