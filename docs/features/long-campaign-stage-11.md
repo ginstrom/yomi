@@ -4,8 +4,8 @@
 
 - Request (user's words):
   > Merge PR #12 (stage 10), then start stage 11, the high roster. [...] Its design, docs/designs/long-campaign/stage-11-high-roster.md, is marked "ready for planning". It covers ogres, wyverns, wights, basilisks, giants, golems, cultists, dragons, the lich, the elder wyrm, and the Source rebuilt at 20, each with a sprite. Stage 11 picks up two things stage 10 left for it. The trophies table is empty until then, and the Source Guardians stay capped at level 6 until then.
-- Slug `long-campaign-stage-11` · Phase 5, verification · Next action: bw12 tuning trials (fixes engineer, opus); then a short re-review of that commit and the report / PR go-ahead.
-- Fixes re-review (opus) at 458d311: code correct (#253, build #254); blocker BW12 483 'accepted' without a decision (→ user: three trials); 3 cleanups done b72acd7–36d3573 (#255). QA re-check pass (5/5).
+- Slug `long-campaign-stage-11` · Phase 6, report · Next action: the user's go-ahead to push and open the PR (pr-reviewer, then pr-creator).
+- Fixes re-review (opus) at 458d311: code correct (#253, build #254); blocker BW12 483 'accepted' without a decision (→ user: three trials); 3 cleanups done b72acd7–36d3573 (#255). QA re-check pass (5/5). BW tuning 6cda296 (bw11 425, bw12 473, bw14 341), review clean (#261); its doc nits 67d9b41; npm test #263 at 67d9b41, build #258, e2e battle #260, debug #259.
 - Verification at 8248f10: overall review clean (#230, build #231); QA pass, 2 minor; simulated user (e2e driver) goals met. Fixes 1–9 a9f7eee–03321ae (opus engineer); retune kept lc18 439, lc20 309; cu18 500 after three trials, recorded for stage 12. Guard and 50-check unmoved.
 - Branch `long-campaign-stage-11` off main c138d83. Path: stage design approved; straight to planning.
 - Links: design `docs/designs/long-campaign/stage-11-high-roster.md`; plan `docs/implementation-plans/long-campaign-stage-11/index.md`; history `.../log.md`; status thread C0CMCLX2G8G, ts "1795693090.979109", https://recursiveai.slack.com/archives/C0CMCLX2G8G/p1795693090979109
