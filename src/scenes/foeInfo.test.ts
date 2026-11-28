@@ -74,6 +74,46 @@ describe('foeInfoLines', () => {
     })
   })
 
+  describe('lists a caster\'s spells, with the mana it has left, and under them each spell\'s reach and effect', () => {
+    const caster = (spells: Parameters<typeof unit>[0]['magic'], mana: number, extra: Partial<UnitSnapshot> = {}) => unit({ name: 'Blight Cultist', magic: spells, mana, ...extra })
+
+    it('the Blight Cultist: Heal, Curse and Lightning Bolt', () => {
+      expect(foeInfoLines(caster({ maxMana: 16, skill: 95, spells: ['heal', 'curse', 'lightning_bolt'] }, 16))).toEqual([
+        'Blight Cultist',
+        'Spells: Heal, Curse, Lightning Bolt (16 mana)',
+        '  heal: an ally within 4: +1d8+2',
+        '  curse: a foe within 5: cursed 3 turns (−15 to hit, −5 AC)',
+        '  lightning bolt: line 6: 4d6 lightning',
+      ])
+    })
+
+    it('the Blight Lich: an area, a drain and a spell on itself, and its mana as it stands now', () => {
+      const lich = caster({ maxMana: 30, skill: 100, spells: ['death_cloud', 'lightning_bolt', 'drain_life', 'dark_shield'] }, 22, { name: 'Blight Lich' })
+      expect(foeInfoLines(lich)).toEqual([
+        'Blight Lich',
+        'Spells: Death Cloud, Lightning Bolt, Drain Life, Dark Shield (22 mana)',
+        '  death cloud: burst 1, range 5: poisoned 3 turns (1d6 poison a turn)',
+        '  lightning bolt: line 6: 4d6 lightning',
+        '  drain life: a foe within 5: 3d6, half heals the caster',
+        '  dark shield: itself: shielded 3 turns (+15 AC)',
+      ])
+    })
+
+    it('adds the caster\'s spell power, heal bonus and longer statuses to what it shows', () => {
+      const strong = caster({ maxMana: 20, skill: 90, spells: ['flame_arrow', 'heal', 'curse'], power: { all: 1, fire: 2 }, healBonus: 3, extend: { hostile: 1 } }, 20, { name: 'Hedge-Mage' })
+      expect(foeInfoLines(strong).slice(2)).toEqual([
+        '  flame arrow: a foe within 5: 2d8+3 fire, seared 2 turns (no regeneration)',
+        '  heal: an ally within 4: +1d8+5',
+        '  curse: a foe within 5: cursed 4 turns (−15 to hit, −5 AC)',
+      ])
+    })
+
+    it('puts the spells after the abilities, before the wards', () => {
+      const lines = foeInfoLines(caster({ maxMana: 6, skill: 90, spells: ['drain_life'] }, 6, { abilities: ['troll_claws'], wards: { fire: 10 } }))
+      expect(lines.filter((line) => !line.startsWith('  '))).toEqual(['Blight Cultist', 'Claws: ready', 'Spells: Drain Life (6 mana)', 'Wards: fire 10'])
+    })
+  })
+
   it('ends with what an immune unit is immune to, by the name of each ticking status’s damage', () => {
     expect(foeInfoLines(unit({ name: 'Stone Golem', immune: true }))).toEqual(['Stone Golem', 'Immune to acid and poison'])
     expect(foeInfoLines(unit({ name: 'Stone Golem', immune: true, wards: { poison: 99 } }))).toEqual(['Stone Golem', 'Wards: poison 99', 'Immune to acid and poison'])
