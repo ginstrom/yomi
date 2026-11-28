@@ -174,7 +174,9 @@ interface FoeSlot {
   /**
    * Its hex as [column, row]. No two foes stand in neighbouring hexes of adjacent rows, where the lower's sprite
    * would hide the upper's nameplate: a foe in an odd row of column 8 has its neighbours in the even rows beside it
-   * at columns 8 and 9, so those beside it stand in column 10 (the Barrow Wights, the Blight Cult and the Lich's Court).
+   * at columns 8 and 9, so those beside it stand in column 10 (the Barrow Wights and the Blight Cult); or the odd rows'
+   * foes stand in column 7 and the even rows' in column 9 (the Lich's Court, whose casters standing in column 10 left
+   * it won 499 times in 500 at 18; the stage 11 verification's tuning, in the plan's log).
    */
   at: readonly [number, number]
   /** The lowest threat it takes the field at; below it, the slots after it fill its place. Any threat when left out. */
@@ -489,11 +491,11 @@ const YOUNG_DRAGON_SLOTS: readonly FoeSlot[] = [
 // Ring 18 (long-campaign stage 11): a lich's court of the dead and the cultists who serve it; an elder wyrm and the
 // young dragons of its brood.
 const BLIGHT_LICH_COURT_SLOTS: readonly FoeSlot[] = [
-  { id: 'lich', kind: 'blight_lich', name: 'Blight Lich', at: [10, 4] },
-  { id: 'guard', kind: 'barrow_wight', name: 'Barrow Guard', at: [8, 3] },
-  { id: 'acolyte', kind: 'blight_cultist', name: 'Lich\'s Acolyte', at: [10, 2] },
-  { id: 'warden', kind: 'barrow_wight', name: 'Crypt Warden', at: [8, 5] },
-  { id: 'herald', kind: 'blight_cultist', name: 'Lich\'s Herald', at: [10, 6] },
+  { id: 'lich', kind: 'blight_lich', name: 'Blight Lich', at: [9, 4] },
+  { id: 'guard', kind: 'barrow_wight', name: 'Barrow Guard', at: [7, 3] },
+  { id: 'acolyte', kind: 'blight_cultist', name: 'Lich\'s Acolyte', at: [9, 2] },
+  { id: 'warden', kind: 'barrow_wight', name: 'Crypt Warden', at: [7, 5] },
+  { id: 'herald', kind: 'blight_cultist', name: 'Lich\'s Herald', at: [9, 6] },
 ]
 
 const ELDER_WYRM_SLOTS: readonly FoeSlot[] = [
@@ -588,7 +590,8 @@ const YOUNG_DRAGON: EncounterDef = { slots: YOUNG_DRAGON_SLOTS, band: { min: 15,
 /**
  * Ring 18's encounters (stage 11 step 12); the cells' tuning is in the plan's log. The Blight Lich's Court, threats 17
  * to 20: the Blight Lich, two wights and two cultists; four at 20, the Lich's Herald sitting out (five at 20 were won
- * 287 times in 500, and five at 17 to 19 as few as 464). So, with the Wyvern Roost and the Blight Cult, one of the
+ * 287 times in 500, and five at 17 to 19 as few as 464; with the stage 11 verification's placement, 484 at 17, 439 at 18
+ * and 309 at 20). So, with the Wyvern Roost and the Blight Cult, one of the
  * encounters whose numbers fall as the threat rises.
  */
 const BLIGHT_LICH_COURT: EncounterDef = { slots: BLIGHT_LICH_COURT_SLOTS, band: { min: 17, max: 20 }, counts: [5, 5, 5, 4] }

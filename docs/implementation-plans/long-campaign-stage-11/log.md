@@ -551,3 +551,18 @@ Step 15 (document and play): engineer Opus 5.5 (model unset by the brief; the pl
 8. `aggressive`-policy tests: the Ogre clubs one hero beside it and sweeps two; the Hill Giant throws its Rock at a hero 4 hexes off; the Blight Horror breathes whenever Blight Breath is ready and only then (turns 1 and 4 of 5) (`b56279f`).
 
 Gates at `b56279f`: `npm test` #238 (3053 passed), `npm run build` #239, browser `battle` #240 (32 passed, A9 included), `debug` #241 (5 passed); the manual's two shots #234.
+
+9. The hover panel lists a caster foe's spells and the mana it has left ("Spells: Heal, Curse, Lightning Bolt (16 mana)"), and under them each spell's reach and effect (`spellLine`: "curse: a foe within 5: cursed 3 turns (−15 to hit, −5 AC)"), with the caster's spell power, heal bonus and longer statuses (`e76f5a6`). The manual's hover paragraph and `docs/reference/scenes.md` updated. No manual screenshot shows a caster's hover: the full set was retaken (#242) and the battle shots compared; none changed but by animation frame, so none was committed. Checked in the browser: the Blight Lich's panel (four spells, 33 mana) fits beside it. Gates at `e76f5a6`: `npm test` #247 (3056 passed, 1 failed: `scripts/records.test.ts`, the feature record over its size limits from `b2f9906`, not this fix), `npm run build` #244, browser `debug` #245 (5 passed), `battle` #246 (32 passed).
+
+### Tuning after fix 7 (the user's decision: keep the placement and retune)
+
+Cells 500 each, seed 1, `--player-kit expected`, a party of the threat's level (`logs/s11-tune-t<N>-<code>.txt`); reading 300–475. Before: the figures at `146aa72` above.
+
+| Trial | Change | lc17 | lc18 (in play) | lc20 | cu14 | cu15 (in play) | cu18 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| before | casters in column 10, wights in column 8 | 499 | 499 | 268 | 389 | 381 | 500 |
+| 1 | both encounters: casters in column 9, wights in column 7 | **484** | **439** | **309** | 290 | 352 | 484 |
+| 2 | the cult only, back to before, and a sixth foe at 18 (a Barrow Wight at (8,7)) | | | | 389 | 381 | 282 |
+| 3 | the cult only, before, and a sixth at 18 a wolf (Cult Hound) | | | | | | 487 |
+
+Kept: trial 1 for the Lich's Court (lc18 inside, lc17 and lc20 both nearer the reading than before; lc20 now inside). The cult: trial 1 left cu18 out (484) and pushed cu14 out below (290); trial 2 overshot (282); trial 3 left it out (487). The cult stays as before (cu18 500, a band top; cu14 389, cu15 381 inside), recorded for stage 12; a sixth foe between a wolf and a wight at 18 is the lever left. Every trial kept the readability test green. The policy snapshot re-recorded for the court's lines only (22,060 lines, `8ac48767…8199`; without the three moved encounters still `0a0879f5…8d75`). 50-campaign hash identical (`1e85d023…d216`); refactor guard green and unedited.
