@@ -1403,7 +1403,7 @@ export class BattleScene extends Phaser.Scene {
     this.hintText.setText(this.hoverHint ?? this.baseHint).setColor(this.hoverHint ? '#ffb74d' : '#9e9e9e')
   }
 
-  /** The panel of a hovered standing foe's abilities and wards, beside its hex; nothing for a foe with neither. */
+  /** The panel of a hovered standing foe's abilities, spells and wards, beside its hex; nothing for a foe with none of them. */
   private refreshFoeInfo(): void {
     this.foePanel.removeAll(true)
     this.foeInfo = []
@@ -1415,7 +1415,7 @@ export class BattleScene extends Phaser.Scene {
     if (lines.length === 0) return
     this.foeInfo = lines
     const { x, y } = boardHexCenter(at)
-    // A line apiece, stacked: the foe's name as the title, each ability's name and readiness, and, dimmer
+    // A line apiece, stacked: the foe's name as the title, each ability's name and readiness (and its spells), and, dimmer
     // and indented, what the ability does.
     const style = { fontFamily: 'monospace', fontSize: '11px', backgroundColor: '#000000cc', padding: { x: 4, y: 1 } }
     const texts = lines.map((line, i) =>
