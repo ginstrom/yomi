@@ -4,7 +4,8 @@
 
 - Request (user's words):
   > Merge PR #12 (stage 10), then start stage 11, the high roster. [...] Its design, docs/designs/long-campaign/stage-11-high-roster.md, is marked "ready for planning". It covers ogres, wyverns, wights, basilisks, giants, golems, cultists, dragons, the lich, the elder wyrm, and the Source rebuilt at 20, each with a sprite. Stage 11 picks up two things stage 10 left for it. The trophies table is empty until then, and the Source Guardians stay capped at level 6 until then.
-- Slug `long-campaign-stage-11` · Phase 5, verification · Next action: overall review (opus), QA (sonnet, browser), simulated user (sonnet) at d6c9f8f; then triage.
+- Slug `long-campaign-stage-11` · Phase 5, verification · Next action: verification fixes engineer (opus) on fix 9 (caster spells in hover) and the court/cult retune; then re-review the fixes (opus) and a QA re-check (sonnet).
+- Verification at 8248f10: overall review clean (npm test #230, build #231; 3 doc findings + 1 test gap); QA pass, 2 minor; simulated user (e2e driver; the runner can't click the canvas) goals met, 3 findings. Fixes 1–8 a9f7eee–5308248 (opus engineer); fix 7 (wight/cult/court back rank to column 10) moved cells: cu15 381, cu18 500, lc18 499, lc20 268; guard and 50-check unmoved.
 - Branch: `long-campaign-stage-11`, off main at c138d83 (stage 10 merged as PR #12, e801f5c).
 - Path: the stage design is the approved design; straight to planning, as stages 2–10.
 - Links:
@@ -47,3 +48,5 @@
 | 2026-11-27 | Elder Wyrm lair at threat 18 (in play) 482 after three trials: accept, record for stage 12 | user | a weaker third foe at 18–19 | 7 over; a stronger block pulls 20 down |
 | 2026-11-28 | Early figures: accept rl10 371 (409 at step 01; band 370–420), one 287, company 288; cause the new ring-7/9 spawn kinds at threats 7 and 9. Update bands.md and src/game/CLAUDE.md | user | keep old spawn kinds under --near-source; change the kinds' fromThreat | It is what the game now does; stage 12 owns the gear lag |
 | 2026-11-28 | Long run (Source 0 of 100, 739 days, campaigns end at rings 7–9): record for stage 12, carry on | user | stop before step 15 | Expected; stage 12's retune |
+| 2026-11-28 | Verification: caster foes' hover lists their spells | user | leave for stage 12 | Players couldn't see what the lich court casts |
+| 2026-11-28 | Keep the new back-rank placement and retune: lc18 inside 300–475 in up to three trials; cu18 top end if cu15 stays inside; lc20 recorded | user | keep and record; revert the placement | Readability fixed for good, a test guards it |
