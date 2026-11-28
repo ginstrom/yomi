@@ -440,6 +440,16 @@ describe('ring 12 (stage 11 step 10)', () => {
       expect(unitOf(engine, 'target').hp).toBe(HERO_STATS.maxHp - through)
     })
 
+    it('says in the log how much the armour stopped, as a weapon hit does, and nothing when it stopped none', () => {
+      const names = { giant: 'Hill Giant', target: 'Delwyn' }
+      const rolled = dice.count * dice.sides + dice.bonus
+      const through = damageThrough(rolled, effectiveResistance(HILL_GIANT_STATS, 11))
+      const [cut] = field(counted([HIT, ...Array<number>(dice.count).fill(0.999)]).rng, 11).step(rock(hex(2, 1))) as AbilityEvent[]
+      expect(formatEvent(cut, names)).toBe(`Hill Giant hurls a rock: HITS Delwyn for ${through} dmg (armour stops ${rolled - through}).`)
+      const [bare] = field(counted([HIT, ...Array<number>(dice.count).fill(0.999)]).rng, 0).step(rock(hex(2, 1))) as AbilityEvent[]
+      expect(formatEvent(bare, names)).toBe(`Hill Giant hurls a rock: HITS Delwyn for ${rolled} dmg.`)
+    })
+
     it('cannot be thrown further than 4 hexes, and is aimed at a hero’s hex 2 to 4 off as well as beside it', () => {
       const engine = field(() => HIT)
       const centres = engine.legalActions('giant').flatMap((a) => (a.type === 'ability' && 'at' in a ? [hexKey(a.at)] : []))
