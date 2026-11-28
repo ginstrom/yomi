@@ -140,7 +140,7 @@ describe.each(Object.entries(ENCOUNTERS))('the %s encounter, as the threat rises
    * And the Blight Lich's Court (stage 11 step 12): five at 17 to 19 and four at 20 (without the Lich's Herald), as
    * the kit is the same from 17 to 20 while the court grows (five at 20 were won 287 times in 500).
    * And the Barrow Wights (stage 11's verification tuning): five at 11 (a kobold Grave Robber with the four wights), four
-   * from 12, as four were won 485 times in 500 at 11 and the robber brings it to 425 without touching 12 to 14.
+   * from 12, as four were won 486 times in 500 at 11 (485 in the old placement) and the robber brings it to 425 without touching 12 to 14.
    * And the Source's guardians (stage 11 step 13): four near home at 5, then the Source at 20's three, fought at 20
    * from threat 6 up, so its threats 7 to 20 are its threat 6 (`held`), and its three at 6 are worth more than the four.
    */

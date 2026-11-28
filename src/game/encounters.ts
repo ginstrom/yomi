@@ -442,7 +442,7 @@ const WYVERN_ROOST_SLOTS: readonly FoeSlot[] = [
   { id: 'old', kind: 'wyvern', name: 'Old Wyvern', at: [9, 4] },
 ]
 
-// Ring 12 (long-campaign stage 11): the barrow's dead, its king first; a pair of basilisks and the ogre that keeps
+// Ring 12 (long-campaign stage 11): the barrow's dead, its king first, and at 11 a living kobold robbing their graves; a pair of basilisks and the ogre that keeps
 // them; a steading of two hill giants and their ogre. Three foes are each line-up's whole (a fourth was won 0 times
 // in 500 at the lair's top threat and 19 at the steading's), so the plan's second ogre of each has no slot.
 const BARROW_WIGHTS_SLOTS: readonly FoeSlot[] = [
@@ -554,17 +554,18 @@ const WORG_RIDERS: EncounterDef = { slots: WORG_RIDERS_SLOTS, band: { min: 7, ma
 const OGRE_CAMP: EncounterDef = { slots: OGRE_CAMP_SLOTS, band: { min: 7, max: 10 }, counts: [3, 3, 3, 4] }
 /**
  * Ring 9's encounter (stage 11 step 09). The Wyvern Roost, threats 9 to 12: four at 9 and 10, three at 11 and 12,
- * the one encounter whose numbers fall as the threat rises (the user's decision). The expected kit is the same
+ * one of the four encounters whose numbers fall as the threat rises (the user's decision; with the Barrow Wights, the
+ * Blight Cult and the Lich's Court). The expected kit is the same
  * across the band while the wyverns grow, so three were won 498 times in 500 at 9 and 399 at 12; four at 9, 312.
  * A pair at 9 was won 500 times. The plan's log has the trials.
  */
 const WYVERN_ROOST: EncounterDef = { slots: WYVERN_ROOST_SLOTS, band: { min: 9, max: 12 }, counts: [4, 4, 3, 3] }
 /**
  * Ring 12's encounters (stage 11 step 10); the cells' tuning is in the plan's log. Each is the same line-up at every
- * threat of its band: the expected kit steps up at 13, so the top of the band is far the harder end. The Barrow
+ * threat of its band, but that the Barrow Wights field a fifth at 11: the expected kit steps up at 13, so the top of the band is far the harder end. The Barrow
  * Wights, threats 11 to 14: four (three at 11 were won 500 times in 500), and at 11 a kobold Grave Robber with them
- * (four were won 485 times in 500 there; the stage 11 verification's tuning). So one of the encounters whose numbers
- * fall as the threat rises.
+ * (four were won 486 times in 500 there, 485 in the old placement; the stage 11 verification's tuning). So one of the
+ * four encounters whose numbers fall as the threat rises (the Wyvern Roost, the Barrow Wights, the Blight Cult and the Lich's Court).
  */
 const BARROW_WIGHTS: EncounterDef = { slots: BARROW_WIGHTS_SLOTS, band: { min: 11, max: 14 }, counts: [5, 4, 4, 4] }
 /** The Basilisk Lair, threats 11 to 14: a Basilisk, its keeper and its mate (two foes are no battle for a party in the expected kit, and a second Ogre at 14 was never beaten). */
@@ -582,7 +583,7 @@ const GOLEM_RUIN: EncounterDef = { slots: GOLEM_RUIN_SLOTS, band: { min: 14, max
  * The Blight Cult, threats 14 to 18: three cultists and the two wights they have raised, but at 15 and 16 without
  * the Cult Elder (the user's decision, stage 11 step 11). From 14 to 15 every foe gains 5 armour class, to hit and
  * spell skill while the expected kit does not move until 17: five were won 345 times in 500 at 14 and 99 at 15.
- * So, with the Wyvern Roost, one of the two encounters whose numbers fall as the threat rises.
+ * So one of the four encounters whose numbers fall as the threat rises (the Wyvern Roost, the Barrow Wights, the Blight Cult and the Lich's Court).
  */
 const BLIGHT_CULT: EncounterDef = { slots: BLIGHT_CULT_SLOTS, band: { min: 14, max: 18 }, counts: [5, 4, 4, 5, 5] }
 /**
@@ -594,8 +595,7 @@ const YOUNG_DRAGON: EncounterDef = { slots: YOUNG_DRAGON_SLOTS, band: { min: 15,
  * Ring 18's encounters (stage 11 step 12); the cells' tuning is in the plan's log. The Blight Lich's Court, threats 17
  * to 20: the Blight Lich, two wights and two cultists; four at 20, the Lich's Herald sitting out (five at 20 were won
  * 287 times in 500, and five at 17 to 19 as few as 464; with the stage 11 verification's placement, 484 at 17, 439 at 18
- * and 309 at 20). So, with the Wyvern Roost and the Blight Cult, one of the
- * encounters whose numbers fall as the threat rises.
+ * and 309 at 20). So one of the four encounters whose numbers fall as the threat rises (the Wyvern Roost, the Barrow Wights, the Blight Cult and the Lich's Court).
  */
 const BLIGHT_LICH_COURT: EncounterDef = { slots: BLIGHT_LICH_COURT_SLOTS, band: { min: 17, max: 20 }, counts: [5, 5, 5, 4] }
 /**

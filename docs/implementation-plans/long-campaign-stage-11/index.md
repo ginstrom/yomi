@@ -115,7 +115,7 @@ Ids in `ENCOUNTERS` (after `freebooter_host`, in this order), `ENCOUNTER_BANDS`,
 | `worg_riders` | 7–9 | worg_rider, wolf, worg_rider, wolf, wolf, worg_rider (wolves `fromThreat` 8) | 3, 3, 5 | Worg Band | — | 08 |
 | `ogre_camp` | 7–10 | ogre, worg_rider, ogre, wolf | 3, 3, 3, 4 | Ogre Camp | — | 08 |
 | `wyvern_roost` | 9–12 | wyvern ×4 (the Old Wyvern last) | 4, 4, 3, 3 (falls: the user's decision, step 09) | Wyvern Roost | venom | 09 |
-| `barrow_wights` | 11–14 | barrow_wight ×4 | 4, 4, 4, 4 | Barrow | — | 10 |
+| `barrow_wights` | 11–14 | barrow_wight ×4, kobold (the Grave Robber last) | 5, 4, 4, 4 (falls: the verification's tuning) | Barrow | — | 10 |
 | `basilisk_lair` | 11–14 | basilisk, ogre, basilisk | 3, 3, 3, 3 | Basilisk Lair | rime | 10 |
 | `hill_giant_steading` | 12–15 | hill_giant, hill_giant, ogre | 3, 3, 3, 3 | Giant Steading | — | 10 |
 | `golem_ruin` | 14–17 | stone_golem, barrow_wight, stone_golem, barrow_wight, stone_golem | 4, 4, 4, 5 | Golem Ruin | — | 11 |

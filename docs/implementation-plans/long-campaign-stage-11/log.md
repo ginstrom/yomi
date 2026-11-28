@@ -583,3 +583,5 @@ Cells as above (`logs/s11-bw-t<N>-<code>.txt`); before: bw11 485, bw12 483 (in p
 | 3 | trial 1, and the fifth at 11 a kobold, the Grave Robber, at (7,1) | **425** | **473** | **341** |
 
 Trial 1 brought 12 inside but left 11 a win worse (486 against 485), so it was not kept alone; trial 2 overshot 11; trial 3 kept: all three cells inside (bw14 8 lower, inside). The Barrow Wights now fall as the threat rises (five at 11, four from 12; the encounter tests' `FALLS`). Readability test green. Policy snapshot re-recorded for the barrow_wights lines only (22,032 lines, `badab14b…aaab`; without the three moved encounters still `0a0879f5…8d75`). 50-campaign hash identical (`1e85d023…d216`); refactor guard green and unedited. The design's cells line: BW11 and BW12 inside after tuning.
+
+Review of `6cda296` (four doc and comment findings): the plan index's `barrow_wights` row; the falling encounters named as four wherever counted; four at 11 won 486 in the present placement (485 in the old); the ring 12 comments for the Grave Robber and the 11-only fifth.
