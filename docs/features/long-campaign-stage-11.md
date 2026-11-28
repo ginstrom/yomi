@@ -4,24 +4,17 @@
 
 - Request (user's words):
   > Merge PR #12 (stage 10), then start stage 11, the high roster. [...] Its design, docs/designs/long-campaign/stage-11-high-roster.md, is marked "ready for planning". It covers ogres, wyverns, wights, basilisks, giants, golems, cultists, dragons, the lich, the elder wyrm, and the Source rebuilt at 20, each with a sprite. Stage 11 picks up two things stage 10 left for it. The trophies table is empty until then, and the Source Guardians stay capped at level 6 until then.
-- Slug `long-campaign-stage-11` · Phase 5, verification · Next action: verification fixes engineer (opus) on fix 9 (caster spells in hover) and the court/cult retune; then re-review the fixes (opus) and a QA re-check (sonnet).
-- Verification at 8248f10: overall review clean (npm test #230, build #231; 3 doc findings + 1 test gap); QA pass, 2 minor; simulated user (e2e driver; the runner can't click the canvas) goals met, 3 findings. Fixes 1–8 a9f7eee–5308248 (opus engineer); fix 7 (wight/cult/court back rank to column 10) moved cells: cu15 381, cu18 500, lc18 499, lc20 268; guard and 50-check unmoved.
-- Branch: `long-campaign-stage-11`, off main at c138d83 (stage 10 merged as PR #12, e801f5c).
-- Path: the stage design is the approved design; straight to planning, as stages 2–10.
-- Links:
-  - Design: `docs/designs/long-campaign/stage-11-high-roster.md` (status "ready for planning")
-  - Previous stage: `docs/features/long-campaign-stage-10.md`
-  - Plan: `docs/implementation-plans/long-campaign-stage-11/index.md` (15 steps, bb47278; trimmed 3e77176)
-  - Plan log (history): `docs/implementation-plans/long-campaign-stage-11/log.md`
-  - Status thread: C0CMCLX2G8G, ts "1795693090.979109", https://recursiveai.slack.com/archives/C0CMCLX2G8G/p1795693090979109
-- Open questions: none. Plan Q1–Q10 answered 2026-11-26 (decision log).
-- Tiers (engineer / reviewer): planner opus. 01 sonnet / sonnet; 04–07, 15 sonnet / opus; 02, 03, 08–14 opus / opus. No escalations.
-- Done, each clean in 1 round: 01 (runlog #15), 02 (#22), 03 (#58), 08 (#69), 09 (#84), 10 (#94), 11 (#134; cult trial 3f4f90c, cu15 429, checked by the orchestrator: #152), 12 (#165; ew18 482 accepted), 13 (#185; sgk20 445), 14 (#205), 15 (#208); cells in the plan log; sprites 04–07 merged. 50-check 1e85d023… (schema 27), unmoved. SAVE_VERSION 36.
-- `throughResistance` on an area means cut by resistance less `armorPierce`; without it resistance is ignored (plan corrected d06bdb9). Follow-ups outside the stage: `stopVoice` fade race in `src/scenes/soundPlayer.ts`; battle e2e A9 fails in the full file (order-dependent, pre-existing). A closed lid hangs browser runs.
-- Run npm with `PATH=/opt/homebrew/opt/node@26/bin:$PATH`. Sprite tool: `/Users/ryan/.local/bin/sprite`, never `npx sprite`.
-- Checkpoints to the user: a threat that occurs on the map (7, 9, 12, 15, 18) outside 300–475 after three trials (band-end misses are recorded for stage 12, no stop); an ability that needs a new engine field; the guard or 50-check moving; an early figure further out than accepted.
-- Carried from stage 10: trophies from kills (done through ring 9); Source Guardians at SOURCE_FOE_LEVEL 6 until step 13.
-- Not this stage (stage 12, the retune): the accepted early figures (288/289), the long campaign's gear lag, the Source at 1/100, market income, the simulator's spend order.
+- Slug `long-campaign-stage-11` · Phase 5, verification · Next action: re-review fixes a9f7eee..HEAD (opus) and QA re-check (sonnet); then report and the PR go-ahead.
+- Verification at 8248f10: overall review clean (#230, build #231); QA pass, 2 minor; simulated user (e2e driver) goals met. Fixes 1–9 a9f7eee–03321ae (opus engineer); retune kept lc18 439, lc20 309; cu18 500 after three trials, recorded for stage 12. Guard and 50-check unmoved.
+- Branch `long-campaign-stage-11` off main c138d83. Path: stage design approved; straight to planning.
+- Links: design `docs/designs/long-campaign/stage-11-high-roster.md`; plan `docs/implementation-plans/long-campaign-stage-11/index.md`; history `.../log.md`; status thread C0CMCLX2G8G, ts "1795693090.979109", https://recursiveai.slack.com/archives/C0CMCLX2G8G/p1795693090979109
+- Open questions: none.
+- Tiers (engineer / reviewer): planner opus. 01 sonnet / sonnet; 04–07, 15 sonnet / opus; 02, 03, 08–14 opus / opus; fixes opus. No escalations.
+- Steps 01–15 done, each clean in 1 round (runlog IDs in log.md). 50-check 1e85d023… (schema 27). SAVE_VERSION 36.
+- Follow-ups outside the stage: `stopVoice` fade race (`src/scenes/soundPlayer.ts`); battle e2e A9 order-dependent. A closed lid hangs browser runs.
+- Run npm with `PATH=/opt/homebrew/opt/node@26/bin:$PATH`. Sprite tool: `/Users/ryan/.local/bin/sprite`.
+- Checkpoints to the user: an in-play threat (7, 9, 12, 15, 18) outside 300–475 after three trials; the guard or 50-check moving.
+- Stage 12 (the retune) owns: early figures (288/289), gear lag, the Source at 1/100, market income, spend order, recorded band misses.
 
 ## Decision log
 
